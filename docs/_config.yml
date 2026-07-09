@@ -1,0 +1,8 @@
+theme: jekyll-theme-minimal
+title: QtFM
+description: Qt File Manager for UNIX
+logo: https://github.com/rodlie/qtfm/raw/master/share/hicolor/256x256/apps/qtfm.png
+show_downloads: true
+github:
+  zip_url: https://github.com/rodlie/qtfm/archive/6.2.1.zip
+  tar_url: https://github.com/rodlie/qtfm/archive/6.2.1.tar.gz

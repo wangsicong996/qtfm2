@@ -1,0 +1,45 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: apt install
+      run: |
+        sudo apt-get update
+        sudo apt-get install tree qtbase5-dev libmagick++-dev ffmpeg poppler-utils libqt5svg5-dev
+    - name: Build 1 (qmake release)
+      run: |
+        cd $GITHUB_WORKSPACE
+        mkdir build1
+        cd build1
+        qmake CONFIG+=with_magick CONFIG+=release PREFIX=/usr ..
+        make -j2
+        make INSTALL_ROOT=`pwd`/pkg install
+        tree pkg
+    - name: Build 2 (cmake release)
+      run: |
+        cd $GITHUB_WORKSPACE
+        mkdir build2
+        cd build2
+        cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=/lib/x86_64-linux-gnu -DCMAKE_BUILD_TYPE=Release ..
+        make -j2
+        make DESTDIR=`pwd`/pkg install
+        tree pkg
+        sudo make install
+        ldd /usr/bin/qtfm
+        ldd /usr/bin/qtfm-tray

@@ -1,0 +1,190 @@
+# CI: Linux x86_64 (ubuntu-22.04) + AppImage artifact
+name: Build Linux x86_64
+
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+env:
+  QTFM_VERSION: "6.3.0"
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Verify runner is x86_64
+        run: |
+          arch="$(uname -m)"
+          echo "Runner architecture: ${arch}"
+          test "${arch}" = "x86_64"
+
+      - name: Guard Qt Svg scope (libfm vs qtfm app)
+        run: |
+          if grep -E '^QT\s*\+=' share/qtfm.pri | grep -q svg; then
+            echo "Qt Svg must not be in share/qtfm.pri (libfm); use fm/fm.pro only."
+            exit 1
+          fi
+          grep -qE 'QT.*svg' fm/fm.pro || { echo "fm/fm.pro must request Qt Svg"; exit 1; }
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            qtbase5-dev \
+            qt5-qmake \
+            libqt5svg5-dev \
+            libmagick++-dev \
+            ffmpeg \
+            poppler-utils \
+            libfuse2 \
+            file \
+            wget \
+            qttools5-dev-tools
+
+      - name: Sync app icon (mimes/app.png → hicolor)
+        run: |
+          chmod +x share/scripts/sync-app-icon.sh
+          share/scripts/sync-app-icon.sh
+
+      - name: Regenerate mimes.qrc
+        run: ./share/icons/mimes/update_qrc.sh
+
+      - name: Build UI translations
+        run: |
+          python3 share/translations/build_qtfm_ts.py
+          lrelease share/translations/qtfm_zh_CN.ts -qm share/translations/qtfm_zh_CN.qm
+
+      - name: Build (qmake release)
+        run: |
+          mkdir -p build
+          cd build
+          qmake CONFIG+=with_magick CONFIG+=release PREFIX=/usr ..
+          set -o pipefail
+          make -j"$(nproc)" 2>&1 | tee build.log
+          make_rc=${PIPESTATUS[0]}
+          if [ "$make_rc" -ne 0 ]; then
+            echo "::group::Compiler / linker errors (first 60 lines)"
+            grep -E ':( error:|fatal error:|undefined reference)' build.log | head -60 || true
+            echo "::endgroup::"
+            echo "Full log: build/build.log in the job artifact (see step output above)."
+            exit "$make_rc"
+          fi
+
+      - name: Verify binary
+        run: |
+          file build/bin/qtfm
+          file build/bin/qtfm | grep -E 'x86-64|Intel 80386'
+          test -x build/bin/qtfm
+
+      - name: Download linuxdeploy
+        run: |
+          wget -q -O linuxdeploy.AppImage \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q -O linuxdeploy-plugin-qt.AppImage \
+            https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          wget -q -O appimagetool.AppImage \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x linuxdeploy.AppImage linuxdeploy-plugin-qt.AppImage appimagetool.AppImage
+
+      - name: Install into AppDir
+        working-directory: build
+        run: make INSTALL_ROOT="${GITHUB_WORKSPACE}/AppDir" install
+
+      - name: Verify bundled mime icons in AppDir
+        run: |
+          test -f "${GITHUB_WORKSPACE}/AppDir/usr/share/qtfm/mimes/folder.svg"
+          test -f "${GITHUB_WORKSPACE}/AppDir/usr/share/qtfm/mimes/mp4.svg"
+          test -f "${GITHUB_WORKSPACE}/AppDir/usr/share/icons/hicolor/512x512/apps/qtfm.png"
+          test -x "${GITHUB_WORKSPACE}/AppDir/usr/bin/qtfm"
+          CANON="${GITHUB_WORKSPACE}/share/icons/mimes/app.png"
+          DEPLOY="${GITHUB_WORKSPACE}/AppDir/usr/share/icons/hicolor/512x512/apps/qtfm.png"
+          if command -v magick >/dev/null 2>&1 && [ -f "$CANON" ]; then
+            magick "$CANON" -resize 512x512 /tmp/qtfm-icon-expected.png
+            cmp -s /tmp/qtfm-icon-expected.png "$DEPLOY" || {
+              echo "AppDir hicolor icon does not match share/icons/mimes/app.png" >&2
+              exit 1
+            }
+          fi
+
+      - name: Build AppImage
+        env:
+          LINUXDEPLOY_OUTPUT_VERSION: ${{ env.QTFM_VERSION }}
+          ARCH: x86_64
+          QMAKE: qmake
+        run: |
+          APPDIR="${GITHUB_WORKSPACE}/AppDir"
+          test -x "${APPDIR}/usr/bin/qtfm"
+          test -f "${APPDIR}/usr/share/applications/qtfm.desktop"
+
+          EXTRA_LIBS=()
+          while IFS= read -r lib; do
+            if [ -n "${lib}" ] && [ -f "${lib}" ]; then
+              EXTRA_LIBS+=(--library "${lib}")
+            fi
+          done < <(
+            ldd "${APPDIR}/usr/bin/qtfm" | awk '/=>/ {print $3}' \
+              | grep -E 'lib(Magick|MagickCore|MagickWand|avcodec|avformat|avutil|avdevice|swscale|swresample)' \
+              || true
+          )
+
+          ICON_PNG="${GITHUB_WORKSPACE}/share/icons/mimes/app.png"
+          if [ ! -f "$ICON_PNG" ]; then
+            ICON_PNG="${GITHUB_WORKSPACE}/share/images/app.png"
+          fi
+          ICON_ARG="${APPDIR}/usr/share/icons/hicolor/512x512/apps/qtfm.png"
+          if [ -f "$ICON_PNG" ]; then
+            # linuxdeploy accepts PNG icons only at fixed sizes (max 512x512); app.png is often 1024.
+            ICON_DEPLOY="${GITHUB_WORKSPACE}/build/app-icon-512.png"
+            mkdir -p "${GITHUB_WORKSPACE}/build"
+            if command -v magick >/dev/null 2>&1; then
+              magick "$ICON_PNG" -resize 512x512 "$ICON_DEPLOY"
+            elif command -v convert >/dev/null 2>&1; then
+              convert "$ICON_PNG" -resize 512x512 "$ICON_DEPLOY"
+            else
+              ffmpeg -y -loglevel error -i "$ICON_PNG" -vf scale=512:512 "$ICON_DEPLOY"
+            fi
+            ICON_ARG="$ICON_DEPLOY"
+          fi
+
+          ./linuxdeploy.AppImage --appdir="${APPDIR}" \
+            --executable="${APPDIR}/usr/bin/qtfm" \
+            --desktop-file="${APPDIR}/usr/share/applications/qtfm.desktop" \
+            --icon-file="${ICON_ARG}" \
+            --plugin qt \
+            "${EXTRA_LIBS[@]}"
+
+          # gzip squashfs: works with older squashfuse on Arch/Manjaro (zstd needs newer tools)
+          ARCH=x86_64 ./appimagetool.AppImage --comp gzip --no-appstream \
+            "${APPDIR}" "qtfm-${QTFM_VERSION}-x86_64.AppImage"
+
+          chmod +x "qtfm-${QTFM_VERSION}-x86_64.AppImage"
+          ls -lah "qtfm-${QTFM_VERSION}-x86_64.AppImage"
+
+      - name: Verify AppImage (extract, no FUSE)
+        env:
+          QTFM_VERSION: ${{ env.QTFM_VERSION }}
+        run: |
+          ./qtfm-${QTFM_VERSION}-x86_64.AppImage --appimage-extract
+          test -x squashfs-root/AppRun
+          test -x squashfs-root/usr/bin/qtfm
+          rm -rf squashfs-root
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: qtfm-${{ env.QTFM_VERSION }}-linux-x86_64
+          path: qtfm-${{ env.QTFM_VERSION }}-x86_64.AppImage
+          if-no-files-found: error

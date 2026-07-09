@@ -1,0 +1,51 @@
+QTFM_TARGET = qtfm
+QTFM_TARGET_NAME = "QtFM"
+QTFM_MAJOR = 6
+QTFM_MINOR = 3
+QTFM_PATCH = 0
+
+QMAKE_TARGET_COMPANY = "$${QTFM_TARGET_NAME}"
+QMAKE_TARGET_PRODUCT = "$${QTFM_TARGET_NAME}"
+QMAKE_TARGET_DESCRIPTION = "$${QTFM_TARGET_NAME}"
+QMAKE_TARGET_COPYRIGHT = "Copyright $${QTFM_TARGET_NAME} developers"
+
+unix:!macx {
+    isEmpty(PREFIX) {
+        PREFIX = /usr/local
+        isEmpty(XDGDIR): XDGDIR = $${PREFIX}/etc/xdg
+    }
+    isEmpty(LIBDIR): LIBDIR = $$PREFIX/lib$${LIBSUFFIX}
+    isEmpty(DOCDIR): DOCDIR = $$PREFIX/share/doc/$${QTFM_TARGET}-$${QTFM_MAJOR}.$${QTFM_MINOR}.$${QTFM_PATCH}
+    isEmpty(MANDIR): MANDIR = $$PREFIX/share/man
+    isEmpty(XDGDIR): XDGDIR = /etc/xdg
+}
+
+# Qt modules for libfm and all subprojects that include this file.
+# Do NOT add "svg" here — only the qtfm app (fm/fm.pro) needs Qt Svg for toolbar icons.
+# Linux splits packages (qtbase5-dev vs libqt5svg5-dev); macOS Homebrew qt@5 is monolithic,
+# so putting svg here fails on Linux CI but can still pass on macOS.
+QT += widgets
+
+CONFIG += link_pkgconfig
+
+macx {
+    QTFM_TARGET = QtFM
+    LIBS += -framework CoreFoundation -framework CoreServices
+    QT_CONFIG -= no-pkg-config
+    PKGCONFIG += libinotify
+    CONFIG += staticlib
+}
+
+CONFIG(deploy) : DEFINES += DEPLOY
+CONFIG(release, debug|release) {
+    DEFINES += QT_NO_DEBUG_OUTPUT
+    !CONFIG(sharedlib): CONFIG += staticlib
+}
+
+freebsd: LIBS += -linotify
+netbsd-g++: PKGCONFIG += libinotify
+
+#DEFINES += QT_DEPRECATED_WARNINGS
+#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+
+lessThan(QT_MAJOR_VERSION, 5): error("Qt4 is not supported anymore.")

@@ -1,0 +1,114 @@
+# CI: macOS x86_64, deployment target 12.5+
+name: Build macOS x86_64 (12.5+)
+
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+env:
+  MACOSX_DEPLOYMENT_TARGET: "12.5"
+  QT_VERSION: "5.15.2"
+  QT_ARCH: clang_64
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Guard Qt Svg scope (libfm vs qtfm app)
+        run: |
+          if grep -E '^QT\s*\+=' share/qtfm.pri | grep -q svg; then
+            echo "Qt Svg must not be in share/qtfm.pri (libfm); use fm/fm.pro only."
+            exit 1
+          fi
+          grep -qE 'QT.*svg' fm/fm.pro || { echo "fm/fm.pro must request Qt Svg"; exit 1; }
+
+      - name: Install Qt 5 (x86_64 / clang_64)
+        run: |
+          python3 -m venv /tmp/aqt-venv
+          source /tmp/aqt-venv/bin/activate
+          pip install aqtinstall==3.3.*
+          QT_DIR="${{ runner.tool_cache }}/Qt/${{ env.QT_VERSION }}/${{ env.QT_ARCH }}"
+          aqt install-qt mac desktop "${{ env.QT_VERSION }}" "${{ env.QT_ARCH }}" \
+            --outputdir "${{ runner.tool_cache }}/Qt"
+          test -x "${QT_DIR}/bin/qmake"
+          echo "${QT_DIR}/bin" >> "${GITHUB_PATH}"
+          echo "PKG_CONFIG_PATH=${QT_DIR}/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "${GITHUB_ENV}"
+
+      - name: Install build tools
+        run: brew install autoconf automake libtool librsvg pkg-config ffmpeg
+
+      - name: Build libinotify-kqueue (x86_64)
+        run: |
+          git clone --depth 1 https://github.com/libinotify-kqueue/libinotify-kqueue.git /tmp/libinotify-kqueue
+          cd /tmp/libinotify-kqueue
+          export CFLAGS="-arch x86_64"
+          export CXXFLAGS="-arch x86_64"
+          export LDFLAGS="-arch x86_64"
+          ./autogen.sh
+          ./configure --prefix="${GITHUB_WORKSPACE}/deps-x86_64"
+          make -j"$(sysctl -n hw.ncpu)"
+          make install
+          echo "PKG_CONFIG_PATH=${GITHUB_WORKSPACE}/deps-x86_64/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "${GITHUB_ENV}"
+
+      - name: Prepare app icon from mimes/app.png
+        run: |
+          chmod +x share/scripts/sync-app-icon.sh share/scripts/app-icon-from-png.sh
+          if [ -f share/icons/mimes/app.png ]; then
+            share/scripts/sync-app-icon.sh
+            share/scripts/app-icon-from-png.sh
+          elif [ -f share/images/app.png ]; then
+            share/scripts/app-icon-from-png.sh
+          elif [ ! -f share/images/QtFM.icns ]; then
+            echo "No share/icons/mimes/app.png, share/images/app.png, or QtFM.icns" >&2
+            exit 1
+          fi
+
+      - name: Build (qmake release, x86_64)
+        run: |
+          mkdir -p build
+          cd build
+          qmake CONFIG+=release \
+            QMAKE_APPLE_DEVICE_ARCHS=x86_64 \
+            QMAKE_MACOSX_DEPLOYMENT_TARGET=12.5 \
+            ..
+          make -j"$(sysctl -n hw.ncpu)"
+
+      - name: Verify binary
+        run: |
+          bin="build/fm/QtFM.app/Contents/MacOS/QtFM"
+          test -f "${bin}"
+          file "${bin}"
+          file "${bin}" | grep x86_64
+
+      - name: Deploy Qt libraries (macdeployqt)
+        run: macdeployqt build/fm/QtFM.app -always-overwrite
+
+      - name: Bundle ffmpeg for video thumbnails
+        run: |
+          RES="build/fm/QtFM.app/Contents/Resources"
+          mkdir -p "${RES}"
+          install -m 755 "$(command -v ffmpeg)" "${RES}/ffmpeg"
+          install -m 755 "$(command -v ffprobe)" "${RES}/ffprobe"
+
+      - name: Build DMG
+        run: |
+          chmod +x share/scripts/make-macos-dmg.sh
+          share/scripts/make-macos-dmg.sh build/fm/QtFM.app QtFM-macos-x86_64.dmg QtFM
+
+      - name: Upload QtFM DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: QtFM-macos-x86_64
+          path: QtFM-macos-x86_64.dmg
+          if-no-files-found: error
