@@ -43,31 +43,38 @@ QModelIndex IconFileListView::indexAt(const QPoint &point) const
 
 void IconFileListView::mousePressEvent(QMouseEvent *event)
 {
+    // ExtendedSelection: a double-click's first press can range-select from a stale
+    // anchor (often row 0) to the clicked item. Single-click-open avoids this path.
+    if (viewMode() == QListView::IconMode
+        && event->button() == Qt::LeftButton
+        && (event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) == 0) {
+        const QModelIndex idx = indexAt(event->pos());
+        if (idx.isValid() && selectionModel()) {
+            selectionModel()->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect);
+        }
+    }
     QListView::mousePressEvent(event);
-#ifdef Q_OS_MAC
-    if (event->button() != Qt::LeftButton) {
-        return;
+    if (viewMode() == QListView::IconMode
+        && event->button() == Qt::LeftButton
+        && (event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) == 0) {
+        const QModelIndex idx = indexAt(event->pos());
+        if (idx.isValid() && selectionModel() && selectionModel()->selectedRows().size() > 1) {
+            selectionModel()->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect);
+        }
     }
-    if (event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) {
-        return;
-    }
-    const QModelIndex idx = indexAt(event->pos());
-    if (!idx.isValid() || !selectionModel()) {
-        return;
-    }
-    if (selectionModel()->selectedRows().size() > 1) {
-        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect);
-    }
-#endif
 }
 
 void IconFileListView::mouseDoubleClickEvent(QMouseEvent *event)
 {
-#ifdef Q_OS_MAC
     const QModelIndex idx = indexAt(event->pos());
     if (idx.isValid() && selectionModel()) {
         selectionModel()->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect);
     }
-#endif
+    if (idx.isValid()) {
+        emit doubleClicked(idx);
+        emit activated(idx);
+        event->accept();
+        return;
+    }
     QListView::mouseDoubleClickEvent(event);
 }

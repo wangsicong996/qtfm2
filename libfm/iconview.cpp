@@ -7,11 +7,9 @@
 #include <QFrame>
 #include <QPainterPath>
 #include <QPlainTextEdit>
-#include <QScrollBar>
 #include <QShowEvent>
 #include <QResizeEvent>
 #include <QTimer>
-#include <QWheelEvent>
 #include <QTextBlockFormat>
 #include <QTextCursor>
 #include <QTextDocument>
@@ -39,7 +37,7 @@ QString renameEditorStyleSheet()
                " color: palette(text);"
                " border: 1px solid %1;"
                " border-radius: 2px;"
-               " padding: 2px;"
+               " padding: 0px;"
                " selection-background-color: #0078d4;"
                " selection-color: #ffffff;"
                "}")
@@ -57,7 +55,8 @@ public:
         setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         setTabChangesFocus(true);
         document()->setDocumentMargin(0);
-        setLineWrapMode(QPlainTextEdit::NoWrap);
+        setLineWrapMode(QPlainTextEdit::WidgetWidth);
+        document()->setMaximumBlockCount(2);
 
         QPalette pal = palette();
         pal.setColor(QPalette::Highlight, QColor::fromRgb(kRenameSelectionBackground));
@@ -71,7 +70,7 @@ public:
         QTextCursor cursor(document());
         cursor.select(QTextCursor::Document);
         QTextBlockFormat blockFormat;
-        blockFormat.setAlignment(Qt::AlignRight);
+        blockFormat.setAlignment(Qt::AlignLeft);
         cursor.mergeBlockFormat(blockFormat);
         cursor.clearSelection();
     }
@@ -79,32 +78,6 @@ public:
     void keepCursorVisible()
     {
         ensureCursorVisible();
-    }
-
-    void wheelEvent(QWheelEvent *event) override
-    {
-        int delta = 0;
-        if (!event->pixelDelta().isNull()) {
-            if (event->pixelDelta().x() != 0) {
-                delta = event->pixelDelta().x();
-            } else {
-                delta = -event->pixelDelta().y();
-            }
-        } else if (!event->angleDelta().isNull()) {
-            if (event->angleDelta().x() != 0) {
-                delta = event->angleDelta().x() / 2;
-            } else {
-                delta = -event->angleDelta().y() / 2;
-            }
-        }
-        if (delta != 0) {
-            if (QScrollBar *hbar = horizontalScrollBar()) {
-                hbar->setValue(hbar->value() - delta);
-                event->accept();
-                return;
-            }
-        }
-        QPlainTextEdit::wheelEvent(event);
     }
 
 protected:
@@ -149,7 +122,7 @@ void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &te
 
     QTextLayout layout(text, font);
     QTextOption opt;
-    opt.setAlignment(Qt::AlignHCenter);
+    opt.setAlignment(Qt::AlignLeft);
     opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     layout.setTextOption(opt);
 
@@ -181,7 +154,7 @@ void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &te
     if (truncated) {
         const QString rest = text.mid(line2.textStart());
         painter->drawText(QRect(rect.left(), int(y), rect.width(), lineHeight),
-                          Qt::AlignHCenter | Qt::AlignTop,
+                          Qt::AlignLeft | Qt::AlignTop,
                           fm.elidedText(rest, Qt::ElideRight, rect.width()));
     } else {
         line2.draw(painter, QPointF(rect.left(), y));
@@ -256,7 +229,7 @@ QWidget *IconViewDelegate::createEditor(QWidget *parent,
 {
     Q_UNUSED(index);
     auto *editor = new RenameEditor(parent);
-    editor->setFixedHeight(twoLineTextHeight(option.fontMetrics) + 4);
+    editor->setFixedHeight(twoLineTextHeight(option.fontMetrics));
     return editor;
 }
 
