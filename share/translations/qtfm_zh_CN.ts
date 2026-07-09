@@ -1425,6 +1425,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>否</translation>
     </message>
     <message>
+      <source>On macOS, folders open with a single click; double-click opens files only.</source>
+      <translation>在 macOS 上：单击打开文件夹，双击仅打开文件。</translation>
+    </message>
+    <message>
       <source>Open with</source>
       <translation>打开方式</translation>
     </message>

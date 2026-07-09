@@ -217,7 +217,17 @@ QWidget *SettingsDialog::createGeneralSettings() {
   comboSingleClick->addItem(tr("No"),0);
   comboSingleClick->addItem(tr("Directories only"),1);
   comboSingleClick->addItem(tr("Everything"),2);
+#ifndef Q_OS_MAC
   layoutBehav->addRow(tr("Enable Single Click"), comboSingleClick);
+#else
+  {
+    auto *macClickHint = new QLabel(
+        tr("On macOS, folders open with a single click; double-click opens files only."),
+        grpBehav);
+    macClickHint->setWordWrap(true);
+    layoutBehav->addRow(macClickHint);
+  }
+#endif
 
   checkPathHistory = new QCheckBox(grpBehav);
   layoutBehav->addRow(tr("Enable path history"), checkPathHistory);
@@ -771,6 +781,9 @@ void SettingsDialog::readSettings() {
   comboDADshift->setCurrentIndex(settingsPtr->value("dad_shift", 2).toInt());
 
   comboSingleClick->setCurrentIndex(settingsPtr->value("singleClick", 0).toInt());
+#ifdef Q_OS_MAC
+  comboSingleClick->setCurrentIndex(1);
+#endif
   showHomeButton->setChecked(settingsPtr->value("home_button", true).toBool());
   showNewTabButton->setChecked(settingsPtr->value("newtab_button", false).toBool());
   showTerminalButton->setChecked(settingsPtr->value("terminal_button", true).toBool());
@@ -1025,6 +1038,9 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("dad_shift", comboDADshift->currentIndex());
 
   settingsPtr->setValue("singleClick", comboSingleClick->currentIndex());
+#ifdef Q_OS_MAC
+  settingsPtr->setValue("singleClick", 1);
+#endif
   const QString newUiLang = comboUiLanguage->currentData().toString();
   if (AppTranslator::normalizedLanguageCode(newUiLang)
       != AppTranslator::normalizedLanguageCode(

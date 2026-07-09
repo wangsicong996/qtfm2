@@ -7,6 +7,7 @@
 #include <QFrame>
 #include <QPainterPath>
 #include <QPlainTextEdit>
+#include <QScrollBar>
 #include <QShowEvent>
 #include <QResizeEvent>
 #include <QTimer>
@@ -56,7 +57,6 @@ public:
         setTabChangesFocus(true);
         document()->setDocumentMargin(0);
         setLineWrapMode(QPlainTextEdit::WidgetWidth);
-        document()->setMaximumBlockCount(2);
 
         QPalette pal = palette();
         pal.setColor(QPalette::Highlight, QColor::fromRgb(kRenameSelectionBackground));
@@ -65,19 +65,26 @@ public:
         setStyleSheet(renameEditorStyleSheet());
     }
 
-    void applyRenameLayout()
+    void applyRenameLayout(Qt::Alignment align)
     {
         QTextCursor cursor(document());
         cursor.select(QTextCursor::Document);
         QTextBlockFormat blockFormat;
-        blockFormat.setAlignment(Qt::AlignLeft);
+        blockFormat.setAlignment(align);
         cursor.mergeBlockFormat(blockFormat);
         cursor.clearSelection();
     }
 
+    void pinScrollToTop()
+    {
+        if (QScrollBar *v = verticalScrollBar()) {
+            v->setValue(v->minimum());
+        }
+    }
+
     void keepCursorVisible()
     {
-        ensureCursorVisible();
+        pinScrollToTop();
     }
 
 protected:
@@ -111,6 +118,28 @@ int twoLineTextHeight(const QFontMetrics &fm)
     return fm.height() * 2 + 2;
 }
 
+bool fileNameUsesMultipleLines(const QString &text, const QFont &font, int width)
+{
+    if (text.isEmpty() || width <= 0) {
+        return false;
+    }
+    QTextLayout layout(text, font);
+    QTextOption opt;
+    opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+    layout.setTextOption(opt);
+    layout.beginLayout();
+    QTextLine line1 = layout.createLine();
+    if (!line1.isValid()) {
+        layout.endLayout();
+        return false;
+    }
+    line1.setLineWidth(width);
+    QTextLine line2 = layout.createLine();
+    const bool multi = line2.isValid();
+    layout.endLayout();
+    return multi;
+}
+
 void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &text,
                          const QFont &font, const QColor &color)
 {
@@ -122,7 +151,6 @@ void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &te
 
     QTextLayout layout(text, font);
     QTextOption opt;
-    opt.setAlignment(Qt::AlignLeft);
     opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     layout.setTextOption(opt);
 
@@ -135,30 +163,31 @@ void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &te
     line1.setLineWidth(rect.width());
 
     QTextLine line2 = layout.createLine();
-    bool truncated = false;
-    if (line2.isValid()) {
-        line2.setLineWidth(rect.width());
-        QTextLine line3 = layout.createLine();
-        truncated = line3.isValid();
-    }
-    layout.endLayout();
-
-    painter->setPen(color);
-    qreal y = rect.top();
-    line1.draw(painter, QPointF(rect.left(), y));
-    y += lineHeight;
-
     if (!line2.isValid()) {
+        layout.endLayout();
+        painter->setPen(color);
+        painter->drawText(rect, Qt::AlignHCenter | Qt::AlignTop,
+                          fm.elidedText(text, Qt::ElideRight, rect.width()));
         return;
     }
+
+    line2.setLineWidth(rect.width());
+    const QTextLine line3 = layout.createLine();
+    const bool truncated = line3.isValid();
+
+    painter->setPen(color);
+    line1.draw(painter, QPointF(rect.left(), rect.top()));
+    const qreal y2 = rect.top() + lineHeight;
     if (truncated) {
         const QString rest = text.mid(line2.textStart());
-        painter->drawText(QRect(rect.left(), int(y), rect.width(), lineHeight),
+        layout.endLayout();
+        painter->drawText(QRect(rect.left(), int(y2), rect.width(), lineHeight),
                           Qt::AlignLeft | Qt::AlignTop,
                           fm.elidedText(rest, Qt::ElideRight, rect.width()));
-    } else {
-        line2.draw(painter, QPointF(rect.left(), y));
+        return;
     }
+    line2.draw(painter, QPointF(rect.left(), y2));
+    layout.endLayout();
 }
 
 } // namespace
@@ -253,8 +282,13 @@ void IconViewDelegate::setEditorData(QWidget *editor,
         return;
     }
     plain->setPlainText(index.data(Qt::EditRole).toString());
-    plain->applyRenameLayout();
+    const QString name = plain->toPlainText();
+    const Qt::Alignment align = fileNameUsesMultipleLines(name, plain->font(), plain->width())
+                                    ? Qt::AlignLeft
+                                    : Qt::AlignHCenter;
+    plain->applyRenameLayout(align);
     plain->selectAll();
+    plain->pinScrollToTop();
 }
 
 void IconViewDelegate::setModelData(QWidget *editor,

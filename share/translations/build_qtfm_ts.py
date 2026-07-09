@@ -22,6 +22,7 @@ EXACT = {
     "Turn off individual modules to see whether freezes or high CPU come from disks or thumbnail generation. Takes effect when you save settings.": "可单独关闭模块，排查卡死或高 CPU 是否由磁盘侧栏或缩略图生成引起。保存设置后立即生效。",
     "Enable disk sidebar": "启用磁盘侧栏",
     "Enable thumbnail generation": "启用缩略图生成",
+    "On macOS, folders open with a single click; double-click opens files only.": "在 macOS 上：单击打开文件夹，双击仅打开文件。",
     "Behaviour": "行为",
     "Confirmation": "确认",
     "Terminal emulator": "终端模拟器",

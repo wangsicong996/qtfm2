@@ -1432,6 +1432,10 @@
     "source": "Enable thumbnail generation"
   },
   {
+    "context": "SettingsDialog",
+    "source": "On macOS, folders open with a single click; double-click opens files only."
+  },
+  {
     "context": "MainWindow",
     "source": "Open warnings and errors saved from previous sessions"
   },

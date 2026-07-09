@@ -544,6 +544,12 @@ void MainWindow::lateStart() {
   tabs->setExpanding(0);
 
   // Connect mouse clicks in views
+#ifdef Q_OS_MAC
+  connect(list, SIGNAL(clicked(QModelIndex)),
+          this, SLOT(listItemClicked(QModelIndex)));
+  connect(detailTree, SIGNAL(clicked(QModelIndex)),
+          this, SLOT(listItemClicked(QModelIndex)));
+#else
   if (settings->value("singleClick").toInt() == 1) {
     connect(list, SIGNAL(clicked(QModelIndex)),
             this, SLOT(listItemClicked(QModelIndex)));
@@ -556,6 +562,7 @@ void MainWindow::lateStart() {
     connect(detailTree, SIGNAL(clicked(QModelIndex)),
             this, SLOT(listDoubleClicked(QModelIndex)));
   }
+#endif
 
   // Connect list view
   connect(list, SIGNAL(activated(QModelIndex)),
@@ -646,6 +653,9 @@ void MainWindow::lateStart() {
 void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thumbState) {
 
   // first run?
+#ifdef Q_OS_MAC
+  settings->setValue(QStringLiteral("singleClick"), 1);
+#endif
     bool isFirstRun = false;
     if (!settings->value("firstRun").isValid()) {
         isFirstRun = true;
@@ -1759,14 +1769,17 @@ void MainWindow::listDoubleClicked(QModelIndex current) {
   if (mods == Qt::ControlModifier || mods == Qt::ShiftModifier) {
     return;
   }
+  const QModelIndex src = modelView->mapToSource(current);
 #ifdef Q_OS_MAC
-  if (modelList->isDir(modelView->mapToSource(current)) && !modelList->fileName(modelView->mapToSource(current)).endsWith(".app")) {
-#else
-  if (modelList->isDir(modelView->mapToSource(current))) {
+  if (modelList->isDir(src) && !modelList->fileName(src).endsWith(QLatin1String(".app"))) {
+    return;
+  }
+  executeFile(current, 0);
+  return;
 #endif
+  if (modelList->isDir(src)) {
     listSelectionModel->setCurrentIndex(current, QItemSelectionModel::ClearAndSelect);
-    QModelIndex i = modelView->mapToSource(current);
-    tree->setCurrentIndex(modelTree->mapFromSource(i));
+    tree->setCurrentIndex(modelTree->mapFromSource(src));
   } else {
     executeFile(current, 0);
   }
