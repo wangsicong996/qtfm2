@@ -13,6 +13,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QFont>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMutex>
@@ -196,7 +197,12 @@ void showViewerDialog(QWidget *parent)
     auto *editor = new QPlainTextEdit(&dlg);
     editor->setReadOnly(true);
     editor->setLineWrapMode(QPlainTextEdit::NoWrap);
-    editor->setFontFamily(QStringLiteral("Monospace"));
+    {
+        QFont mono = editor->font();
+        mono.setStyleHint(QFont::Monospace);
+        mono.setFamily(QStringLiteral("Monospace"));
+        editor->setFont(mono);
+    }
     layout->addWidget(editor, 1);
 
     const QString fullText = readLogText();
