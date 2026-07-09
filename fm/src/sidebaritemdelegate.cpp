@@ -265,8 +265,22 @@ void DiskItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
 
     const QRect rect = opt.rect;
+    const bool mounted = !index.data(DISK_MOUNTPOINT).toString().isEmpty();
+#ifndef Q_OS_MAC
+    const bool dimUnmounted = !mounted;
+#else
+    const bool dimUnmounted = false;
+#endif
+
     if (opt.state & QStyle::State_Selected) {
         style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
+    } else if (dimUnmounted) {
+        QColor bg = opt.palette.color(QPalette::Base);
+        const QColor disabled = opt.palette.color(QPalette::Disabled, QPalette::Text);
+        bg.setRedF((bg.redF() + disabled.redF()) / 2.0);
+        bg.setGreenF((bg.greenF() + disabled.greenF()) / 2.0);
+        bg.setBlueF((bg.blueF() + disabled.blueF()) / 2.0);
+        painter->fillRect(rect, bg);
     } else if (opt.state & QStyle::State_MouseOver) {
         QColor hoverBg = opt.palette.highlight().color();
         hoverBg.setAlpha(72);
@@ -279,8 +293,10 @@ void DiskItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QRect iconRect(rect.left() + kHPad, rect.top() + (rect.height() - kIconSize) / 2,
                   kIconSize, kIconSize);
     if (!icon.isNull()) {
-        icon.paint(painter, iconRect, Qt::AlignCenter,
-                  (opt.state & QStyle::State_Selected) ? QIcon::Selected : QIcon::Normal);
+        const QIcon::Mode iconMode = (opt.state & QStyle::State_Selected)
+                                         ? QIcon::Selected
+                                         : (dimUnmounted ? QIcon::Disabled : QIcon::Normal);
+        icon.paint(painter, iconRect, Qt::AlignCenter, iconMode);
     }
 
     const int textLeft = iconRect.right() + kIconTextGap;
@@ -293,7 +309,8 @@ void DiskItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
     const QColor textColor = (opt.state & QStyle::State_Selected)
                                  ? opt.palette.highlightedText().color()
-                                 : opt.palette.text().color();
+                                 : (dimUnmounted ? opt.palette.color(QPalette::Disabled, QPalette::Text)
+                                                 : opt.palette.text().color());
 
     const QFontMetrics fm(opt.font);
     const int sizeWidth = fm.horizontalAdvance(sizeText) + 4;

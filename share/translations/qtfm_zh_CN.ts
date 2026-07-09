@@ -423,14 +423,6 @@
       <translation>粘贴 the file here</translation>
     </message>
     <message>
-      <source>Properties</source>
-      <translation>属性</translation>
-    </message>
-    <message>
-      <source>View properties of selected items</source>
-      <translation>查看所选项目的属性</translation>
-    </message>
-    <message>
       <source>Places</source>
       <translation>位置</translation>
     </message>
@@ -1294,6 +1286,10 @@
       <translation>筛选 ...</translation>
     </message>
     <message>
+      <source>Folders always first (icon)</source>
+      <translation>图标视图中文件夹始终在前</translation>
+    </message>
+    <message>
       <source>Folders always first (list)</source>
       <translation>列表中文件夹始终在前</translation>
     </message>
@@ -1436,6 +1432,10 @@
     <message>
       <source>Timestamp</source>
       <translation>Timestamp</translation>
+    </message>
+    <message>
+      <source>Toolbar padding (all sides)</source>
+      <translation>工具栏留白（四边相同）</translation>
     </message>
     <message>
       <source>Use "Dark Mode"</source>

@@ -5,9 +5,11 @@
 #include <QFrame>
 #include <QPainterPath>
 #include <QPlainTextEdit>
+#include <QScrollBar>
 #include <QShowEvent>
 #include <QResizeEvent>
 #include <QTimer>
+#include <QWheelEvent>
 #include <QTextBlockFormat>
 #include <QTextCursor>
 #include <QTextDocument>
@@ -51,10 +53,9 @@ public:
         setFrameStyle(QFrame::NoFrame);
         setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
         setTabChangesFocus(true);
         document()->setDocumentMargin(0);
-        setLineWrapMode(QPlainTextEdit::WidgetWidth);
+        setLineWrapMode(QPlainTextEdit::NoWrap);
 
         QPalette pal = palette();
         pal.setColor(QPalette::Highlight, QColor::fromRgb(kRenameSelectionBackground));
@@ -76,6 +77,32 @@ public:
     void keepCursorVisible()
     {
         ensureCursorVisible();
+    }
+
+    void wheelEvent(QWheelEvent *event) override
+    {
+        int delta = 0;
+        if (!event->pixelDelta().isNull()) {
+            if (event->pixelDelta().x() != 0) {
+                delta = event->pixelDelta().x();
+            } else {
+                delta = -event->pixelDelta().y();
+            }
+        } else if (!event->angleDelta().isNull()) {
+            if (event->angleDelta().x() != 0) {
+                delta = event->angleDelta().x() / 2;
+            } else {
+                delta = -event->angleDelta().y() / 2;
+            }
+        }
+        if (delta != 0) {
+            if (QScrollBar *hbar = horizontalScrollBar()) {
+                hbar->setValue(hbar->value() - delta);
+                event->accept();
+                return;
+            }
+        }
+        QPlainTextEdit::wheelEvent(event);
     }
 
 protected:

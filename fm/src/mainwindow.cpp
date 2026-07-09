@@ -493,7 +493,7 @@ void MainWindow::lateStart() {
   // Configure bookmarks list
   bookmarksList->setDragDropMode(QAbstractItemView::DragDrop);
   bookmarksList->setDropIndicatorShown(true);
-  bookmarksList->setDefaultDropAction(Qt::CopyAction);
+  bookmarksList->setDefaultDropAction(Qt::MoveAction);
   bookmarksList->setSelectionMode(QAbstractItemView::ExtendedSelection);
   bookmarksList->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
@@ -2891,6 +2891,21 @@ void MainWindow::handleMediaUnmount()
     if (!index.isValid() || index.data(DISK_IS_SEPARATOR).toBool()) { return; }
     const QString path = index.data(DISK_DEVICE_PATH).toString();
     if (path.isEmpty()) { return; }
+    const QString mountpoint = index.data(DISK_MOUNTPOINT).toString();
+    if (mountpoint.isEmpty()) {
+        return;
+    }
+    const QString label = index.data(Qt::DisplayRole).toString();
+    const QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        tr("Safely Remove"),
+        tr("Safely remove \"%1\"?\nMake sure no programs are using files on this volume.")
+            .arg(label.isEmpty() ? mountpoint : label),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+    if (reply != QMessageBox::Yes) {
+        return;
+    }
 #ifndef NO_UDISKS
     const QString opPath = diskOperationBlockPath(path, disks->devices);
     if (disks->devices.contains(opPath)) {

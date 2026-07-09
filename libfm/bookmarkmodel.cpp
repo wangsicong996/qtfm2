@@ -114,14 +114,18 @@ bool bookmarkmodel::dropMimeData(const QMimeData * data,
                                  int column,
                                  const QModelIndex &parent)
 {
-    // Reorder bookmarks within the list
+    // Reorder bookmarks within the list (always move, never duplicate).
     if (data->hasFormat("application/x-qstandarditemmodeldatalist")) {
         if (parent.column() == -1) {
-            return QStandardItemModel::dropMimeData(data,
-                                                    action,
-                                                    row,
-                                                    column,
-                                                    parent);
+            const bool ok = QStandardItemModel::dropMimeData(data,
+                                                             Qt::MoveAction,
+                                                             row,
+                                                             column,
+                                                             parent);
+            if (ok) {
+                emit bookmarksChanged();
+            }
+            return ok;
         }
         return false;
     }

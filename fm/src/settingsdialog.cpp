@@ -140,6 +140,10 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
       spin->setFocusPolicy(Qt::StrongFocus);
       spin->installEventFilter(this);
   }
+  installEventFilter(this);
+  if (stack) {
+      stack->installEventFilter(this);
+  }
 }
 //---------------------------------------------------------------------------
 
@@ -1107,10 +1111,14 @@ bool SettingsDialog::saveSettings() {
 bool SettingsDialog::eventFilter(QObject *watched, QEvent *event)
 {
     if (event->type() == QEvent::Wheel) {
-        if (auto *spin = qobject_cast<QAbstractSpinBox *>(watched)) {
-            if (!spin->hasFocus()) {
-                event->ignore();
-                return false;
+        QWidget *w = qobject_cast<QWidget *>(watched);
+        for (; w; w = w->parentWidget()) {
+            if (auto *spin = qobject_cast<QAbstractSpinBox *>(w)) {
+                if (!spin->hasFocus()) {
+                    event->ignore();
+                    return true;
+                }
+                break;
             }
         }
     }

@@ -149,7 +149,8 @@ bool viewsSortProxyModel::lessThan(const QModelIndex &left, const QModelIndex &r
     const bool rightDir = fsModel->isDir(r);
     const int dirCmp = compareDirEntries(leftDir, rightDir, directoriesFirst());
     if (dirCmp != 0) {
-        return dirCmp < 0;
+        // Keep folder grouping stable; do not invert with descending name/size sort.
+        return sortOrder() == Qt::AscendingOrder ? (dirCmp < 0) : (dirCmp > 0);
     }
 
     const int column = sortColumn();

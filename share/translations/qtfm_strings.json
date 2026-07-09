@@ -1221,6 +1221,14 @@
   },
   {
     "context": "SettingsDialog",
+    "source": "Folders always first (icon)"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Toolbar padding (all sides)"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Icon view size"
   },
   {
