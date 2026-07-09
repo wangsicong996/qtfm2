@@ -26,6 +26,8 @@ public:
   void loadMimeTypes() const;
   void cacheInfo();
   void setMode(bool);
+  void setThumbnailGenerationEnabled(bool enabled);
+  bool thumbnailGenerationEnabled() const { return m_thumbnailGenerationEnabled; }
   void loadThumbs(QModelIndexList);
   void addCutItems(QStringList);
   void populateItem(myModelItem *item);
@@ -103,6 +105,7 @@ private:
 
   bool realMimeTypes;
   bool showThumbs;
+  bool m_thumbnailGenerationEnabled = true;
   bool m_showListDecorations = true;
 
   QPalette colors;

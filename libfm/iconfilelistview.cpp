@@ -2,6 +2,7 @@
 #include "iconview.h"
 
 #include <QFontMetrics>
+#include <QMouseEvent>
 
 IconFileListView::IconFileListView(QWidget *parent)
     : QListView(parent)
@@ -38,4 +39,35 @@ QModelIndex IconFileListView::indexAt(const QPoint &point) const
         return QModelIndex();
     }
     return idx;
+}
+
+void IconFileListView::mousePressEvent(QMouseEvent *event)
+{
+    QListView::mousePressEvent(event);
+#ifdef Q_OS_MAC
+    if (event->button() != Qt::LeftButton) {
+        return;
+    }
+    if (event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) {
+        return;
+    }
+    const QModelIndex idx = indexAt(event->pos());
+    if (!idx.isValid() || !selectionModel()) {
+        return;
+    }
+    if (selectionModel()->selectedRows().size() > 1) {
+        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect);
+    }
+#endif
+}
+
+void IconFileListView::mouseDoubleClickEvent(QMouseEvent *event)
+{
+#ifdef Q_OS_MAC
+    const QModelIndex idx = indexAt(event->pos());
+    if (idx.isValid() && selectionModel()) {
+        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect);
+    }
+#endif
+    QListView::mouseDoubleClickEvent(event);
 }

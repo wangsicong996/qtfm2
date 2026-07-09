@@ -295,13 +295,44 @@ QString lastErrorMessage()
 
 bool volumeSpaceBytes(const QString &deviceIdentifier,
                       qint64 *usedBytes,
-                      qint64 *totalBytes)
+                      qint64 *totalBytes,
+                      const QString &mountPoint)
 {
     if (!usedBytes || !totalBytes || deviceIdentifier.isEmpty()) {
         return false;
     }
     *usedBytes = 0;
     *totalBytes = 0;
+
+    if (!mountPoint.isEmpty()) {
+        NSURL *url = [NSURL fileURLWithPath:mountPoint.toNSString() isDirectory:YES];
+        NSNumber *totalNum = nil;
+        NSNumber *availNum = nil;
+        if ([url getResourceValue:&totalNum forKey:NSURLVolumeTotalCapacityKey error:nil]
+            && [url getResourceValue:&availNum
+                              forKey:NSURLVolumeAvailableCapacityForImportantUsageKey
+                               error:nil]
+            && totalNum && availNum) {
+            const qint64 total = static_cast<qint64>(totalNum.longLongValue);
+            const qint64 avail = static_cast<qint64>(availNum.longLongValue);
+            if (total > 0) {
+                *totalBytes = total;
+                *usedBytes = qMax<qint64>(0, total - avail);
+                return true;
+            }
+        }
+        if ([url getResourceValue:&totalNum forKey:NSURLVolumeTotalCapacityKey error:nil]
+            && [url getResourceValue:&availNum forKey:NSURLVolumeAvailableCapacityKey error:nil]
+            && totalNum && availNum) {
+            const qint64 total = static_cast<qint64>(totalNum.longLongValue);
+            const qint64 avail = static_cast<qint64>(availNum.longLongValue);
+            if (total > 0) {
+                *totalBytes = total;
+                *usedBytes = qMax<qint64>(0, total - avail);
+                return true;
+            }
+        }
+    }
 
     NSTask *task = [[NSTask alloc] init];
     task.launchPath = @"/usr/sbin/diskutil";
@@ -349,20 +380,30 @@ bool volumeSpaceBytes(const QString &deviceIdentifier,
 
     qint64 total = readLong(@"TotalSize");
     if (total <= 0) {
-        total = readLong(@"APFSSize");
+        total = readLong(@"Size");
     }
     if (total <= 0) {
-        total = readLong(@"Size");
+        total = readLong(@"APFSSize");
     }
     qint64 free = readLong(@"VolumeFreeSpace");
     if (free <= 0) {
         free = readLong(@"FreeSpace");
     }
+    qint64 used = readLong(@"VolumeUsedSpace");
+    if (used <= 0) {
+        used = readLong(@"UsedSpace");
+    }
     if (total <= 0) {
         return false;
     }
     *totalBytes = total;
-    *usedBytes = qMax<qint64>(0, total - free);
+    if (used > 0) {
+        *usedBytes = qMin(used, total);
+    } else if (free > 0) {
+        *usedBytes = qMax<qint64>(0, total - free);
+    } else {
+        *usedBytes = 0;
+    }
     return true;
 }
 

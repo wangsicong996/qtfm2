@@ -16,6 +16,10 @@ public:
 
     QModelIndex indexAt(const QPoint &point) const override;
 
+protected:
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
+
 private:
     QRect contentRectForVisualRect(const QRect &cellRect) const;
 };

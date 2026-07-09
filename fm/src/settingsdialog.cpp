@@ -561,6 +561,22 @@ QWidget *SettingsDialog::createAdvSettings()
 
     layoutWidget->addWidget(grpCopyX);
 
+    QGroupBox *grpModules = new QGroupBox(tr("Module testing (stability)"), widget);
+    QVBoxLayout *layoutModules = new QVBoxLayout(grpModules);
+    auto *modulesHint = new QLabel(
+        tr("Turn off individual modules to see whether freezes or high CPU come from "
+           "disks or thumbnail generation. Takes effect when you save settings."),
+        grpModules);
+    modulesHint->setWordWrap(true);
+    layoutModules->addWidget(modulesHint);
+    checkEnableDiskSidebar = new QCheckBox(tr("Enable disk sidebar"), grpModules);
+    checkEnableThumbnailGeneration =
+        new QCheckBox(tr("Enable thumbnail generation"), grpModules);
+    layoutModules->addWidget(checkEnableDiskSidebar);
+    layoutModules->addWidget(checkEnableThumbnailGeneration);
+    layoutWidget->addWidget(grpModules);
+    layoutWidget->addStretch();
+
     return widget;
 }
 //---------------------------------------------------------------------------
@@ -820,6 +836,14 @@ void SettingsDialog::readSettings() {
 
   // Read custom actions
   checkOutput->setChecked(settingsPtr->value("showActionOutput", true).toBool());
+  if (checkEnableDiskSidebar) {
+      checkEnableDiskSidebar->setChecked(
+          settingsPtr->value(QStringLiteral("enableDiskSidebar"), true).toBool());
+  }
+  if (checkEnableThumbnailGeneration) {
+      checkEnableThumbnailGeneration->setChecked(
+          settingsPtr->value(QStringLiteral("enableThumbnailGeneration"), true).toBool());
+  }
   if (customActionsSettingsWidget) {
       customActionsSettingsWidget->loadFromSettings(settingsPtr);
   }
@@ -1050,6 +1074,14 @@ bool SettingsDialog::saveSettings() {
 
   // Custom actions
   settingsPtr->setValue("showActionOutput", checkOutput->isChecked());
+  if (checkEnableDiskSidebar) {
+      settingsPtr->setValue(QStringLiteral("enableDiskSidebar"),
+                            checkEnableDiskSidebar->isChecked());
+  }
+  if (checkEnableThumbnailGeneration) {
+      settingsPtr->setValue(QStringLiteral("enableThumbnailGeneration"),
+                            checkEnableThumbnailGeneration->isChecked());
+  }
   if (customActionsSettingsWidget) {
       customActionsSettingsWidget->saveToSettings(settingsPtr);
   }

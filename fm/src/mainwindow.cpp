@@ -172,9 +172,9 @@ MainWindow::MainWindow(const QString &forcedStartPath)
 #endif
 #ifdef Q_OS_MAC
     {
-        auto *macDiskTimer = new QTimer(this);
-        connect(macDiskTimer, &QTimer::timeout, this, &MainWindow::scheduleMacPopulateMedia);
-        macDiskTimer->start(30000);
+        m_macDiskPollTimer = new QTimer(this);
+        connect(m_macDiskPollTimer, &QTimer::timeout, this, &MainWindow::scheduleMacPopulateMedia);
+        m_macDiskPollTimer->start(30000);
         macVolumesWatcher = new QFileSystemWatcher(this);
         const QString volumesRoot = QStringLiteral("/Volumes");
         if (QDir(volumesRoot).exists()) {
@@ -695,9 +695,6 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   // Set bookmarks
   firstRunBookmarks(isFirstRun);
   refreshBookmarkGroupBar();
-#if defined(QTFM_HAVE_SIDEBAR_DISKS)
-  populateMedia();
-#endif
   bookmarksList->setModel(bookmarkListProxy);
   bookmarksList->setResizeMode(QListView::Adjust);
   bookmarksList->setFlow(QListView::TopToBottom);
@@ -849,6 +846,8 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
 #if QT_VERSION >= 0x050000
   applyThemeFromSettings();
 #endif
+
+  applyModuleTogglesFromSettings();
 }
 
 void MainWindow::firstRunBookmarks(bool isFirstRun)
@@ -1207,7 +1206,7 @@ void MainWindow::dirLoaded(bool thumbs)
     statusSize->setText(QString("%1 items").arg(items.count()));
     statusDate->setText(QString("%1").arg(total));
 
-    if (thumbsAct->isChecked() && thumbs) {
+    if (thumbsAct->isChecked() && thumbs && modelList->thumbnailGenerationEnabled()) {
       myModel *modelListPtr = modelList;
       QMetaObject::invokeMethod(modelList, [modelListPtr, items]() {
         modelListPtr->loadThumbs(items);
@@ -1765,7 +1764,7 @@ void MainWindow::listDoubleClicked(QModelIndex current) {
 #else
   if (modelList->isDir(modelView->mapToSource(current))) {
 #endif
-    listSelectionModel->clearSelection();
+    listSelectionModel->setCurrentIndex(current, QItemSelectionModel::ClearAndSelect);
     QModelIndex i = modelView->mapToSource(current);
     tree->setCurrentIndex(modelTree->mapFromSource(i));
   } else {
@@ -2811,7 +2810,9 @@ void applyGroupedDisks(disksModel *model, QVector<DiskPopulateItem> items)
         lastGroup = item.groupKey;
     }
     model->setRows(rows);
+#ifndef Q_OS_MAC
     model->refreshUsage();
+#endif
 }
 
 } // namespace
@@ -2838,7 +2839,7 @@ QVector<DiskPopulateItem> buildMacDiskPopulateItems()
         item.groupTotalBytes = v.physicalDiskSizeBytes;
         qint64 used = 0;
         qint64 total = 0;
-        if (MacDisks::volumeSpaceBytes(v.deviceIdentifier, &used, &total)) {
+        if (MacDisks::volumeSpaceBytes(v.deviceIdentifier, &used, &total, v.mountPoint)) {
             item.prefetchedUsed = used;
             item.prefetchedTotal = total;
         }
@@ -2851,6 +2852,9 @@ QVector<DiskPopulateItem> buildMacDiskPopulateItems()
 
 void MainWindow::scheduleMacPopulateMedia()
 {
+    if (!settings->value(QStringLiteral("enableDiskSidebar"), true).toBool()) {
+        return;
+    }
     if (!m_macDiskDebounceTimer) {
         m_macDiskDebounceTimer = new QTimer(this);
         m_macDiskDebounceTimer->setSingleShot(true);
@@ -2891,8 +2895,72 @@ void MainWindow::scheduleMacPopulateMedia()
 }
 #endif
 
+void MainWindow::applyModuleTogglesFromSettings()
+{
+    const bool disksOn = settings->value(QStringLiteral("enableDiskSidebar"), true).toBool();
+    const bool thumbGen = settings->value(QStringLiteral("enableThumbnailGeneration"), true).toBool();
+
+    modelList->setThumbnailGenerationEnabled(thumbGen);
+    if (thumbsAct) {
+        thumbsAct->setEnabled(thumbGen);
+        if (!thumbGen) {
+            thumbsAct->setChecked(false);
+            modelList->setMode(false);
+        } else {
+            modelList->setMode(thumbsAct->isChecked());
+        }
+    }
+
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
+    if (sidebarTabs && disksList) {
+        const int tabIdx = sidebarTabs->indexOf(disksList);
+        if (tabIdx >= 0) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+            sidebarTabs->setTabVisible(tabIdx, disksOn);
+#else
+            disksList->setVisible(disksOn);
+            sidebarTabs->setTabEnabled(tabIdx, disksOn);
+#endif
+        }
+    }
+#ifdef Q_OS_MAC
+    if (m_macDiskPollTimer) {
+        if (disksOn) {
+            if (!m_macDiskPollTimer->isActive()) {
+                m_macDiskPollTimer->start(30000);
+            }
+        } else {
+            m_macDiskPollTimer->stop();
+        }
+    }
+    if (macVolumesWatcher) {
+        const QString volumesRoot = QStringLiteral("/Volumes");
+        if (!disksOn) {
+            const QStringList watched = macVolumesWatcher->directories();
+            if (!watched.isEmpty()) {
+                macVolumesWatcher->removePaths(watched);
+            }
+        } else if (QDir(volumesRoot).exists()
+                   && !macVolumesWatcher->directories().contains(volumesRoot)) {
+            macVolumesWatcher->addPath(volumesRoot);
+        }
+    }
+#endif
+    if (!disksOn && modelDisks) {
+        modelDisks->setRows({});
+    } else if (disksOn) {
+        populateMedia();
+    }
+#endif
+}
+
 void MainWindow::populateMedia()
 {
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
+    if (!settings->value(QStringLiteral("enableDiskSidebar"), true).toBool()) {
+        return;
+    }
+#endif
     QVector<DiskPopulateItem> items;
 #ifndef NO_UDISKS
     QMapIterator<QString, Device *> it(disks->devices);

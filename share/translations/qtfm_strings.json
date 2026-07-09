@@ -1416,6 +1416,22 @@
     "source": "View diagnostic log…"
   },
   {
+    "context": "SettingsDialog",
+    "source": "Module testing (stability)"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Turn off individual modules to see whether freezes or high CPU come from disks or thumbnail generation. Takes effect when you save settings."
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Enable disk sidebar"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Enable thumbnail generation"
+  },
+  {
     "context": "MainWindow",
     "source": "Open warnings and errors saved from previous sessions"
   },

@@ -137,6 +137,9 @@ void disksModel::setMountpoint(const QString &devicePath, const QString &mountpo
 void disksModel::refreshUsage()
 {
     if (disksData.isEmpty()) { return; }
+#ifdef Q_OS_MAC
+    return;
+#endif
     for (int i = 0; i < disksData.count(); ++i) {
         DiskEntry &d = disksData[i];
         if (d.isSeparator) {

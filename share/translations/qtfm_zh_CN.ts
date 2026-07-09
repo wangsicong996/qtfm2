@@ -1329,8 +1329,16 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>启用单击打开</translation>
     </message>
     <message>
+      <source>Enable disk sidebar</source>
+      <translation>启用磁盘侧栏</translation>
+    </message>
+    <message>
       <source>Enable path history</source>
       <translation>启用路径历史</translation>
+    </message>
+    <message>
+      <source>Enable thumbnail generation</source>
+      <translation>启用缩略图生成</translation>
     </message>
     <message>
       <source>Everything</source>
@@ -1395,6 +1403,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Mime types</source>
       <translation>Mime types</translation>
+    </message>
+    <message>
+      <source>Module testing (stability)</source>
+      <translation>模块测试（稳定性）</translation>
     </message>
     <message>
       <source>Move</source>
@@ -1491,6 +1503,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Toolbar padding (all sides)</source>
       <translation>工具栏留白（四边相同）</translation>
+    </message>
+    <message>
+      <source>Turn off individual modules to see whether freezes or high CPU come from disks or thumbnail generation. Takes effect when you save settings.</source>
+      <translation>可单独关闭模块，排查卡死或高 CPU 是否由磁盘侧栏或缩略图生成引起。保存设置后立即生效。</translation>
     </message>
     <message>
       <source>Use "Dark Mode"</source>

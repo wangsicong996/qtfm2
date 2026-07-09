@@ -179,6 +179,7 @@ public slots:
     void thumbUpdate(const QString &path);
     void addressChanged(int,int);
     void loadSettings(bool wState = true, bool hState = true, bool tabState = true, bool thumbState = true);
+    void applyModuleTogglesFromSettings();
     void firstRunBookmarks(bool isFirstRun);
     void loadBookmarks();
     void writeBookmarks();
@@ -384,6 +385,7 @@ private:
     QAction *macCopyImageToClipboardAct = nullptr;
     QAction *macCopyFilePathAct = nullptr;
     QFileSystemWatcher *macVolumesWatcher = nullptr;
+    QTimer *m_macDiskPollTimer = nullptr;
     void scheduleMacPopulateMedia();
     QTimer *m_macDiskDebounceTimer = nullptr;
     QAtomicInt m_macDiskWorkerRunning;
