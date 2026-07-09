@@ -605,13 +605,12 @@ void MainWindow::renameFileDialog()
     if (currentView == 2 && idx.column() != COLUMN_NAME) {
         idx = idx.sibling(idx.row(), COLUMN_NAME);
     }
-    const QModelIndex src = modelView->mapToSource(idx);
-    if (!src.isValid()) {
+    if (!idx.isValid()) {
         return;
     }
 
     FileRenameDialog dlg(this);
-    dlg.setFileName(modelList->data(src, Qt::DisplayRole).toString());
+    dlg.setFileName(modelView->data(idx, Qt::DisplayRole).toString());
     if (dlg.exec() != QDialog::Accepted) {
         return;
     }
@@ -621,10 +620,10 @@ void MainWindow::renameFileDialog()
     if (name.isEmpty()) {
         return;
     }
-    if (name == modelList->data(src, Qt::DisplayRole).toString()) {
+    if (name == modelView->data(idx, Qt::DisplayRole).toString()) {
         return;
     }
-    if (!modelList->setData(src, name, Qt::EditRole)) {
+    if (!modelView->setData(idx, name, Qt::EditRole)) {
         QMessageBox::warning(this, tr("Rename file"), tr("Could not rename the file."));
     }
 }
