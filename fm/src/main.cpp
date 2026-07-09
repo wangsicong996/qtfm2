@@ -24,6 +24,7 @@
 #include "mainwindow.h"
 #include "common.h"
 #include "apptranslator.h"
+#include "diagnosticlog.h"
 #include <QSettings>
 #ifdef Q_OS_MAC
 #include <QStyleFactory>
@@ -38,23 +39,19 @@ void msgHandler(QtMsgType type, const QMessageLogContext &context, const QString
     if (localMsg.contains("link outline hasn't been detected!") ||
         localMsg.contains("iCCP: known incorrect sRGB profile") ||
         localMsg.contains("XDG_RUNTIME_DIR")) { return; }
+    const char *prefix = "Msg";
     switch (type) {
-    case QtDebugMsg:
-        fprintf(stderr, "Debug: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
+    case QtDebugMsg: prefix = "Debug"; break;
 #if QT_VERSION >= 0x050500
-    case QtInfoMsg:
-        fprintf(stderr, "Info: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
+    case QtInfoMsg: prefix = "Info"; break;
 #endif
-    case QtWarningMsg:
-        fprintf(stderr, "Warning: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
-    case QtCriticalMsg:
-        fprintf(stderr, "Critical: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
-    case QtFatalMsg:
-        fprintf(stderr, "Fatal: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
+    case QtWarningMsg: prefix = "Warning"; break;
+    case QtCriticalMsg: prefix = "Critical"; break;
+    case QtFatalMsg: prefix = "Fatal"; break;
+    }
+    fprintf(stderr, "%s: %s (%s:%u, %s)\n", prefix, localMsg.constData(), context.file, context.line, context.function);
+    DiagnosticLog::appendLine(QByteArray(prefix) + ": " + localMsg);
+    if (type == QtFatalMsg) {
         abort();
     }
 }
@@ -79,6 +76,9 @@ int main(int argc, char *argv[]) {
   QApplication::setOrganizationName(APP);
   QApplication::setApplicationName(APP);
   QApplication::setOrganizationDomain("eu");
+
+  DiagnosticLog::openSession();
+  qInfo("QtFM diagnostic log: %s", qPrintable(DiagnosticLog::filePath()));
 
   {
     QSettings settings(Common::configFile(), QSettings::IniFormat);

@@ -469,6 +469,11 @@ void MainWindow::createActions() {
   connect(aboutQtAct, SIGNAL(triggered(bool)), qApp, SLOT(aboutQt()));
   actionList->append(aboutQtAct);
 
+  viewDiagnosticLogAct = new QAction(tr("View diagnostic log…"), this);
+  viewDiagnosticLogAct->setStatusTip(tr("Open warnings and errors saved from previous sessions"));
+  connect(viewDiagnosticLogAct, SIGNAL(triggered()), this, SLOT(showDiagnosticLog()));
+  actionList->append(viewDiagnosticLogAct);
+
 #ifdef Q_OS_MAC
   macOpenWithHelpAct = new QAction(tr("macOS 打开方式设置…"), this);
   macOpenWithHelpAct->setStatusTip(tr("如何在设置里配置 Open with"));
@@ -697,6 +702,8 @@ void MainWindow::createMenus() {
   helpMenu->addAction(macOpenWithHelpAct);
   helpMenu->addSeparator();
 #endif
+  helpMenu->addAction(viewDiagnosticLogAct);
+  helpMenu->addSeparator();
   helpMenu->addAction(aboutAct);
   helpMenu->addAction(aboutQtAct);
 

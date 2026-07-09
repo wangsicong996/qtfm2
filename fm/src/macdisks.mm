@@ -293,6 +293,79 @@ QString lastErrorMessage()
     return gLastError;
 }
 
+bool volumeSpaceBytes(const QString &deviceIdentifier,
+                      qint64 *usedBytes,
+                      qint64 *totalBytes)
+{
+    if (!usedBytes || !totalBytes || deviceIdentifier.isEmpty()) {
+        return false;
+    }
+    *usedBytes = 0;
+    *totalBytes = 0;
+
+    NSTask *task = [[NSTask alloc] init];
+    task.launchPath = @"/usr/sbin/diskutil";
+    task.arguments = @[ @"info", @"-plist", deviceIdentifier.toNSString() ];
+    NSPipe *pipe = [NSPipe pipe];
+    task.standardOutput = pipe;
+    task.standardError = pipe;
+
+    @try {
+        [task launch];
+        [task waitUntilExit];
+    } @catch (NSException *ex) {
+        gLastError = QString::fromNSString(ex.reason);
+        return false;
+    }
+
+    if (task.terminationStatus != 0) {
+        NSData *errData = [[pipe fileHandleForReading] readDataToEndOfFile];
+        gLastError = QString::fromUtf8(
+            reinterpret_cast<const char *>(errData.bytes),
+            static_cast<int>(errData.length)).trimmed();
+        return false;
+    }
+
+    NSData *data = [[pipe fileHandleForReading] readDataToEndOfFile];
+    NSError *error = nil;
+    id plist = [NSPropertyListSerialization propertyListWithData:data
+                                                           options:NSPropertyListImmutable
+                                                            format:nullptr
+                                                             error:&error];
+    if (!plist || ![plist isKindOfClass:[NSDictionary class]]) {
+        gLastError = error ? QString::fromNSString(error.localizedDescription)
+                           : QStringLiteral("diskutil info plist parse failed");
+        return false;
+    }
+
+    NSDictionary *dict = (NSDictionary *)plist;
+    auto readLong = [&dict](NSString *key) -> qint64 {
+        id value = dict[key];
+        if ([value respondsToSelector:@selector(longLongValue)]) {
+            return static_cast<qint64>([value longLongValue]);
+        }
+        return 0;
+    };
+
+    qint64 total = readLong(@"TotalSize");
+    if (total <= 0) {
+        total = readLong(@"APFSSize");
+    }
+    if (total <= 0) {
+        total = readLong(@"Size");
+    }
+    qint64 free = readLong(@"VolumeFreeSpace");
+    if (free <= 0) {
+        free = readLong(@"FreeSpace");
+    }
+    if (total <= 0) {
+        return false;
+    }
+    *totalBytes = total;
+    *usedBytes = qMax<qint64>(0, total - free);
+    return true;
+}
+
 } // namespace MacDisks
 
 #endif

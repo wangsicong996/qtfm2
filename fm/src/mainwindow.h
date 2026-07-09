@@ -26,6 +26,7 @@
 #include <QMainWindow>
 #include <QSettings>
 class QTimer;
+#include <QAtomicInt>
 #include <QSplitter>
 #include <QTreeView>
 #include <QListView>
@@ -103,6 +104,7 @@ public slots:
     void lateStart();
     void goUpDir();
     void goBackDir();
+    void goForwardDir();
     void goHomeDir();
     void deleteFile();
     void trashFile();
@@ -190,6 +192,7 @@ public slots:
     void handleBookmarksChanged();
     void firstRunCustomActions(bool isFirstRun);
     void showAboutBox();
+    void showDiagnosticLog();
 #ifdef Q_OS_MAC
     void showMacOpenWithHelp();
     void showMacFileAccessHelp();
@@ -284,6 +287,7 @@ private:
     QString term;
     QFileInfo curIndex;
     QModelIndex backIndex;
+    QStringList m_navForward;
 
     QSortFilterProxyModel *modelTree;
     viewsSortProxyModel *modelView;
@@ -370,6 +374,7 @@ private:
     QAction *tabsOnTopAct;
     QAction *aboutAct;
     QAction *aboutQtAct;
+    QAction *viewDiagnosticLogAct = nullptr;
 #ifdef Q_OS_MAC
     QAction *macOpenWithHelpAct;
     QAction *macFileAccessHelpAct;
@@ -379,6 +384,10 @@ private:
     QAction *macCopyImageToClipboardAct = nullptr;
     QAction *macCopyFilePathAct = nullptr;
     QFileSystemWatcher *macVolumesWatcher = nullptr;
+    void scheduleMacPopulateMedia();
+    QTimer *m_macDiskDebounceTimer = nullptr;
+    QAtomicInt m_macDiskWorkerRunning;
+    bool m_macDiskRefreshPending = false;
 #endif
 #if defined(QTFM_HAVE_SIDEBAR_DISKS)
     QAction *mediaUnmountAct;

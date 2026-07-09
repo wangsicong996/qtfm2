@@ -152,6 +152,7 @@ add_executable(
     fm/src/settingsuistyles.cpp
     fm/src/actiondefs.cpp
     fm/src/actiontriggers.cpp
+    fm/src/diagnosticlog.cpp
     share/${PROJECT_NAME}.qrc
     share/mimes.qrc
 )

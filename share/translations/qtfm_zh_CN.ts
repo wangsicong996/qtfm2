@@ -110,6 +110,53 @@
     </message>
   </context>
   <context>
+    <name>DiagnosticLog</name>
+    <message>
+      <source>(Log file is empty or not created yet.)</source>
+      <translation>（日志文件为空或尚未创建。）</translation>
+    </message>
+    <message>
+      <source>(No warnings or errors in the log file yet.)
+
+Switch to “Full log” to see all messages, or reproduce the problem and refresh.</source>
+      <translation>（日志中尚无警告或错误。）
+
+可切换到「完整日志」查看全部信息，或复现问题后点「刷新」。</translation>
+    </message>
+    <message>
+      <source>Copied</source>
+      <translation>已复制</translation>
+    </message>
+    <message>
+      <source>Copy to clipboard</source>
+      <translation>复制到剪贴板</translation>
+    </message>
+    <message>
+      <source>Diagnostic log</source>
+      <translation>诊断日志</translation>
+    </message>
+    <message>
+      <source>Full log</source>
+      <translation>完整日志</translation>
+    </message>
+    <message>
+      <source>Log file: %1</source>
+      <translation>日志文件：%1</translation>
+    </message>
+    <message>
+      <source>Logs are saved to disk continuously. If QtFM stopped responding, quit and restart, then open this window again to read messages from the previous session.</source>
+      <translation>日志会持续写入磁盘。若 QtFM 无响应，请先退出并重新启动，再打开本窗口即可查看上一次运行（含卡死前）的记录。</translation>
+    </message>
+    <message>
+      <source>Refresh</source>
+      <translation>刷新</translation>
+    </message>
+    <message>
+      <source>Warnings and errors</source>
+      <translation>警告与错误</translation>
+    </message>
+  </context>
+  <context>
     <name>FileUtils</name>
     <message>
       <source>Filetype:</source>
@@ -411,6 +458,10 @@
       <translation>打开 virtual terminal</translation>
     </message>
     <message>
+      <source>Open warnings and errors saved from previous sessions</source>
+      <translation>查看已保存的警告与错误（含上次异常退出前的记录）</translation>
+    </message>
+    <message>
       <source>Open with</source>
       <translation>打开方式</translation>
     </message>
@@ -569,6 +620,10 @@
     <message>
       <source>View</source>
       <translation>视图</translation>
+    </message>
+    <message>
+      <source>View diagnostic log…</source>
+      <translation>查看诊断日志…</translation>
     </message>
     <message>
       <source>View thumbnails for image files</source>

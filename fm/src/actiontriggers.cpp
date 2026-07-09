@@ -3,6 +3,7 @@
 #include "macfileaccess.h"
 #endif
 #include "mainwindow.h"
+#include "diagnosticlog.h"
 #include "settingsdialog.h"
 #include "openwithconfig.h"
 #include "dfmqstyleditemdelegate.h"
@@ -195,6 +196,7 @@ void MainWindow::goBackDir() {
 
   // Retrieve current index
   QString current = pathEdit->currentText();
+  m_navForward.append(current);
   if (current.contains(pathEdit->itemText(1))) {
     backIndex = modelList->index(current);
   }
@@ -208,6 +210,23 @@ void MainWindow::goBackDir() {
 
   // Sets new dir index
   QModelIndex i = modelList->index(pathEdit->itemText(0));
+  tree->setCurrentIndex(modelTree->mapFromSource(i));
+}
+
+void MainWindow::goForwardDir()
+{
+  if (m_navForward.isEmpty()) {
+    return;
+  }
+  const QString target = m_navForward.takeLast();
+  if (!QFileInfo(target).exists()) {
+    return;
+  }
+  backIndex = modelList->index(pathEdit->currentText());
+  QModelIndex i = modelList->index(target);
+  if (!i.isValid()) {
+    return;
+  }
   tree->setCurrentIndex(modelTree->mapFromSource(i));
 }
 //---------------------------------------------------------------------------
@@ -942,6 +961,12 @@ void MainWindow::showAboutBox()
     }
     if (!details.isEmpty()) { box.setDetailedText(details); }
     box.exec();
+}
+//---------------------------------------------------------------------------
+
+void MainWindow::showDiagnosticLog()
+{
+    DiagnosticLog::showViewerDialog(this);
 }
 //---------------------------------------------------------------------------
 

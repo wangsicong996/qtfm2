@@ -57,6 +57,7 @@ public:
     QStringList allDevicePaths() const;
     /** Recomputes used/total bytes for every mounted disk (statfs). */
     void refreshUsage();
+    void setUsageForDevice(const QString &devicePath, qint64 usedBytes, qint64 totalBytes);
     /** Replaces all rows (disk volumes and optional group separators). */
     void setRows(const QVector<DiskListRow> &rows);
 

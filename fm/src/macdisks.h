@@ -29,6 +29,10 @@ bool mountVolume(const QString &deviceIdentifier);
 bool unmountVolume(const QString &deviceIdentifier);
 bool ejectWholeDisk(const QString &wholeDiskIdentifier);
 QString lastErrorMessage();
+/** Per-volume capacity from `diskutil info` (not whole physical disk). */
+bool volumeSpaceBytes(const QString &deviceIdentifier,
+                      qint64 *usedBytes,
+                      qint64 *totalBytes);
 
 } // namespace MacDisks
 

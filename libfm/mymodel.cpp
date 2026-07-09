@@ -862,6 +862,11 @@ int thumbnailMaxConcurrentJobs()
     }
     return qMin(4, ideal);
 }
+#elif defined(Q_OS_MAC)
+int thumbnailMaxConcurrentJobs()
+{
+    return 1;
+}
 #else
 int thumbnailMaxConcurrentJobs()
 {

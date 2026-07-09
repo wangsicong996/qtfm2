@@ -173,15 +173,15 @@ MainWindow::MainWindow(const QString &forcedStartPath)
 #ifdef Q_OS_MAC
     {
         auto *macDiskTimer = new QTimer(this);
-        connect(macDiskTimer, &QTimer::timeout, this, &MainWindow::populateMedia);
-        macDiskTimer->start(5000);
+        connect(macDiskTimer, &QTimer::timeout, this, &MainWindow::scheduleMacPopulateMedia);
+        macDiskTimer->start(30000);
         macVolumesWatcher = new QFileSystemWatcher(this);
         const QString volumesRoot = QStringLiteral("/Volumes");
         if (QDir(volumesRoot).exists()) {
             macVolumesWatcher->addPath(volumesRoot);
         }
         connect(macVolumesWatcher, &QFileSystemWatcher::directoryChanged,
-                this, &MainWindow::populateMedia);
+                this, &MainWindow::scheduleMacPopulateMedia);
     }
 #endif
 
@@ -1129,6 +1129,7 @@ void MainWindow::treeSelectionChanged(QModelIndex current, QModelIndex previous)
     }
 
     if (curIndex.filePath() != pathEdit->itemText(0)) {
+        m_navForward.clear();
         if (tabs->count() && pathHistory) { tabs->addHistory(curIndex.filePath()); }
         if (!pathHistory && pathEdit->count()>0) { pathEdit->clear(); }
         pathEdit->insertItem(0,curIndex.filePath());
@@ -1160,6 +1161,7 @@ void MainWindow::treeSelectionChanged(QModelIndex current, QModelIndex previous)
         else { list->scrollTo(modelView->mapFromSource(backIndex)); }
     } else {
         listSelectionModel->blockSignals(1);
+        listSelectionModel->clearSelection();
         listSelectionModel->clear();
     }
 
@@ -1763,6 +1765,7 @@ void MainWindow::listDoubleClicked(QModelIndex current) {
 #else
   if (modelList->isDir(modelView->mapToSource(current))) {
 #endif
+    listSelectionModel->clearSelection();
     QModelIndex i = modelView->mapToSource(current);
     tree->setCurrentIndex(modelTree->mapFromSource(i));
   } else {
@@ -2573,8 +2576,12 @@ bool MainWindow::eventFilter(QObject *o, QEvent *e)
         switch (me->button()) {
         case Qt::BackButton:
             goBackDir();
+            return true;
+        case Qt::ForwardButton:
+            goForwardDir();
+            return true;
+        default:
             break;
-        default:;
         }
     }
 
@@ -2770,6 +2777,8 @@ struct DiskPopulateItem {
     bool isOptical = false;
     QString groupKey;
     qint64 groupTotalBytes = 0;
+    qint64 prefetchedUsed = -1;
+    qint64 prefetchedTotal = -1;
 };
 
 void applyGroupedDisks(disksModel *model, QVector<DiskPopulateItem> items)
@@ -2807,6 +2816,81 @@ void applyGroupedDisks(disksModel *model, QVector<DiskPopulateItem> items)
 
 } // namespace
 
+#ifdef Q_OS_MAC
+namespace {
+
+QVector<DiskPopulateItem> buildMacDiskPopulateItems()
+{
+    QVector<DiskPopulateItem> items;
+    const QVector<MacDiskVolume> volumes = MacDisks::listVolumes();
+    items.reserve(volumes.size());
+    for (const MacDiskVolume &v : volumes) {
+        DiskPopulateItem item;
+        item.devicePath = v.deviceIdentifier;
+        item.name = diskDisplayNameFromTitle(v.displayTitle);
+        item.mountpoint = v.mountPoint;
+        item.isOptical = v.isOptical;
+        item.groupKey = v.physicalDiskGroup.isEmpty()
+                            ? (v.wholeDiskIdentifier.isEmpty()
+                                   ? diskWholeGroupKey(v.deviceIdentifier)
+                                   : v.wholeDiskIdentifier)
+                            : v.physicalDiskGroup;
+        item.groupTotalBytes = v.physicalDiskSizeBytes;
+        qint64 used = 0;
+        qint64 total = 0;
+        if (MacDisks::volumeSpaceBytes(v.deviceIdentifier, &used, &total)) {
+            item.prefetchedUsed = used;
+            item.prefetchedTotal = total;
+        }
+        items.append(item);
+    }
+    return items;
+}
+
+} // namespace
+
+void MainWindow::scheduleMacPopulateMedia()
+{
+    if (!m_macDiskDebounceTimer) {
+        m_macDiskDebounceTimer = new QTimer(this);
+        m_macDiskDebounceTimer->setSingleShot(true);
+        m_macDiskDebounceTimer->setInterval(400);
+        connect(m_macDiskDebounceTimer, &QTimer::timeout, this, [this]() {
+            if (m_macDiskWorkerRunning.loadAcquire() != 0) {
+                m_macDiskRefreshPending = true;
+                return;
+            }
+            if (!m_macDiskWorkerRunning.testAndSetAcquire(0, 1)) {
+                m_macDiskRefreshPending = true;
+                return;
+            }
+            QtConcurrent::run([this]() {
+                const QVector<DiskPopulateItem> items = buildMacDiskPopulateItems();
+                QMetaObject::invokeMethod(
+                    this,
+                    [this, items]() {
+                        applyGroupedDisks(modelDisks, items);
+                        for (const DiskPopulateItem &item : items) {
+                            if (item.prefetchedTotal > 0) {
+                                modelDisks->setUsageForDevice(item.devicePath,
+                                                              item.prefetchedUsed,
+                                                              item.prefetchedTotal);
+                            }
+                        }
+                        m_macDiskWorkerRunning.storeRelease(0);
+                        if (m_macDiskRefreshPending) {
+                            m_macDiskRefreshPending = false;
+                            scheduleMacPopulateMedia();
+                        }
+                    },
+                    Qt::QueuedConnection);
+            });
+        });
+    }
+    m_macDiskDebounceTimer->start();
+}
+#endif
+
 void MainWindow::populateMedia()
 {
     QVector<DiskPopulateItem> items;
@@ -2830,21 +2914,8 @@ void MainWindow::populateMedia()
         items.append(item);
     }
 #elif defined(Q_OS_MAC)
-    const QVector<MacDiskVolume> volumes = MacDisks::listVolumes();
-    for (const MacDiskVolume &v : volumes) {
-        DiskPopulateItem item;
-        item.devicePath = v.deviceIdentifier;
-        item.name = diskDisplayNameFromTitle(v.displayTitle);
-        item.mountpoint = v.mountPoint;
-        item.isOptical = v.isOptical;
-        item.groupKey = v.physicalDiskGroup.isEmpty()
-                            ? (v.wholeDiskIdentifier.isEmpty()
-                                   ? diskWholeGroupKey(v.deviceIdentifier)
-                                   : v.wholeDiskIdentifier)
-                            : v.physicalDiskGroup;
-        item.groupTotalBytes = v.physicalDiskSizeBytes;
-        items.append(item);
-    }
+    scheduleMacPopulateMedia();
+    return;
 #endif
     applyGroupedDisks(modelDisks, items);
 }

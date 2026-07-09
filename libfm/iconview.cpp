@@ -2,6 +2,8 @@
 #include "bundledicons.h"
 
 #include <QListView>
+#include <QAbstractItemView>
+#include <QItemSelectionModel>
 #include <QFrame>
 #include <QPainterPath>
 #include <QPlainTextEdit>
@@ -324,6 +326,19 @@ void IconViewDelegate::paint(QPainter *painter,
     bool isSelected = opt.state & QStyle::State_Selected;
     bool isEditing = _isEditing && index==_index;
 
+    bool suppressHoverChrome = false;
+#ifdef Q_OS_MAC
+    if (!isSelected && (opt.state & QStyle::State_MouseOver)) {
+        if (const auto *view = qobject_cast<const QAbstractItemView *>(opt.widget)) {
+            if (QItemSelectionModel *sel = view->selectionModel()) {
+                if (sel->hasSelection() && sel->currentIndex() == index) {
+                    suppressHoverChrome = true;
+                }
+            }
+        }
+    }
+#endif
+
     painter->setRenderHint(QPainter::Antialiasing);
 
     if (isSelected && !isEditing) {
@@ -333,7 +348,7 @@ void IconViewDelegate::paint(QPainter *painter,
         painter->setOpacity(0.85);
         painter->fillPath(path, opt.palette.highlight());
         painter->setOpacity(1.0);
-    } else if ((opt.state & QStyle::State_MouseOver) && !isEditing) {
+    } else if ((opt.state & QStyle::State_MouseOver) && !isEditing && !suppressHoverChrome) {
         QPainterPath path;
         const QRect frame = itemHighlightRect(item, zoom, _cellGapH, _cellGapV, fm);
         path.addRoundedRect(frame, 15, 15);

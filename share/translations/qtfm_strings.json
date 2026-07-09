@@ -1412,6 +1412,54 @@
     "source": "Open in new window"
   },
   {
+    "context": "MainWindow",
+    "source": "View diagnostic log…"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Open warnings and errors saved from previous sessions"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Diagnostic log"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Logs are saved to disk continuously. If QtFM stopped responding, quit and restart, then open this window again to read messages from the previous session."
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Log file: %1"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Warnings and errors"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Full log"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Refresh"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Copy to clipboard"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Copied"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "(No warnings or errors in the log file yet.)\n\nSwitch to “Full log” to see all messages, or reproduce the problem and refresh."
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "(Log file is empty or not created yet.)"
+  },
+  {
     "context": "uDisks2",
     "source": "Failed to eject %1"
   },

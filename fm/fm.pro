@@ -24,7 +24,8 @@ HEADERS += \
     src/sidebaritemdelegate.h \
     src/bookmarkgroupbar.h \
     src/bookmarkgroupproxy.h \
-    src/pathcombodelegate.h
+    src/pathcombodelegate.h \
+    src/diagnosticlog.h
 
 SOURCES += \
     src/main.cpp \
@@ -40,7 +41,8 @@ SOURCES += \
     src/sidebaritemdelegate.cpp \
     src/bookmarkgroupbar.cpp \
     src/bookmarkgroupproxy.cpp \
-    src/pathcombodelegate.cpp
+    src/pathcombodelegate.cpp \
+    src/diagnosticlog.cpp
 
 RESOURCES += $${top_srcdir}/share/$${TARGET}.qrc \
               $${top_srcdir}/share/mimes.qrc \

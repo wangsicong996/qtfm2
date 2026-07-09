@@ -157,6 +157,18 @@ void disksModel::refreshUsage()
     emit dataChanged(index(0), index(disksData.count() - 1));
 }
 
+void disksModel::setUsageForDevice(const QString &devicePath, qint64 usedBytes,
+                                   qint64 totalBytes)
+{
+    const int row = indexOfDevice(devicePath);
+    if (row < 0) {
+        return;
+    }
+    disksData[row].usedBytes = usedBytes;
+    disksData[row].totalBytes = totalBytes;
+    emit dataChanged(index(row), index(row));
+}
+
 void disksModel::setRows(const QVector<DiskListRow> &rows)
 {
     beginResetModel();
