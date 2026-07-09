@@ -25,7 +25,8 @@ HEADERS += \
     src/bookmarkgroupbar.h \
     src/bookmarkgroupproxy.h \
     src/pathcombodelegate.h \
-    src/diagnosticlog.h
+    src/diagnosticlog.h \
+    src/filerenamedialog.h
 
 SOURCES += \
     src/main.cpp \
@@ -42,7 +43,8 @@ SOURCES += \
     src/bookmarkgroupbar.cpp \
     src/bookmarkgroupproxy.cpp \
     src/pathcombodelegate.cpp \
-    src/diagnosticlog.cpp
+    src/diagnosticlog.cpp \
+    src/filerenamedialog.cpp
 
 RESOURCES += $${top_srcdir}/share/$${TARGET}.qrc \
               $${top_srcdir}/share/mimes.qrc \

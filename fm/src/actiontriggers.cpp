@@ -5,6 +5,7 @@
 #include "mainwindow.h"
 #include "diagnosticlog.h"
 #include "settingsdialog.h"
+#include "filerenamedialog.h"
 #include "openwithconfig.h"
 #include "dfmqstyleditemdelegate.h"
 #include <QApplication>
@@ -588,6 +589,45 @@ void MainWindow::renameFile() {
     tree->edit(treeSelectionModel->currentIndex());
   }
 }
+
+void MainWindow::renameFileDialog()
+{
+    if (!listSelectionModel || !listSelectionModel->hasSelection()) {
+        return;
+    }
+    QModelIndex idx = listSelectionModel->currentIndex();
+    if (!idx.isValid()) {
+        return;
+    }
+    if (currentView == 1 && idx.column() != 0) {
+        idx = idx.sibling(idx.row(), 0);
+    }
+    if (currentView == 2 && idx.column() != COLUMN_NAME) {
+        idx = idx.sibling(idx.row(), COLUMN_NAME);
+    }
+    const QModelIndex src = modelView->mapToSource(idx);
+    if (!src.isValid()) {
+        return;
+    }
+
+    FileRenameDialog dlg(this);
+    dlg.setFileName(modelList->data(src, Qt::DisplayRole).toString());
+    if (dlg.exec() != QDialog::Accepted) {
+        return;
+    }
+    QString name = dlg.fileName();
+    name.replace(QLatin1Char('\n'), QLatin1Char(' '));
+    name = name.trimmed();
+    if (name.isEmpty()) {
+        return;
+    }
+    if (name == modelList->data(src, Qt::DisplayRole).toString()) {
+        return;
+    }
+    if (!modelList->setData(src, name, Qt::EditRole)) {
+        QMessageBox::warning(this, tr("Rename file"), tr("Could not rename the file."));
+    }
+}
 //---------------------------------------------------------------------------
 
 
@@ -913,6 +953,10 @@ void MainWindow::toggleThumbs() {
     return;
   }
   modelList->setMode(thumbsAct->isChecked());
+  settings->setValue(QStringLiteral("showThumbs"), thumbsAct->isChecked());
+  if (thumbsAct->isChecked()) {
+    dirLoaded(true);
+  }
 }
 //---------------------------------------------------------------------------
 

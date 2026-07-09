@@ -1,6 +1,8 @@
 #include "settingsuistyles.h"
 
+#include <QDialogButtonBox>
 #include <QPushButton>
+#include "bundledicons.h"
 
 namespace SettingsUiStyles {
 
@@ -37,6 +39,25 @@ void styleDeleteButton(QPushButton *button)
     }
     button->setObjectName(QStringLiteral("settingsDeleteBtn"));
     button->setCursor(Qt::PointingHandCursor);
+}
+
+void styleSaveCancelDialogButtons(QDialogButtonBox *box)
+{
+    if (!box) {
+        return;
+    }
+    const QIcon saveIcon = BundledIcons::settingsIcon(QStringLiteral("save"));
+    const QIcon cancelIcon = BundledIcons::settingsIcon(QStringLiteral("cancel"));
+    if (QPushButton *saveBtn = box->button(QDialogButtonBox::Save)) {
+        if (!saveIcon.isNull()) {
+            saveBtn->setIcon(saveIcon);
+        }
+    }
+    if (QPushButton *cancelBtn = box->button(QDialogButtonBox::Cancel)) {
+        if (!cancelIcon.isNull()) {
+            cancelBtn->setIcon(cancelIcon);
+        }
+    }
 }
 
 } // namespace SettingsUiStyles

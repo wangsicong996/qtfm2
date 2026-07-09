@@ -1216,7 +1216,7 @@ void MainWindow::dirLoaded(bool thumbs)
     statusSize->setText(QString("%1 items").arg(items.count()));
     statusDate->setText(QString("%1").arg(total));
 
-    if (thumbsAct->isChecked() && thumbs && modelList->thumbnailGenerationEnabled()) {
+    if (thumbsAct->isChecked() && thumbs) {
       myModel *modelListPtr = modelList;
       QMetaObject::invokeMethod(modelList, [modelListPtr, items]() {
         modelListPtr->loadThumbs(items);
@@ -2321,7 +2321,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
         }
 #endif
         popup->addSeparator();
-        popup->addAction(renameAct);
+        popup->addAction(renamePopupAct);
         popup->addSeparator();
 
         // Add custom actions that are associated with all file types
@@ -2359,7 +2359,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
         popup->addAction(macCopyFilePathAct);
 #endif
         popup->addSeparator();
-        popup->addAction(renameAct);
+        popup->addAction(renamePopupAct);
         popup->addSeparator();
 
         foreach (QMenu* parent, customActManager->getMenus()->values("*")) {
@@ -2445,7 +2445,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
           popup->addAction(copyAct);
           popup->addAction(pasteAct);
           popup->addSeparator();
-          popup->addAction(renameAct);
+          popup->addAction(renamePopupAct);
           popup->addSeparator();
           if (modelList->getRootPath() != trashDir) {
             popup->addAction(trashAct);
@@ -2920,7 +2920,12 @@ void MainWindow::applyModuleTogglesFromSettings()
             thumbsAct->setChecked(false);
             modelList->setMode(false);
         } else {
-            modelList->setMode(thumbsAct->isChecked());
+            const bool show = settings->value(QStringLiteral("showThumbs"), true).toBool();
+            thumbsAct->setChecked(show);
+            modelList->setMode(show);
+            if (show) {
+                dirLoaded(true);
+            }
         }
     }
 

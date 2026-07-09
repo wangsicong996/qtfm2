@@ -1412,6 +1412,18 @@
     "source": "Open in new window"
   },
   {
+    "context": "FileRenameDialog",
+    "source": "Rename file"
+  },
+  {
+    "context": "FileRenameDialog",
+    "source": "File name:"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Could not rename the file."
+  },
+  {
     "context": "MainWindow",
     "source": "View diagnostic log…"
   },

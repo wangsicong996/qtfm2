@@ -157,6 +157,17 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
   </context>
   <context>
+    <name>FileRenameDialog</name>
+    <message>
+      <source>File name:</source>
+      <translation>文件名：</translation>
+    </message>
+    <message>
+      <source>Rename file</source>
+      <translation>重命名 file</translation>
+    </message>
+  </context>
+  <context>
     <name>FileUtils</name>
     <message>
       <source>Filetype:</source>
@@ -248,6 +259,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Copy the current file</source>
       <translation>复制 the current file</translation>
+    </message>
+    <message>
+      <source>Could not rename the file.</source>
+      <translation>无法重命名该文件。</translation>
     </message>
     <message>
       <source>Create a new Markdown (.md) file</source>

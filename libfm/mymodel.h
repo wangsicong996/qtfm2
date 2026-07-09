@@ -29,6 +29,7 @@ public:
   void setThumbnailGenerationEnabled(bool enabled);
   bool thumbnailGenerationEnabled() const { return m_thumbnailGenerationEnabled; }
   void loadThumbs(QModelIndexList);
+  void syncThumbnailCacheFromPaths(const QStringList &files);
   void addCutItems(QStringList);
   void populateItem(myModelItem *item);
   void fetchMore(const QModelIndex & parent);

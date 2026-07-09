@@ -10,6 +10,7 @@ namespace SettingsUiStyles {
 QString moduleStyleSheet();
 void styleAddButton(QPushButton *button);
 void styleDeleteButton(QPushButton *button);
+void styleSaveCancelDialogButtons(class QDialogButtonBox *box);
 
 } // namespace SettingsUiStyles
 

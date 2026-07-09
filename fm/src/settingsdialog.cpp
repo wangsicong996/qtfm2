@@ -21,6 +21,7 @@
 #include "common.h"
 #include "bundledicons.h"
 #include "apptranslator.h"
+#include "settingsuistyles.h"
 
 namespace {
 
@@ -161,28 +162,12 @@ void SettingsDialog::updateDialogButtonIcons()
     if (!dialogButtonBox) {
         return;
     }
-    bool darkForIcons = BundledIcons::uiDarkMode();
 #if QT_VERSION >= 0x050000
     if (checkDarkTheme) {
-        darkForIcons = checkDarkTheme->isChecked();
+        BundledIcons::setUiDarkMode(checkDarkTheme->isChecked());
     }
 #endif
-    const bool prev = BundledIcons::uiDarkMode();
-    BundledIcons::setUiDarkMode(darkForIcons);
-    const QIcon saveIcon = BundledIcons::settingsIcon(QStringLiteral("save"));
-    const QIcon cancelIcon = BundledIcons::settingsIcon(QStringLiteral("cancel"));
-    BundledIcons::setUiDarkMode(prev);
-
-    if (QPushButton *saveBtn = dialogButtonBox->button(QDialogButtonBox::Save)) {
-        if (!saveIcon.isNull()) {
-            saveBtn->setIcon(saveIcon);
-        }
-    }
-    if (QPushButton *cancelBtn = dialogButtonBox->button(QDialogButtonBox::Cancel)) {
-        if (!cancelIcon.isNull()) {
-            cancelBtn->setIcon(cancelIcon);
-        }
-    }
+    SettingsUiStyles::styleSaveCancelDialogButtons(dialogButtonBox);
 }
 
 QWidget *SettingsDialog::createGeneralSettings() {

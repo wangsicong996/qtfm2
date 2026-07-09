@@ -770,10 +770,6 @@ void myModel::loadMimeTypes() const {
  */
 void myModel::loadThumbs(QModelIndexList indexes) {
 
-  if (!m_thumbnailGenerationEnabled) {
-    return;
-  }
-
   QStringList files;
 
   for (const QModelIndex &item : indexes) {
@@ -786,7 +782,47 @@ void myModel::loadThumbs(QModelIndexList indexes) {
     }
   }
 
+  if (files.isEmpty()) {
+    return;
+  }
+  syncThumbnailCacheFromPaths(files);
+  if (!m_thumbnailGenerationEnabled) {
+    return;
+  }
   enqueueThumbnailPaths(files);
+}
+
+void myModel::syncThumbnailCacheFromPaths(const QStringList &files)
+{
+  if (files.isEmpty()) {
+    return;
+  }
+
+  QStringList decorationUpdates;
+  {
+    QMutexLocker lock(&thumbMutex);
+    for (const QString &path : files) {
+      QString cache = Common::thumbnailCacheFile(path);
+      if (!Common::isThumbnailCacheValid(path, cache)) {
+        cache = Common::hasThumbnail(path);
+      }
+      if (cache.isEmpty()) {
+        continue;
+      }
+      if (!thumbPaths->contains(path)) {
+        thumbPaths->insert(path, cache);
+        decorationUpdates.append(path);
+      }
+    }
+  }
+
+  for (const QString &path : decorationUpdates) {
+    icons->remove(path);
+    const QModelIndex idx = index(path);
+    if (idx.isValid()) {
+      emit dataChanged(idx, idx, {Qt::DecorationRole});
+    }
+  }
 }
 
 void myModel::enqueueThumbnailPaths(const QStringList &files)
@@ -804,6 +840,14 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
       if (Common::isThumbnailCacheValid(path, cache)) {
         if (!thumbPaths->contains(path)) {
           thumbPaths->insert(path, cache);
+          decorationUpdates.append(path);
+        }
+        continue;
+      }
+      const QString xdgThumb = Common::hasThumbnail(path);
+      if (!xdgThumb.isEmpty() && QFileInfo::exists(xdgThumb)) {
+        if (!thumbPaths->contains(path)) {
+          thumbPaths->insert(path, xdgThumb);
           decorationUpdates.append(path);
         }
         continue;
@@ -827,6 +871,8 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
 
   if (scheduled) {
     QMetaObject::invokeMethod(this, "pumpThumbnailQueue", Qt::QueuedConnection);
+  } else if (!decorationUpdates.isEmpty()) {
+    flushPendingThumbDecorations();
   }
 }
 
