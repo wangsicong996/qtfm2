@@ -1,3 +1,5 @@
+#ifndef SORTMODEL_H
+#define SORTMODEL_H
 
 #include <QSortFilterProxyModel>
 #include <QModelIndex>
@@ -46,3 +48,5 @@ private:
     /** -1 = use setting; 0 = files first; 1 = folders first */
     int m_directorySortOverride = -1;
 };
+
+#endif // SORTMODEL_H
