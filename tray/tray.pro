@@ -27,6 +27,7 @@ CONFIG(staticlib) {
     QT += svg
     SOURCES += \
         $${top_srcdir}/libfm/common.cpp \
+        $${top_srcdir}/libfm/thumbdiag.cpp \
         $${top_srcdir}/libfm/disks.cpp \
         $${top_srcdir}/libfm/udisks2.cpp \
         $${top_srcdir}/libfm/fileutils.cpp \
