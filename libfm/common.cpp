@@ -40,6 +40,8 @@
 #include <QDateTime>
 #include <QLocale>
 
+#include <algorithm>
+
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
 #else
@@ -408,6 +410,64 @@ Common::DragMode Common::getDefaultDragAndDrop()
 {
     QSettings settings(Common::configFile(), QSettings::IniFormat);
     return int2dad(settings.value("dad", DM_MOVE).toInt());
+}
+
+Common::ThumbnailGenMode Common::thumbnailGenerationMode()
+{
+    QSettings settings(Common::configFile(), QSettings::IniFormat);
+    if (settings.contains(QStringLiteral("enableThumbnailGeneration"))
+        && !settings.value(QStringLiteral("enableThumbnailGeneration"), true).toBool()) {
+        return ThumbGenOff;
+    }
+    const int mode = settings.value(QStringLiteral("thumbnailGenerationMode"),
+                                    static_cast<int>(ThumbGenAll))
+                         .toInt();
+    if (mode == static_cast<int>(ThumbGenOff)
+        || mode == static_cast<int>(ThumbGenNewestOnly)) {
+        return static_cast<ThumbnailGenMode>(mode);
+    }
+    return ThumbGenAll;
+}
+
+int Common::thumbnailNewestLimit()
+{
+    QSettings settings(Common::configFile(), QSettings::IniFormat);
+    return qBound(1, settings.value(QStringLiteral("thumbnailNewestLimit"), 100).toInt(),
+                  100000);
+}
+
+Common::ThumbnailVideoSample Common::thumbnailVideoSample()
+{
+    QSettings settings(Common::configFile(), QSettings::IniFormat);
+    const int v = settings.value(QStringLiteral("thumbnailVideoSample"),
+                                 static_cast<int>(ThumbVideoSampleStart))
+                      .toInt();
+    return v == static_cast<int>(ThumbVideoSampleMiddle) ? ThumbVideoSampleMiddle
+                                                         : ThumbVideoSampleStart;
+}
+
+QStringList Common::filterThumbnailGenerationPaths(const QStringList &absolutePaths)
+{
+    if (thumbnailGenerationMode() != ThumbGenNewestOnly || absolutePaths.isEmpty()) {
+        return absolutePaths;
+    }
+    const int limit = thumbnailNewestLimit();
+    QVector<QPair<qint64, QString>> ranked;
+    ranked.reserve(absolutePaths.size());
+    for (const QString &path : absolutePaths) {
+        ranked.append({QFileInfo(path).lastModified().toMSecsSinceEpoch(), path});
+    }
+    std::sort(ranked.begin(), ranked.end(),
+              [](const QPair<qint64, QString> &a, const QPair<qint64, QString> &b) {
+                  return a.first > b.first;
+              });
+    QStringList out;
+    const int take = qMin(limit, ranked.size());
+    out.reserve(take);
+    for (int i = 0; i < take; ++i) {
+        out.append(ranked.at(i).second);
+    }
+    return out;
 }
 
 QString Common::getDeviceForDir(QString dir)
@@ -971,6 +1031,38 @@ int findAttachedPicStreamIndex(const QString &mediaPath)
     return -1;
 }
 
+qreal findMediaDurationSeconds(const QString &mediaPath)
+{
+    const QString ffprobe = findMediaToolExecutable(QStringLiteral("ffprobe"));
+    if (ffprobe.isEmpty()) {
+        return 0.0;
+    }
+    QProcess proc;
+    proc.setProgram(ffprobe);
+    proc.setArguments({
+        QStringLiteral("-v"), QStringLiteral("quiet"),
+        QStringLiteral("-print_format"), QStringLiteral("json"),
+        QStringLiteral("-show_entries"), QStringLiteral("format=duration"),
+        mediaPath,
+    });
+    proc.setStandardInputFile(QProcess::nullDevice());
+    proc.start();
+    if (!proc.waitForFinished(10000)) {
+        proc.kill();
+        proc.waitForFinished(2000);
+        return 0.0;
+    }
+    if (proc.exitStatus() != QProcess::NormalExit || proc.exitCode() != 0) {
+        return 0.0;
+    }
+    const QJsonDocument doc = QJsonDocument::fromJson(proc.readAllStandardOutput());
+    if (!doc.isObject()) {
+        return 0.0;
+    }
+    const QJsonObject format = doc.object().value(QStringLiteral("format")).toObject();
+    return format.value(QStringLiteral("duration")).toString().toDouble();
+}
+
 } // namespace
 
 QImage Common::videoFirstFrameImage(const QString &mediaPath)
@@ -1015,12 +1107,19 @@ QImage Common::videoFirstFrameImage(const QString &mediaPath)
                               mediaPath, outPng);
     }
     if (!ok) {
+        QString seekPos = QStringLiteral("1");
+        if (Common::thumbnailVideoSample() == Common::ThumbVideoSampleMiddle) {
+            const qreal duration = findMediaDurationSeconds(mediaPath);
+            if (duration > 1.0) {
+                seekPos = QString::number(duration * 0.5, 'f', 3);
+            }
+        }
         ok = runFfmpegExtract(ffmpeg,
-                              { QStringLiteral("-ss"), QStringLiteral("1") },
+                              { QStringLiteral("-ss"), seekPos },
                               mediaPath, outPng);
     }
 #ifndef Q_OS_MAC
-    if (!ok) {
+    if (!ok && Common::thumbnailVideoSample() == Common::ThumbVideoSampleStart) {
         ok = runFfmpegExtract(ffmpeg, QStringList(), mediaPath, outPng);
     }
 #endif

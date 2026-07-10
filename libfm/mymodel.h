@@ -119,6 +119,8 @@ private:
 
   QTimer m_thumbDecorationCoalesce;
   QSet<QString> m_pendingThumbDecorationPaths;
+  /** Paths allowed to show thumbnails when generation mode is NewestOnly. */
+  QSet<QString> thumbEligiblePaths;
 
   myModelItem* rootItem;
   MimeUtils* mimeUtilsPtr;

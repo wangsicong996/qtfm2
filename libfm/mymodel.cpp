@@ -428,7 +428,11 @@ void myModel::notifyProcess(int eventID, QString fileName)
         emit reloadDir(folderChanged);
     }
     if (!newFilePaths.isEmpty() && showThumbs) {
-        enqueueThumbnailPaths(newFilePaths);
+        if (Common::thumbnailGenerationMode() == Common::ThumbGenNewestOnly) {
+            emit reloadDir(currentRootPath);
+        } else {
+            enqueueThumbnailPaths(newFilePaths);
+        }
     }
 }
 
@@ -796,7 +800,27 @@ void myModel::loadThumbs(QModelIndexList indexes) {
   ThumbDiag::info(QStringLiteral("loadThumbs: %1 candidate(s) in %2")
                       .arg(files.count())
                       .arg(currentRootPath));
-  enqueueThumbnailPaths(files);
+
+  const Common::ThumbnailGenMode genMode = Common::thumbnailGenerationMode();
+  if (genMode == Common::ThumbGenOff) {
+    ThumbDiag::info(QStringLiteral("thumbnail generation disabled (Settings → Advanced)"));
+  } else if (genMode == Common::ThumbGenNewestOnly) {
+    ThumbDiag::info(QStringLiteral("newest-only mode (limit %1)")
+                        .arg(Common::thumbnailNewestLimit()));
+  }
+
+  QStringList toEnqueue = files;
+  if (genMode == Common::ThumbGenNewestOnly) {
+    toEnqueue = Common::filterThumbnailGenerationPaths(files);
+    thumbEligiblePaths = QSet<QString>(toEnqueue.cbegin(), toEnqueue.cend());
+    ThumbDiag::info(QStringLiteral("newest-only: %1 of %2 file(s) eligible")
+                        .arg(toEnqueue.count())
+                        .arg(files.count()));
+  } else {
+    thumbEligiblePaths.clear();
+  }
+
+  enqueueThumbnailPaths(toEnqueue);
 }
 
 void myModel::enqueueThumbnailPaths(const QStringList &files)
@@ -811,6 +835,7 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
   int skipFail = 0;
   int queued = 0;
   int queueLen = 0;
+  const bool allowNewJobs = Common::thumbnailGenerationMode() != Common::ThumbGenOff;
   {
     QMutexLocker lock(&thumbMutex);
     for (const QString &path : files) {
@@ -825,6 +850,9 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
       }
       if (Common::isThumbnailFailureMarkerValid(path)) {
         ++skipFail;
+        continue;
+      }
+      if (!allowNewJobs) {
         continue;
       }
       if (!thumbQueue.contains(path)) {
@@ -1231,7 +1259,12 @@ QVariant myModel::findIcon(myModelItem *item) const {
 
     // If thumbnails are allowed and current file has it, show it
     if (showThumbs) {
-        if (icons->contains(item->absoluteFilePath())) {
+        const bool newestOnly =
+            Common::thumbnailGenerationMode() == Common::ThumbGenNewestOnly;
+        if (newestOnly && !thumbEligiblePaths.isEmpty()
+            && !thumbEligiblePaths.contains(absPath)) {
+            // fall through to mime icon
+        } else if (icons->contains(item->absoluteFilePath())) {
             qDebug() << "USING ICON CACHE FOR" << item->absoluteFilePath();
             return *icons->object(item->absoluteFilePath());
         } else if (thumbPaths->contains(item->absoluteFilePath())) {

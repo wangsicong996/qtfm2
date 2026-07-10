@@ -99,6 +99,21 @@ public:
     static QPalette darkTheme();
     static QStringList iconPaths(QString appPath);
     static QVector<QStringList> getDefaultActions();
+    enum ThumbnailGenMode {
+        ThumbGenAll = 0,
+        ThumbGenOff = 1,
+        ThumbGenNewestOnly = 2
+    };
+    enum ThumbnailVideoSample {
+        ThumbVideoSampleStart = 0,
+        ThumbVideoSampleMiddle = 1
+    };
+    static ThumbnailGenMode thumbnailGenerationMode();
+    static int thumbnailNewestLimit();
+    static ThumbnailVideoSample thumbnailVideoSample();
+    /** Newest-only: keep at most `limit` paths by modification time (newest first). */
+    static QStringList filterThumbnailGenerationPaths(const QStringList &absolutePaths);
+
     static QString formatSize(qint64 num);
     /** Details/list view “Date Modified” cell (macOS: yy-M-d 上午/下午h:mm). */
     static QString formatListModifiedDate(const QDateTime &dateTime);

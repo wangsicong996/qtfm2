@@ -16,6 +16,8 @@
 #include <QGroupBox>
 #include <QSpinBox>
 #include <QDialogButtonBox>
+#include <QRadioButton>
+#include <QButtonGroup>
 
 /**
  * @class SettingsDialog
@@ -51,6 +53,7 @@ protected slots:
   void filterMimes(QString filter);
   void previewDarkTheme(bool dark);
   void updateDialogButtonIcons();
+  void updateThumbGenModeUi();
 
 protected:
   bool eventFilter(QObject *watched, QEvent *event) override;
@@ -100,6 +103,15 @@ protected:
   QCheckBox* checkOutput;
     QCheckBox* checkEnableDiskSidebar = nullptr;
     QCheckBox* checkLogThumbnailDiag = nullptr;
+    QGroupBox *grpThumbnails = nullptr;
+    QRadioButton *radioThumbGenAll = nullptr;
+    QRadioButton *radioThumbGenOff = nullptr;
+    QRadioButton *radioThumbGenNewest = nullptr;
+    QSpinBox *spinThumbNewestLimit = nullptr;
+    QRadioButton *radioVideoSampleStart = nullptr;
+    QRadioButton *radioVideoSampleMiddle = nullptr;
+    QButtonGroup *thumbGenModeGroup = nullptr;
+    QButtonGroup *videoSampleGroup = nullptr;
     QTreeWidget* shortsWidget;
   QGroupBox* grpAssoc;
   QTreeWidget* mimesWidget;

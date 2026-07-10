@@ -1432,6 +1432,58 @@
     "source": "Log thumbnail commands to diagnostic log"
   },
   {
+    "context": "SettingsDialog",
+    "source": "Thumbnails"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "To see thumbnails in the file list, enable <b>View → Show thumbs</b>. The options below control background generation only."
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Generate thumbnails for all eligible files"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Do not generate thumbnails"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Only generate thumbnails for the newest files by date modified"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Number of newest files:"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Video thumbnail frame position:"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Beginning of file"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Middle of file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "About thumbnails…"
+  },
+  {
+    "context": "MainWindow",
+    "source": "How to enable and configure file thumbnails"
+  },
+  {
+    "context": "MainWindow",
+    "source": "About thumbnails"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Showing thumbnails in the file list"
+  },
+  {
     "context": "DiagnosticLog",
     "source": "Thumbnail debug ([Thumb])"
   },

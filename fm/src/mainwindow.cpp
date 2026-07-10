@@ -850,8 +850,6 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
 
   applyModuleTogglesFromSettings();
 
-  settings->remove(QStringLiteral("enableThumbnailGeneration"));
-
   ThumbDiag::setLoggingEnabled(settings->value(QStringLiteral("logThumbnailDiag"), true).toBool());
 
   modelList->setMode(thumbsAct->isChecked());

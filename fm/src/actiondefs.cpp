@@ -474,6 +474,11 @@ void MainWindow::createActions() {
   connect(viewDiagnosticLogAct, SIGNAL(triggered()), this, SLOT(showDiagnosticLog()));
   actionList->append(viewDiagnosticLogAct);
 
+  thumbnailHelpAct = new QAction(tr("About thumbnails…"), this);
+  thumbnailHelpAct->setStatusTip(tr("How to enable and configure file thumbnails"));
+  connect(thumbnailHelpAct, SIGNAL(triggered()), this, SLOT(showThumbnailHelp()));
+  actionList->append(thumbnailHelpAct);
+
 #ifdef Q_OS_MAC
   macOpenWithHelpAct = new QAction(tr("macOS 打开方式设置…"), this);
   macOpenWithHelpAct->setStatusTip(tr("如何在设置里配置 Open with"));
@@ -702,6 +707,7 @@ void MainWindow::createMenus() {
   helpMenu->addAction(macOpenWithHelpAct);
   helpMenu->addSeparator();
 #endif
+  helpMenu->addAction(thumbnailHelpAct);
   helpMenu->addAction(viewDiagnosticLogAct);
   helpMenu->addSeparator();
   helpMenu->addAction(aboutAct);

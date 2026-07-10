@@ -985,6 +985,33 @@ void MainWindow::showDiagnosticLog()
 }
 //---------------------------------------------------------------------------
 
+void MainWindow::showThumbnailHelp()
+{
+    QMessageBox box(this);
+    box.setWindowTitle(tr("About thumbnails"));
+    box.setIcon(QMessageBox::Information);
+    box.setText(tr("Showing thumbnails in the file list"));
+    box.setInformativeText(
+        tr("<p><b>1. View → Show thumbs</b> must be enabled. Without it, QtFM will not "
+           "load or display picture/video/PDF thumbnails in the current folder (this is the "
+           "most common reason thumbnails look “broken”).</p>"
+           "<p><b>2. Settings → Advanced → Thumbnails</b> controls background generation:</p>"
+           "<ul>"
+           "<li><b>Generate for all</b> — default; images, PDFs, and videos (via ffmpeg).</li>"
+           "<li><b>Do not generate</b> — skips new work; existing cache may still show if "
+           "Show thumbs is on.</li>"
+           "<li><b>Newest files only</b> — only the N most recently modified files in each "
+           "folder get thumbnails (N is configurable).</li>"
+           "<li><b>Video frame position</b> — sample near the beginning or the middle of the "
+           "file when no embedded cover is found.</li>"
+           "</ul>"
+           "<p>Use <b>Help → View diagnostic log</b> and filter <b>[Thumb]</b> to see ffmpeg "
+           "commands and errors.</p>"));
+    box.setStandardButtons(QMessageBox::Ok);
+    box.exec();
+}
+//---------------------------------------------------------------------------
+
 #ifdef Q_OS_MAC
 void MainWindow::showMacOpenWithHelp()
 {
@@ -1096,6 +1123,11 @@ void MainWindow::showEditDialog() {
                  false /* don't reload hidden state */,
                  false /* don't reload tabs state */,
                  false /* don't reload thumb state */);
+
+    applyModuleTogglesFromSettings();
+    if (thumbsAct->isChecked()) {
+        dirLoaded(true);
+    }
 
     modelList->clearIconCache();
     modelList->refreshItems();

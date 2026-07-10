@@ -194,6 +194,7 @@ public slots:
     void firstRunCustomActions(bool isFirstRun);
     void showAboutBox();
     void showDiagnosticLog();
+    void showThumbnailHelp();
 #ifdef Q_OS_MAC
     void showMacOpenWithHelp();
     void showMacFileAccessHelp();
@@ -376,6 +377,7 @@ private:
     QAction *aboutAct;
     QAction *aboutQtAct;
     QAction *viewDiagnosticLogAct = nullptr;
+    QAction *thumbnailHelpAct = nullptr;
 #ifdef Q_OS_MAC
     QAction *macOpenWithHelpAct;
     QAction *macFileAccessHelpAct;

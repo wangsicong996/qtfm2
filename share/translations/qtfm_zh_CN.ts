@@ -186,6 +186,14 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>关于 %1</translation>
     </message>
     <message>
+      <source>About thumbnails</source>
+      <translation>关于缩略图</translation>
+    </message>
+    <message>
+      <source>About thumbnails…</source>
+      <translation>关于缩略图…</translation>
+    </message>
+    <message>
       <source>Add bookmark</source>
       <translation>添加书签</translation>
     </message>
@@ -368,6 +376,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Home</source>
       <translation>主页</translation>
+    </message>
+    <message>
+      <source>How to enable and configure file thumbnails</source>
+      <translation>如何启用与配置文件缩略图</translation>
     </message>
     <message>
       <source>Icon view</source>
@@ -564,6 +576,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Show thumbs</source>
       <translation>显示缩略图</translation>
+    </message>
+    <message>
+      <source>Showing thumbnails in the file list</source>
+      <translation>在文件列表中显示缩略图</translation>
     </message>
     <message>
       <source>Size</source>
@@ -1265,6 +1281,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>Auto play audio/video DVD's</translation>
     </message>
     <message>
+      <source>Beginning of file</source>
+      <translation>文件开头</translation>
+    </message>
+    <message>
       <source>Behaviour</source>
       <translation>行为</translation>
     </message>
@@ -1317,6 +1337,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>仅文件夹</translation>
     </message>
     <message>
+      <source>Do not generate thumbnails</source>
+      <translation>不生成缩略图</translation>
+    </message>
+    <message>
       <source>Drag and Drop ALT action: </source>
       <translation>按住 Alt 拖放：</translation>
     </message>
@@ -1365,6 +1389,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>列表中文件夹始终在前</translation>
     </message>
     <message>
+      <source>Generate thumbnails for all eligible files</source>
+      <translation>为所有符合条件的文件生成缩略图</translation>
+    </message>
+    <message>
       <source>Icon view size</source>
       <translation>图标视图大小</translation>
     </message>
@@ -1405,6 +1433,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>将缩略图命令写入诊断日志</translation>
     </message>
     <message>
+      <source>Middle of file</source>
+      <translation>文件中间</translation>
+    </message>
+    <message>
       <source>Mime</source>
       <translation>Mime</translation>
     </message>
@@ -1435,6 +1467,14 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>No</source>
       <translation>否</translation>
+    </message>
+    <message>
+      <source>Number of newest files:</source>
+      <translation>最新文件数量：</translation>
+    </message>
+    <message>
+      <source>Only generate thumbnails for the newest files by date modified</source>
+      <translation>仅为按修改日期最新的文件生成缩略图</translation>
     </message>
     <message>
       <source>Open with</source>
@@ -1509,8 +1549,16 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>终端模拟器</translation>
     </message>
     <message>
+      <source>Thumbnails</source>
+      <translation>缩略图</translation>
+    </message>
+    <message>
       <source>Timestamp</source>
       <translation>Timestamp</translation>
+    </message>
+    <message>
+      <source>To see thumbnails in the file list, enable &lt;b&gt;View → Show thumbs&lt;/b&gt;. The options below control background generation only.</source>
+      <translation>要在文件列表中看到缩略图，请启用 &lt;b&gt;视图 → 显示缩略图&lt;/b&gt;。下列选项仅控制后台是否生成缩略图。</translation>
     </message>
     <message>
       <source>Toolbar padding (all sides)</source>
@@ -1523,6 +1571,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Use "Dark Mode"</source>
       <translation>使用深色模式</translation>
+    </message>
+    <message>
+      <source>Video thumbnail frame position:</source>
+      <translation>视频缩略图取帧位置：</translation>
     </message>
     <message>
       <source>Warning</source>

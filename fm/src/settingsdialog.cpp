@@ -7,6 +7,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QHBoxLayout>
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QDialogButtonBox>
@@ -561,6 +562,64 @@ QWidget *SettingsDialog::createAdvSettings()
 
     layoutWidget->addWidget(grpCopyX);
 
+    grpThumbnails = new QGroupBox(tr("Thumbnails"), widget);
+    auto *layoutThumb = new QVBoxLayout(grpThumbnails);
+    auto *thumbHint = new QLabel(
+        tr("To see thumbnails in the file list, enable <b>View → Show thumbs</b>. "
+           "The options below control background generation only."),
+        grpThumbnails);
+    thumbHint->setWordWrap(true);
+    layoutThumb->addWidget(thumbHint);
+
+    radioThumbGenAll = new QRadioButton(tr("Generate thumbnails for all eligible files"),
+                                        grpThumbnails);
+    radioThumbGenOff = new QRadioButton(tr("Do not generate thumbnails"), grpThumbnails);
+    radioThumbGenNewest =
+        new QRadioButton(tr("Only generate thumbnails for the newest files by date modified"),
+                         grpThumbnails);
+    thumbGenModeGroup = new QButtonGroup(grpThumbnails);
+    thumbGenModeGroup->addButton(radioThumbGenAll, static_cast<int>(Common::ThumbGenAll));
+    thumbGenModeGroup->addButton(radioThumbGenOff, static_cast<int>(Common::ThumbGenOff));
+    thumbGenModeGroup->addButton(radioThumbGenNewest,
+                                 static_cast<int>(Common::ThumbGenNewestOnly));
+    radioThumbGenAll->setChecked(true);
+    layoutThumb->addWidget(radioThumbGenAll);
+    layoutThumb->addWidget(radioThumbGenOff);
+    layoutThumb->addWidget(radioThumbGenNewest);
+
+    auto *newestRow = new QHBoxLayout();
+    newestRow->addSpacing(24);
+    newestRow->addWidget(new QLabel(tr("Number of newest files:"), grpThumbnails));
+    spinThumbNewestLimit = new QSpinBox(grpThumbnails);
+    spinThumbNewestLimit->setRange(1, 100000);
+    spinThumbNewestLimit->setValue(100);
+    newestRow->addWidget(spinThumbNewestLimit);
+    newestRow->addStretch();
+    layoutThumb->addLayout(newestRow);
+
+    auto *videoLabel = new QLabel(tr("Video thumbnail frame position:"), grpThumbnails);
+    layoutThumb->addWidget(videoLabel);
+    radioVideoSampleStart = new QRadioButton(tr("Beginning of file"), grpThumbnails);
+    radioVideoSampleMiddle = new QRadioButton(tr("Middle of file"), grpThumbnails);
+    videoSampleGroup = new QButtonGroup(grpThumbnails);
+    videoSampleGroup->addButton(radioVideoSampleStart,
+                                static_cast<int>(Common::ThumbVideoSampleStart));
+    videoSampleGroup->addButton(radioVideoSampleMiddle,
+                                static_cast<int>(Common::ThumbVideoSampleMiddle));
+    radioVideoSampleStart->setChecked(true);
+    layoutThumb->addWidget(radioVideoSampleStart);
+    layoutThumb->addWidget(radioVideoSampleMiddle);
+
+    checkLogThumbnailDiag =
+        new QCheckBox(tr("Log thumbnail commands to diagnostic log"), grpThumbnails);
+    checkLogThumbnailDiag->setChecked(true);
+    layoutThumb->addWidget(checkLogThumbnailDiag);
+
+    connect(thumbGenModeGroup, QOverload<int>::of(&QButtonGroup::idClicked), this,
+            [this](int) { updateThumbGenModeUi(); });
+
+    layoutWidget->addWidget(grpThumbnails);
+
     QGroupBox *grpModules = new QGroupBox(tr("Module testing (stability)"), widget);
     QVBoxLayout *layoutModules = new QVBoxLayout(grpModules);
     auto *modulesHint = new QLabel(
@@ -571,13 +630,19 @@ QWidget *SettingsDialog::createAdvSettings()
     layoutModules->addWidget(modulesHint);
     checkEnableDiskSidebar = new QCheckBox(tr("Enable disk sidebar"), grpModules);
     layoutModules->addWidget(checkEnableDiskSidebar);
-    checkLogThumbnailDiag = new QCheckBox(tr("Log thumbnail commands to diagnostic log"), widget);
-    checkLogThumbnailDiag->setChecked(true);
-    layoutWidget->addWidget(checkLogThumbnailDiag);
     layoutWidget->addWidget(grpModules);
     layoutWidget->addStretch();
 
     return widget;
+}
+
+void SettingsDialog::updateThumbGenModeUi()
+{
+    if (!spinThumbNewestLimit || !radioThumbGenNewest) {
+        return;
+    }
+    const bool newest = radioThumbGenNewest->isChecked();
+    spinThumbNewestLimit->setEnabled(newest);
 }
 //---------------------------------------------------------------------------
 
@@ -844,6 +909,37 @@ void SettingsDialog::readSettings() {
       checkLogThumbnailDiag->setChecked(
           settingsPtr->value(QStringLiteral("logThumbnailDiag"), true).toBool());
   }
+  if (thumbGenModeGroup && radioThumbGenAll && radioThumbGenOff && radioThumbGenNewest) {
+      int mode = settingsPtr->value(QStringLiteral("thumbnailGenerationMode"),
+                                   static_cast<int>(Common::ThumbGenAll))
+                     .toInt();
+      if (settingsPtr->contains(QStringLiteral("enableThumbnailGeneration"))
+          && !settingsPtr->value(QStringLiteral("enableThumbnailGeneration"), true).toBool()) {
+          mode = static_cast<int>(Common::ThumbGenOff);
+      }
+      QAbstractButton *picked = radioThumbGenAll;
+      if (mode == static_cast<int>(Common::ThumbGenOff)) {
+          picked = radioThumbGenOff;
+      } else if (mode == static_cast<int>(Common::ThumbGenNewestOnly)) {
+          picked = radioThumbGenNewest;
+      }
+      picked->setChecked(true);
+  }
+  if (spinThumbNewestLimit) {
+      spinThumbNewestLimit->setValue(
+          settingsPtr->value(QStringLiteral("thumbnailNewestLimit"), 100).toInt());
+  }
+  if (videoSampleGroup && radioVideoSampleStart && radioVideoSampleMiddle) {
+      const int sample = settingsPtr->value(QStringLiteral("thumbnailVideoSample"),
+                                              static_cast<int>(Common::ThumbVideoSampleStart))
+                             .toInt();
+      if (sample == static_cast<int>(Common::ThumbVideoSampleMiddle)) {
+          radioVideoSampleMiddle->setChecked(true);
+      } else {
+          radioVideoSampleStart->setChecked(true);
+      }
+  }
+  updateThumbGenModeUi();
   if (customActionsSettingsWidget) {
       customActionsSettingsWidget->loadFromSettings(settingsPtr);
   }
@@ -1081,6 +1177,19 @@ bool SettingsDialog::saveSettings() {
   if (checkLogThumbnailDiag) {
       settingsPtr->setValue(QStringLiteral("logThumbnailDiag"),
                             checkLogThumbnailDiag->isChecked());
+  }
+  if (thumbGenModeGroup) {
+      settingsPtr->setValue(QStringLiteral("thumbnailGenerationMode"),
+                            thumbGenModeGroup->checkedId());
+      settingsPtr->remove(QStringLiteral("enableThumbnailGeneration"));
+  }
+  if (spinThumbNewestLimit) {
+      settingsPtr->setValue(QStringLiteral("thumbnailNewestLimit"),
+                            spinThumbNewestLimit->value());
+  }
+  if (videoSampleGroup) {
+      settingsPtr->setValue(QStringLiteral("thumbnailVideoSample"),
+                            videoSampleGroup->checkedId());
   }
   if (customActionsSettingsWidget) {
       customActionsSettingsWidget->saveToSettings(settingsPtr);
