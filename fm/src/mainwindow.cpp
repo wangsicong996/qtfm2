@@ -849,6 +849,13 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
 #endif
 
   applyModuleTogglesFromSettings();
+
+  settings->remove(QStringLiteral("enableThumbnailGeneration"));
+
+  modelList->setMode(thumbsAct->isChecked());
+  if (thumbsAct->isChecked()) {
+    QTimer::singleShot(0, this, [this]() { dirLoaded(true); });
+  }
 }
 
 void MainWindow::firstRunBookmarks(bool isFirstRun)
@@ -1213,10 +1220,7 @@ void MainWindow::dirLoaded(bool thumbs)
     statusDate->setText(QString("%1").arg(total));
 
     if (thumbsAct->isChecked() && thumbs) {
-      myModel *modelListPtr = modelList;
-      QMetaObject::invokeMethod(modelList, [modelListPtr, items]() {
-        modelListPtr->loadThumbs(items);
-      }, Qt::QueuedConnection);
+      modelList->loadThumbs(items);
     }
 
     if (!pendingSingleFileTarget.isEmpty()) {

@@ -78,7 +78,9 @@ public slots:
   void clearIconCache();
   void forceRefresh();
   void refreshForegroundRoles();
+  void refreshDecorationRoles();
   void pumpThumbnailQueue();
+  void finishThumbnailJob(QString path, QString cachePath);
   void flushPendingThumbDecorations();
 signals:
   void dragDropPaste(const QMimeData *data, QString newPath,

@@ -3,6 +3,7 @@
 #include "macfileaccess.h"
 #endif
 #include "mainwindow.h"
+#include "common.h"
 #include "diagnosticlog.h"
 #include "settingsdialog.h"
 #include "openwithconfig.h"
@@ -907,7 +908,20 @@ void MainWindow::toggleSortOrder() {
  * @brief Switches from thumbs to details and vice versa
  */
 void MainWindow::toggleThumbs() {
-  modelList->setMode(thumbsAct->isChecked());
+  const bool on = thumbsAct->isChecked();
+  modelList->setMode(on);
+  settings->setValue(QStringLiteral("showThumbs"), on);
+  if (on) {
+    const QModelIndex parent = modelList->index(pathEdit->currentText());
+    const int rows = modelList->rowCount(parent);
+    for (int row = 0; row < rows; ++row) {
+      const QModelIndex idx = modelList->index(row, 0, parent);
+      Common::clearThumbnailFailure(modelList->filePath(idx));
+    }
+    dirLoaded(true);
+  } else {
+    modelList->refreshDecorationRoles();
+  }
 }
 //---------------------------------------------------------------------------
 

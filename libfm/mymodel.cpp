@@ -58,6 +58,7 @@ myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
   icons = new QCache<QString,QIcon>;
   icons->setMaxCost(500);
   thumbActiveJobs.storeRelaxed(0);
+  showThumbs = true;
 
   // Loads cached mime icons
   QFile fileIcons(QString("%1/file.cache").arg(Common::configDir()));
@@ -587,6 +588,21 @@ void myModel::refreshForegroundRoles()
     emit dataChanged(index(0, 0, dir), index(rows - 1, qMax(0, cols), dir), {Qt::ForegroundRole});
 }
 
+void myModel::refreshDecorationRoles()
+{
+    const QModelIndex dir = index(currentRootPath);
+    if (!dir.isValid()) {
+        return;
+    }
+    const int rows = rowCount(dir);
+    if (rows <= 0) {
+        return;
+    }
+    const int cols = columnCount(dir) - 1;
+    emit dataChanged(index(0, 0, dir), index(rows - 1, qMax(0, cols), dir),
+                     {Qt::DecorationRole});
+}
+
 //---------------------------------------------------------------------------------
 QModelIndex myModel::insertFolder(QModelIndex parent)
 {
@@ -901,16 +917,18 @@ void myModel::pumpThumbnailQueue()
         Common::recordThumbnailFailure(path);
       }
       thumbActiveJobs.deref();
-      const QString dir = QFileInfo(path).absolutePath();
-      QMetaObject::invokeMethod(this, [this, path, dir, cache]() {
-        if (!cache.isEmpty()) {
-          queueThumbnailDecorationUpdate(path);
-        }
-        Q_UNUSED(dir);
-        pumpThumbnailQueue();
-      }, Qt::QueuedConnection);
+      QMetaObject::invokeMethod(this, "finishThumbnailJob", Qt::QueuedConnection,
+                                Q_ARG(QString, path), Q_ARG(QString, cache));
     });
   }
+}
+
+void myModel::finishThumbnailJob(QString path, QString cachePath)
+{
+  if (!cachePath.isEmpty()) {
+    queueThumbnailDecorationUpdate(path);
+  }
+  pumpThumbnailQueue();
 }
 
 //---------------------------------------------------------------------------
