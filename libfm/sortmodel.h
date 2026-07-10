@@ -43,6 +43,7 @@ public:
     bool foldersAlwaysFirstIconSetting() const { return m_foldersAlwaysFirstIconSetting; }
     void setIconViewSortContext(bool iconView);
     void resetDirectorySortOverride();
+    void setDirectorySortOverrideValue(int overrideValue);
     void toggleDirectorySortOverride();
     int directorySortOverride() const;
     bool directoriesFirst() const;

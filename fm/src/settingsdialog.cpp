@@ -17,6 +17,7 @@
 #include <QLabel>
 #include <QAbstractSpinBox>
 #include <QWheelEvent>
+#include <QColorDialog>
 
 #include "openwithconfig.h"
 #include "common.h"
@@ -270,6 +271,53 @@ QWidget *SettingsDialog::createAppearanceSettings()
     layoutTopModule->addRow(topModuleHint);
     layoutTopModule->addRow(tr("Toolbar padding (all sides)"), spinTopModuleGap);
     layoutWidget->addWidget(grpTopModule);
+
+    QGroupBox *grpDualPane = new QGroupBox(tr("Dual pane"), widget);
+    QFormLayout *layoutDualPane = new QFormLayout(grpDualPane);
+    checkDualPaneInactiveDefault = new QCheckBox(tr("Use file view default"), grpDualPane);
+    btnDualPaneInactiveColor = new QPushButton(grpDualPane);
+    checkDualPaneActiveDefault = new QCheckBox(tr("Use automatic highlight (20% darker)"), grpDualPane);
+    btnDualPaneActiveColor = new QPushButton(grpDualPane);
+    auto *dualPaneHint = new QLabel(
+        tr("Background colors for the left and right file panes when dual pane is enabled. "
+           "The top toolbar and sidebar are not affected."),
+        grpDualPane);
+    dualPaneHint->setWordWrap(true);
+    layoutDualPane->addRow(dualPaneHint);
+    layoutDualPane->addRow(tr("Inactive pane"), checkDualPaneInactiveDefault);
+    layoutDualPane->addRow(QString(), btnDualPaneInactiveColor);
+    layoutDualPane->addRow(tr("Active pane"), checkDualPaneActiveDefault);
+    layoutDualPane->addRow(QString(), btnDualPaneActiveColor);
+    connect(checkDualPaneInactiveDefault, &QCheckBox::toggled, this, [this](bool) {
+        updateDualPaneColorButtons();
+    });
+    connect(checkDualPaneActiveDefault, &QCheckBox::toggled, this, [this](bool) {
+        updateDualPaneColorButtons();
+    });
+    connect(btnDualPaneInactiveColor, &QPushButton::clicked, this, [this]() {
+        const QColor start = m_dualPaneInactiveColor.isValid()
+                                 ? m_dualPaneInactiveColor
+                                 : palette().color(QPalette::Base);
+        const QColor picked = QColorDialog::getColor(start, this, tr("Inactive pane background"));
+        if (!picked.isValid()) {
+            return;
+        }
+        m_dualPaneInactiveColor = picked;
+        checkDualPaneInactiveDefault->setChecked(false);
+        updateDualPaneColorButtons();
+    });
+    connect(btnDualPaneActiveColor, &QPushButton::clicked, this, [this]() {
+        const QColor base = palette().color(QPalette::Base);
+        const QColor start = m_dualPaneActiveColor.isValid() ? m_dualPaneActiveColor : base.darker(120);
+        const QColor picked = QColorDialog::getColor(start, this, tr("Active pane background"));
+        if (!picked.isValid()) {
+            return;
+        }
+        m_dualPaneActiveColor = picked;
+        checkDualPaneActiveDefault->setChecked(false);
+        updateDualPaneColorButtons();
+    });
+    layoutWidget->addWidget(grpDualPane);
 
     // Appearance
     QGroupBox* grpAppear = new QGroupBox(tr("Appearance"), widget);
@@ -636,6 +684,38 @@ QWidget *SettingsDialog::createAdvSettings()
     return widget;
 }
 
+void SettingsDialog::updateDualPaneColorButtons()
+{
+    const QColor base = palette().color(QPalette::Base);
+    const QColor activeDefault = base.darker(120);
+
+    auto paintBtn = [](QPushButton *btn, const QColor &c, const QString &label) {
+        if (!btn) {
+            return;
+        }
+        btn->setStyleSheet(QStringLiteral("QPushButton { background-color: %1; min-height: 28px; }")
+                               .arg(c.name()));
+        btn->setText(label);
+    };
+
+    if (checkDualPaneInactiveDefault) {
+        const bool useDefault = checkDualPaneInactiveDefault->isChecked();
+        if (btnDualPaneInactiveColor) {
+            btnDualPaneInactiveColor->setEnabled(!useDefault);
+        }
+        paintBtn(btnDualPaneInactiveColor, base,
+                 useDefault ? tr("Default (file view background)") : m_dualPaneInactiveColor.name());
+    }
+    if (checkDualPaneActiveDefault) {
+        const bool useDefault = checkDualPaneActiveDefault->isChecked();
+        if (btnDualPaneActiveColor) {
+            btnDualPaneActiveColor->setEnabled(!useDefault);
+        }
+        paintBtn(btnDualPaneActiveColor, useDefault ? activeDefault : m_dualPaneActiveColor,
+                 useDefault ? tr("Default (20% darker than file view)") : m_dualPaneActiveColor.name());
+    }
+}
+
 void SettingsDialog::updateThumbGenModeUi()
 {
     if (!spinThumbNewestLimit || !radioThumbGenNewest) {
@@ -859,6 +939,17 @@ void SettingsDialog::readSettings() {
   spinListColDate->setValue(settingsPtr->value("listColumnWidth3", 130).toInt());
   spinListColFormat->setValue(settingsPtr->value("listColumnWidth4", 120).toInt());
   spinListColFolder->setValue(settingsPtr->value("listColumnWidth5", 80).toInt());
+  const QString dualInactive = settingsPtr->value(QStringLiteral("dualPaneInactiveColor")).toString();
+  const QString dualActive = settingsPtr->value(QStringLiteral("dualPaneActiveColor")).toString();
+  if (checkDualPaneInactiveDefault) {
+      checkDualPaneInactiveDefault->setChecked(dualInactive.isEmpty());
+  }
+  if (checkDualPaneActiveDefault) {
+      checkDualPaneActiveDefault->setChecked(dualActive.isEmpty());
+  }
+  m_dualPaneInactiveColor = dualInactive.isEmpty() ? QColor() : QColor(dualInactive);
+  m_dualPaneActiveColor = dualActive.isEmpty() ? QColor() : QColor(dualActive);
+  updateDualPaneColorButtons();
   OpenWithConfig::load(settingsPtr);
   if (openWithSettingsWidget) {
       openWithSettingsWidget->loadFromConfig();
@@ -1151,6 +1242,14 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("listColumnWidth3", spinListColDate->value());
   settingsPtr->setValue("listColumnWidth4", spinListColFormat->value());
   settingsPtr->setValue("listColumnWidth5", spinListColFolder->value());
+  settingsPtr->setValue(QStringLiteral("dualPaneInactiveColor"),
+                        (checkDualPaneInactiveDefault && checkDualPaneInactiveDefault->isChecked())
+                            ? QString()
+                            : m_dualPaneInactiveColor.name(QColor::HexRgb));
+  settingsPtr->setValue(QStringLiteral("dualPaneActiveColor"),
+                        (checkDualPaneActiveDefault && checkDualPaneActiveDefault->isChecked())
+                            ? QString()
+                            : m_dualPaneActiveColor.name(QColor::HexRgb));
   settingsPtr->setValue("windowTitlePath", checkWindowTitlePath->isChecked());
 
 #ifndef Q_OS_MAC

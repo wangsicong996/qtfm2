@@ -739,10 +739,15 @@ void MainWindow::applyIconView() {
   updateGrid();
   modelView->setIconViewSortContext(true);
   modelView->resetDirectorySortOverride();
-  const int sortCol = currentSortColumn == COLUMN_FOLDER ? COLUMN_NAME : currentSortColumn;
-  modelView->sort(sortCol, currentSortOrder);
-  modelView->invalidate();
-  list->viewport()->update();
+  applySortToAllFilePanes();
+  for (int pi = 0; pi < 2; ++pi) {
+      if (m_filePane[pi] && m_filePane[pi]->proxyModel()) {
+          m_filePane[pi]->proxyModel()->invalidate();
+      }
+  }
+  if (list) {
+      list->viewport()->update();
+  }
 
   list->setDragDropMode(QAbstractItemView::DragDrop);
   list->setDefaultDropAction(Qt::MoveAction);
@@ -789,7 +794,7 @@ void MainWindow::applyListView() {
   applyListRowHeight();
   modelView->setIconViewSortContext(false);
   modelView->resetDirectorySortOverride();
-  modelView->sort(currentSortColumn, currentSortOrder);
+  applySortToAllFilePanes();
   settings->setValue(QStringLiteral("fileViewMode"), QStringLiteral("list"));
 }
 //---------------------------------------------------------------------------
@@ -824,7 +829,7 @@ void MainWindow::listHeaderClicked(int logicalIndex)
     }
     if (logicalIndex == COLUMN_FOLDER) {
         modelView->toggleDirectorySortOverride();
-        modelView->sort(currentSortColumn, currentSortOrder);
+        applySortToAllFilePanes();
         return;
     }
 
@@ -840,7 +845,7 @@ void MainWindow::listHeaderClicked(int logicalIndex)
         }
         settings->setValue(QStringLiteral("sortBy"), currentSortColumn);
     }
-    modelView->sort(currentSortColumn, currentSortOrder);
+    applySortToAllFilePanes();
 }
 
 void MainWindow::applyListRowHeight()
@@ -909,7 +914,7 @@ void MainWindow::setSortColumn(QAction *columnAct) {
  */
 void MainWindow::toggleSortBy(QAction *action) {
   setSortColumn(action);
-  modelView->sort(currentSortColumn, currentSortOrder);
+  applySortToAllFilePanes();
 }
 //---------------------------------------------------------------------------
 
@@ -938,7 +943,7 @@ void MainWindow::setSortOrder(Qt::SortOrder order) {
 void MainWindow::toggleSortOrder() {
   setSortOrder(currentSortOrder == Qt::AscendingOrder ? Qt::DescendingOrder
                                                       : Qt::AscendingOrder);
-  modelView->sort(currentSortColumn, currentSortOrder);
+  applySortToAllFilePanes();
 }
 //---------------------------------------------------------------------------
 
@@ -1195,6 +1200,8 @@ void MainWindow::showEditDialog() {
                  false /* don't reload thumb state */);
 
     applyModuleTogglesFromSettings();
+    applySortToAllFilePanes();
+    applyFilePaneChrome();
     if (thumbsAct->isChecked()) {
         dirLoaded(true);
     }

@@ -18,6 +18,8 @@
 #include <QDialogButtonBox>
 #include <QRadioButton>
 #include <QButtonGroup>
+#include <QColor>
+#include <QPushButton>
 
 /**
  * @class SettingsDialog
@@ -54,6 +56,7 @@ protected slots:
   void previewDarkTheme(bool dark);
   void updateDialogButtonIcons();
   void updateThumbGenModeUi();
+  void updateDualPaneColorButtons();
 
 protected:
   bool eventFilter(QObject *watched, QEvent *event) override;
@@ -121,6 +124,12 @@ protected:
   QCheckBox* checkAutoMount;
   QCheckBox* checkDVD;
   QCheckBox* checkWindowTitlePath;
+  QPushButton *btnDualPaneInactiveColor = nullptr;
+  QPushButton *btnDualPaneActiveColor = nullptr;
+  QCheckBox *checkDualPaneInactiveDefault = nullptr;
+  QCheckBox *checkDualPaneActiveDefault = nullptr;
+  QColor m_dualPaneInactiveColor;
+  QColor m_dualPaneActiveColor;
   QLineEdit* editCopyX;
   QLineEdit* editCopyTS;
   QDialogButtonBox *dialogButtonBox = nullptr;

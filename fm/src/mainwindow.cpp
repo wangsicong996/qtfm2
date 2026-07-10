@@ -690,6 +690,7 @@ void MainWindow::lateStart() {
   if (m_dualPaneEnabled) {
       QTimer::singleShot(0, this, [this]() {
           syncAllFilePaneRootIndices();
+          applySortToAllFilePanes();
           updateGrid();
       });
   }
@@ -847,11 +848,8 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   }
 
   modelView->setIconViewSortContext(currentView == 1);
-  const int sortColumnForView = (currentView == 1 && currentSortColumn == COLUMN_FOLDER)
-                                    ? COLUMN_NAME
-                                    : currentSortColumn;
   detailTree->setSortingEnabled(true);
-  modelView->sort(sortColumnForView, currentSortOrder);
+  applySortToAllFilePanes();
   if (currentView == 1) {
       list->viewport()->update();
   }
@@ -1309,9 +1307,7 @@ void MainWindow::dirLoaded(bool thumbs)
     }
     updateGrid();
     if (modelView && currentView == 1) {
-        const int sortCol = currentSortColumn == COLUMN_FOLDER ? COLUMN_NAME : currentSortColumn;
-        modelView->sort(sortCol, currentSortOrder);
-        list->viewport()->update();
+        applySortToAllFilePanes();
     }
 }
 
@@ -1519,9 +1515,27 @@ void MainWindow::applyWidgetPalettes()
     };
 
     syncPalette(centralWidget());
-    syncPalette(stackWidget);
-    syncPalette(list);
-    syncPalette(detailTree);
+    if (stackWidget) {
+        syncPalette(stackWidget);
+    }
+    for (int pi = 0; pi < 2; ++pi) {
+        if (!m_filePane[pi]) {
+            continue;
+        }
+        syncPalette(m_filePane[pi]);
+        if (IconFileListView *lv = m_filePane[pi]->listView()) {
+            syncPalette(lv);
+            if (lv->viewport()) {
+                syncPalette(lv->viewport());
+            }
+        }
+        if (DfmQTreeView *dt = m_filePane[pi]->detailTree()) {
+            syncPalette(dt);
+            if (dt->viewport()) {
+                syncPalette(dt->viewport());
+            }
+        }
+    }
     syncPalette(tree);
     syncPalette(bookmarksList);
 #if defined(QTFM_HAVE_SIDEBAR_DISKS)
@@ -1545,7 +1559,7 @@ void MainWindow::applyViewChromeStyles()
     if (!tabs || !list) {
         return;
     }
-    const QPalette pal = list->palette();
+    const QPalette pal = qApp->palette();
     const bool darkUi = settings && settings->value(QStringLiteral("darkTheme")).toBool();
     const QString comboArrowUrl = darkUi
         ? QStringLiteral(":/icons/toolbar/white/chevron-down.svg")
@@ -1731,6 +1745,7 @@ void MainWindow::applyViewChromeStyles()
     }
 
     applyNavToolBarInsets();
+    applyFilePaneChrome();
 }
 
 void MainWindow::applyNavToolBarInsets()
@@ -1762,7 +1777,6 @@ void MainWindow::applyNavToolBarInsets()
         mwLayout->setContentsMargins(0, 0, 0, 0);
     }
 #endif
-    applyFilePaneChrome();
 }
 
 void MainWindow::updateTabBarPalette()
@@ -2870,11 +2884,7 @@ void MainWindow::updateGrid()
         }
     }
     if (modelView && currentView == 1) {
-        const int sortCol = currentSortColumn == COLUMN_FOLDER ? COLUMN_NAME : currentSortColumn;
-        modelView->sort(sortCol, currentSortOrder);
-        if (list) {
-            list->viewport()->update();
-        }
+        applySortToAllFilePanes();
     }
 }
 
@@ -3420,12 +3430,78 @@ void MainWindow::wireFilePane(FileBrowserPane *pane)
 
 void MainWindow::applyFilePaneChrome()
 {
-    const QColor base = palette().color(QPalette::Base);
-    for (int i = 0; i < 2; ++i) {
-        if (m_filePane[i]) {
-            const bool active = (i == m_activePaneIndex);
-            m_filePane[i]->applyChromeTint(base, active);
+    const QColor base = qApp->palette().color(QPalette::Base);
+    auto paneColorFromSetting = [this](const char *key, const QColor &fallback) {
+        const QString raw = settings->value(QLatin1String(key)).toString();
+        if (raw.isEmpty()) {
+            return fallback;
         }
+        const QColor c(raw);
+        return c.isValid() ? c : fallback;
+    };
+
+    const QColor inactiveDefault = base;
+    const QColor activeDefault = base.darker(120);
+    const QColor inactiveColor = paneColorFromSetting("dualPaneInactiveColor", inactiveDefault);
+    const QColor activeColor = paneColorFromSetting("dualPaneActiveColor", activeDefault);
+
+    for (int i = 0; i < 2; ++i) {
+        if (!m_filePane[i]) {
+            continue;
+        }
+        if (!m_dualPaneEnabled) {
+            if (i == 0) {
+                m_filePane[i]->applyChromeTint(base);
+            }
+            continue;
+        }
+        const bool active = (i == m_activePaneIndex);
+        m_filePane[i]->applyChromeTint(active ? activeColor : inactiveColor);
+    }
+}
+
+void MainWindow::syncAllFilePaneSortSettings()
+{
+    if (!modelView) {
+        return;
+    }
+    const bool foldersFirst = modelView->foldersAlwaysFirstSetting();
+    const bool foldersFirstIcon = modelView->foldersAlwaysFirstIconSetting();
+    const bool iconView = (currentView == 1);
+    const int dirOverride = modelView->directorySortOverride();
+
+    for (int i = 0; i < 2; ++i) {
+        if (!m_filePane[i]) {
+            continue;
+        }
+        viewsSortProxyModel *proxy = m_filePane[i]->proxyModel();
+        if (!proxy) {
+            continue;
+        }
+        proxy->setFoldersAlwaysFirstSetting(foldersFirst);
+        proxy->setFoldersAlwaysFirstIconSetting(foldersFirstIcon);
+        proxy->setIconViewSortContext(iconView);
+        proxy->setDirectorySortOverrideValue(dirOverride);
+    }
+}
+
+void MainWindow::applySortToAllFilePanes()
+{
+    syncAllFilePaneSortSettings();
+    const int sortColumnForView = (currentView == 1 && currentSortColumn == COLUMN_FOLDER)
+                                      ? COLUMN_NAME
+                                      : currentSortColumn;
+    for (int i = 0; i < 2; ++i) {
+        if (!m_filePane[i]) {
+            continue;
+        }
+        viewsSortProxyModel *proxy = m_filePane[i]->proxyModel();
+        if (proxy) {
+            proxy->sort(sortColumnForView, currentSortOrder);
+        }
+    }
+    if (list && currentView == 1) {
+        list->viewport()->update();
     }
 }
 
@@ -3480,6 +3556,7 @@ void MainWindow::navigateFilePane(FileBrowserPane *pane, const QString &path, bo
     modelList->setRootPath(path);
     const QModelIndex proxyIndex = pane->proxyModel()->mapFromSource(src);
     pane->setRootIndex(proxyIndex);
+    applySortToAllFilePanes();
     Q_UNUSED(syncTree)
 }
 
@@ -3552,6 +3629,7 @@ void MainWindow::toggleDualPane()
         m_fileSplitter->setSizes({1, 1});
         QTimer::singleShot(0, this, [this]() {
             syncAllFilePaneRootIndices();
+            applySortToAllFilePanes();
             updateGrid();
         });
     } else {
@@ -3603,6 +3681,7 @@ void MainWindow::applyStartupDualPaneLayout()
     applyFilePaneChrome();
     QTimer::singleShot(0, this, [this]() {
         syncAllFilePaneRootIndices();
+        applySortToAllFilePanes();
         updateGrid();
         if (m_fileSplitter) {
             m_fileSplitter->updateGeometry();

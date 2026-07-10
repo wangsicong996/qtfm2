@@ -88,24 +88,25 @@ void FileBrowserPane::setRootIndex(const QModelIndex &proxyIndex)
     m_detailTree->setRootIndex(proxyIndex);
 }
 
-void FileBrowserPane::applyChromeTint(const QColor &windowBase, bool activePane)
+void FileBrowserPane::applyChromeTint(const QColor &background)
 {
-    QPalette pal = palette();
-    QColor bg = windowBase;
-    if (activePane) {
-        bg = bg.darker(120);
-    }
-    pal.setColor(QPalette::Window, bg);
-    pal.setColor(QPalette::Base, bg);
-    setPalette(pal);
     if (m_list) {
+        QPalette pal = m_list->palette();
+        pal.setColor(QPalette::Base, background);
+        pal.setColor(QPalette::Window, background);
         m_list->setPalette(pal);
         m_list->viewport()->setPalette(pal);
+        m_list->setAutoFillBackground(true);
     }
     if (m_detailTree) {
+        QPalette pal = m_detailTree->palette();
+        pal.setColor(QPalette::Base, background);
+        pal.setColor(QPalette::Window, background);
         m_detailTree->setPalette(pal);
         m_detailTree->viewport()->setPalette(pal);
+        m_detailTree->setAutoFillBackground(true);
     }
+    setAutoFillBackground(false);
 }
 
 bool FileBrowserPane::eventFilter(QObject *watched, QEvent *event)

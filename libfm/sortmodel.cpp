@@ -57,6 +57,12 @@ void viewsSortProxyModel::resetDirectorySortOverride()
     invalidate();
 }
 
+void viewsSortProxyModel::setDirectorySortOverrideValue(int overrideValue)
+{
+    m_directorySortOverride = overrideValue;
+    invalidate();
+}
+
 void viewsSortProxyModel::toggleDirectorySortOverride()
 {
     const bool defaultDirsFirst = m_iconViewSortContext

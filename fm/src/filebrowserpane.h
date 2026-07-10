@@ -42,7 +42,7 @@ public:
 
     void setViewStackIndex(int index);
     void setRootIndex(const QModelIndex &proxyIndex);
-    void applyChromeTint(const QColor &windowBase, bool activePane);
+    void applyChromeTint(const QColor &background);
 
 signals:
     void paneActivated(int paneIndex);

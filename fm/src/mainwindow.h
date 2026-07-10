@@ -230,6 +230,8 @@ private slots:
     void loadPathBarFromPane(FileBrowserPane *pane);
     void wireFilePane(FileBrowserPane *pane);
     void applyFilePaneChrome();
+    void syncAllFilePaneSortSettings();
+    void applySortToAllFilePanes();
     void syncFilePaneRootIndex(FileBrowserPane *pane);
     void syncAllFilePaneRootIndices();
     void updateGridForList(IconFileListView *listView);
