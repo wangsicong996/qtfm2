@@ -160,6 +160,36 @@ bool shouldListWholeDisk(Device *whole, const QMap<QString, Device *> &devices)
 } // namespace
 #endif
 
+namespace {
+
+QString resolveLaunchDirectoryImpl(const QString &raw, QString *singleFileTarget)
+{
+    QString path = raw;
+    if (path == QLatin1String(".")) {
+        path = qEnvironmentVariable("PWD");
+    } else if (QUrl(path).isLocalFile()) {
+        path = QUrl(raw).toLocalFile();
+    }
+    const QFileInfo info(path);
+    if (!info.exists()) {
+        return QString();
+    }
+    if (info.isFile()) {
+        if (singleFileTarget) {
+            *singleFileTarget = info.canonicalFilePath();
+        }
+        return info.absolutePath();
+    }
+    return info.canonicalFilePath();
+}
+
+} // namespace
+
+QString MainWindow::resolveLaunchDirectory(const QString &raw, QString *singleFileTarget)
+{
+    return resolveLaunchDirectoryImpl(raw, singleFileTarget);
+}
+
 MainWindow::MainWindow(const QString &forcedStartPath)
 {
 #ifndef NO_UDISKS
@@ -201,42 +231,56 @@ MainWindow::MainWindow(const QString &forcedStartPath)
 
     // get path from cmd
     startPath = QDir::currentPath();
+    m_forceStartupDualPane = false;
+    m_startupRightPath.clear();
+
     if (!forcedStartPath.isEmpty()) {
-        startPath = forcedStartPath;
-        if (startPath == QLatin1String(".")) {
-            startPath = qEnvironmentVariable("PWD");
-        } else if (QUrl(startPath).isLocalFile()) {
-            startPath = QUrl(forcedStartPath).toLocalFile();
-        }
-        const QFileInfo argInfo(startPath);
-        if (argInfo.exists()) {
-            if (argInfo.isFile()) {
-                pendingSingleFileTarget = argInfo.canonicalFilePath();
-                startPath = argInfo.absolutePath();
-            } else {
-                startPath = argInfo.canonicalFilePath();
+        QString fileTarget;
+        const QString resolved = resolveLaunchDirectory(forcedStartPath, &fileTarget);
+        if (!resolved.isEmpty()) {
+            startPath = resolved;
+            if (!fileTarget.isEmpty()) {
+                pendingSingleFileTarget = fileTarget;
             }
         }
     } else {
-    QStringList args = QApplication::arguments();
-
-    if(args.count() > 1) {
-        startPath = args.at(1);
-        if (startPath == ".") {
-            startPath = getenv("PWD");
-        } else if (QUrl(startPath).isLocalFile()) {
-            startPath = QUrl(args.at(1)).toLocalFile();
+        QStringList pathArgs;
+        const QStringList args = QApplication::arguments();
+        for (int i = 1; i < args.count(); ++i) {
+            const QString &a = args.at(i);
+            if (a.startsWith(QLatin1Char('-'))) {
+                continue;
+            }
+            pathArgs.append(a);
         }
-        const QFileInfo argInfo(startPath);
-        if (argInfo.exists()) {
-            if (argInfo.isFile()) {
-                pendingSingleFileTarget = argInfo.canonicalFilePath();
-                startPath = argInfo.absolutePath();
-            } else {
-                startPath = argInfo.canonicalFilePath();
+
+        if (pathArgs.size() >= 2) {
+            QString leftFile;
+            const QString left = resolveLaunchDirectory(pathArgs.at(0), &leftFile);
+            const QString right = resolveLaunchDirectory(pathArgs.at(1), nullptr);
+            if (!left.isEmpty() && !right.isEmpty()) {
+                startPath = left;
+                if (!leftFile.isEmpty()) {
+                    pendingSingleFileTarget = leftFile;
+                }
+                m_startupRightPath = right;
+                m_forceStartupDualPane = true;
+            } else if (!left.isEmpty()) {
+                startPath = left;
+                if (!leftFile.isEmpty()) {
+                    pendingSingleFileTarget = leftFile;
+                }
+            }
+        } else if (pathArgs.size() == 1) {
+            QString fileTarget;
+            const QString resolved = resolveLaunchDirectory(pathArgs.at(0), &fileTarget);
+            if (!resolved.isEmpty()) {
+                startPath = resolved;
+                if (!fileTarget.isEmpty()) {
+                    pendingSingleFileTarget = fileTarget;
+                }
             }
         }
-    }
     }
 
     settings = new QSettings(Common::configFile(), QSettings::IniFormat);
@@ -348,26 +392,39 @@ MainWindow::MainWindow(const QString &forcedStartPath)
     mainLayout->setSpacing(0);
     mainLayout->setContentsMargins(0,0,0,0);
 
-    stackWidget = new QStackedWidget(this);
-    QWidget *page = new QWidget(this);
-    QHBoxLayout *hl1 = new QHBoxLayout(page);
-    hl1->setSpacing(0);
-    hl1->setContentsMargins(0,0,0,0);
-    list = new IconFileListView(page);
-    hl1->addWidget(list);
-    stackWidget->addWidget(page);
-
-    QWidget *page2 = new QWidget(this);
-    hl1 = new QHBoxLayout(page2);
-    hl1->setSpacing(0);
-    hl1->setContentsMargins(0,0,0,0);
-    detailTree = new DfmQTreeView(page2);
-    hl1->addWidget(detailTree);
-    stackWidget->addWidget(page2);
+    m_fileSplitter = new QSplitter(Qt::Horizontal, main);
+    m_filePane[0] = new FileBrowserPane(0, main);
+    m_filePane[1] = new FileBrowserPane(1, main);
+    m_fileSplitter->addWidget(m_filePane[0]);
+    m_fileSplitter->addWidget(m_filePane[1]);
+    m_fileSplitter->setChildrenCollapsible(false);
+    mainLayout->addWidget(m_fileSplitter);
 
     tabs = new tabBar(modelList->folderIcons);
 
-    mainLayout->addWidget(stackWidget);
+    ivdelegate = new IconViewDelegate();
+    ildelegate = new IconListDelegate();
+    m_filePane[0]->setupViews(modelList, ivdelegate, ildelegate);
+    m_filePane[1]->setupViews(modelList, ivdelegate, ildelegate);
+
+    list = m_filePane[0]->listView();
+    detailTree = m_filePane[0]->detailTree();
+    stackWidget = m_filePane[0]->stackWidget();
+    modelView = m_filePane[0]->proxyModel();
+    listSelectionModel = m_filePane[0]->selectionModel();
+
+    m_dualPaneEnabled = settings->value(QStringLiteral("dualPane"), false).toBool();
+    m_filePane[1]->setVisible(m_dualPaneEnabled);
+    if (!m_dualPaneEnabled) {
+        m_fileSplitter->setSizes({100000, 0});
+    } else {
+        m_fileSplitter->setSizes({1, 1});
+    }
+    const QByteArray splitState = settings->value(QStringLiteral("dualPaneSplitter")).toByteArray();
+    if (!splitState.isEmpty() && m_dualPaneEnabled) {
+        m_fileSplitter->restoreState(splitState);
+    }
+
     mainLayout->addWidget(tabs);
 
     setCentralWidget(main);
@@ -385,26 +442,17 @@ MainWindow::MainWindow(const QString &forcedStartPath)
     tree->hideColumn(COLUMN_FORMAT);
     tree->hideColumn(COLUMN_FOLDER);
 
-    modelView = new viewsSortProxyModel();
-    modelView->setSourceModel(modelList);
-    modelView->setSortCaseSensitivity(Qt::CaseInsensitive);
-
-    list->setWrapping(true);
-    list->setWordWrap(true);
-    list->setModel(modelView);
-    ivdelegate = new IconViewDelegate();
-    ildelegate = new IconListDelegate();
-    list->setTextElideMode(Qt::ElideNone);
-    listSelectionModel = list->selectionModel();
-
-    detailTree->setRootIsDecorated(false);
-    detailTree->setItemsExpandable(false);
-    detailTree->setUniformRowHeights(true);
-    detailTree->setAlternatingRowColors(true);
-    detailTree->setModel(modelView);
-    detailTree->setSelectionModel(listSelectionModel);
-    detailTree->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
-    setupFileListHeader();
+    for (int pi = 0; pi < 2; ++pi) {
+        IconFileListView *lv = m_filePane[pi]->listView();
+        DfmQTreeView *dt = m_filePane[pi]->detailTree();
+        lv->setTextElideMode(Qt::ElideNone);
+        dt->setRootIsDecorated(false);
+        dt->setItemsExpandable(false);
+        dt->setUniformRowHeights(true);
+        dt->setAlternatingRowColors(true);
+        dt->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+        setupFileListHeaderFor(dt);
+    }
 
     pathEdit = new QComboBox(this);
     pathEdit->setObjectName(QStringLiteral("pathAddressCombo"));
@@ -471,6 +519,18 @@ MainWindow::MainWindow(const QString &forcedStartPath)
     // Load settings before showing window
     loadSettings();
 
+    if (m_forceStartupDualPane) {
+        applyStartupDualPaneLayout();
+    } else if (m_dualPaneEnabled && m_filePane[1] && !pathEdit->itemText(0).isEmpty()) {
+        const QString p = pathEdit->itemText(0);
+        m_filePane[0]->setCurrentPath(p);
+        savePathBarToPane(m_filePane[0]);
+        if (m_filePane[1]->pathHistory().isEmpty()) {
+            m_filePane[1]->setPathHistory(m_filePane[0]->pathHistory());
+        }
+        navigateFilePane(m_filePane[1], p, false);
+    }
+
     // show window
     show();
 
@@ -505,21 +565,24 @@ void MainWindow::lateStart() {
   tree->setEditTriggers(QAbstractItemView::EditKeyPressed |
                         QAbstractItemView::SelectedClicked);
 
-  // Configure detail view
-  detailTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
-  detailTree->setSelectionBehavior(QAbstractItemView::SelectRows);
-  detailTree->setDragDropMode(QAbstractItemView::DragDrop);
-  detailTree->setDefaultDropAction(Qt::MoveAction);
-  detailTree->setDropIndicatorShown(true);
-  detailTree->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
-  // Configure list view
-  list->setResizeMode(QListView::Adjust);
-  list->setSelectionMode(QAbstractItemView::ExtendedSelection);
-  list->setSelectionRectVisible(true);
+  for (int pi = 0; pi < 2; ++pi) {
+      DfmQTreeView *dt = m_filePane[pi]->detailTree();
+      IconFileListView *lv = m_filePane[pi]->listView();
+      dt->setSelectionMode(QAbstractItemView::ExtendedSelection);
+      dt->setSelectionBehavior(QAbstractItemView::SelectRows);
+      dt->setDragDropMode(QAbstractItemView::DragDrop);
+      dt->setDefaultDropAction(Qt::MoveAction);
+      dt->setDropIndicatorShown(true);
+      dt->setEditTriggers(QAbstractItemView::NoEditTriggers);
+      lv->setResizeMode(QListView::Adjust);
+      lv->setSelectionMode(QAbstractItemView::ExtendedSelection);
+      lv->setSelectionRectVisible(true);
+      lv->setEditTriggers(QAbstractItemView::NoEditTriggers);
+      lv->setMouseTracking(true);
+      wireFilePane(m_filePane[pi]);
+  }
   list->setFocus();
-  list->setEditTriggers(QAbstractItemView::NoEditTriggers);
-  list->setMouseTracking(true);
+
   bookmarksList->setMouseTracking(true);
 #if defined(QTFM_HAVE_SIDEBAR_DISKS)
   if (disksList) {
@@ -544,23 +607,7 @@ void MainWindow::lateStart() {
   tabs->setDrawBase(0);
   tabs->setExpanding(0);
 
-  // Connect mouse clicks in views
-  if (settings->value("singleClick").toInt() == 1) {
-    connect(list, SIGNAL(clicked(QModelIndex)),
-            this, SLOT(listItemClicked(QModelIndex)));
-    connect(detailTree, SIGNAL(clicked(QModelIndex)),
-            this, SLOT(listItemClicked(QModelIndex)));
-  }
-  if (settings->value("singleClick").toInt() == 2) {
-    connect(list, SIGNAL(clicked(QModelIndex))
-            ,this, SLOT(listDoubleClicked(QModelIndex)));
-    connect(detailTree, SIGNAL(clicked(QModelIndex)),
-            this, SLOT(listDoubleClicked(QModelIndex)));
-  }
-
-  // Connect list view
-  connect(list, SIGNAL(activated(QModelIndex)),
-          this, SLOT(listDoubleClicked(QModelIndex)));
+  // Connect mouse clicks in views (both panes wired in wireFilePane)
 
   // Connect custom action manager
   connect(customActManager, SIGNAL(actionMapped(QString)),
@@ -587,9 +634,11 @@ void MainWindow::lateStart() {
   // Connect selection
   connect(QApplication::clipboard(), SIGNAL(changed(QClipboard::Mode)),
           this, SLOT(clipboardChanged()));
-  connect(detailTree,SIGNAL(activated(QModelIndex)),
-          this, SLOT(listDoubleClicked(QModelIndex)));
-  connect(listSelectionModel,
+  connect(m_filePane[0]->selectionModel(),
+          SIGNAL(selectionChanged(const QItemSelection, const QItemSelection)),
+          this, SLOT(listSelectionChanged(const QItemSelection,
+                                          const QItemSelection)));
+  connect(m_filePane[1]->selectionModel(),
           SIGNAL(selectionChanged(const QItemSelection, const QItemSelection)),
           this, SLOT(listSelectionChanged(const QItemSelection,
                                           const QItemSelection)));
@@ -614,10 +663,6 @@ void MainWindow::lateStart() {
   connect(tabs, SIGNAL(dragDropTab(const QMimeData *, QString, QStringList)),
           this, SLOT(pasteLauncher(const QMimeData *, QString, QStringList)));
   connect(tabs, SIGNAL(openInNewWindowRequested(int)), this, SLOT(openTabInNewWindow(int)));
-  connect(list, SIGNAL(pressed(QModelIndex)),
-          this, SLOT(listItemPressed(QModelIndex)));
-  connect(detailTree, SIGNAL(pressed(QModelIndex)),
-          this, SLOT(listItemPressed(QModelIndex)));
 
   connect(modelList, SIGNAL(thumbUpdate(QString)),
           this, SLOT(thumbUpdate(QString)));
@@ -851,6 +896,12 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   applyModuleTogglesFromSettings();
 
   ThumbDiag::setLoggingEnabled(settings->value(QStringLiteral("logThumbnailDiag"), true).toBool());
+
+  if (dualPaneAct) {
+      dualPaneAct->setChecked(m_dualPaneEnabled);
+  }
+
+  applyFilePaneChrome();
 
   modelList->setMode(thumbsAct->isChecked());
   if (thumbsAct->isChecked()) {
@@ -1137,12 +1188,16 @@ void MainWindow::treeSelectionChanged(QModelIndex current, QModelIndex previous)
 
     if (curIndex.filePath() != pathEdit->itemText(0)) {
         m_navForward.clear();
+        activeFilePane()->clearForward();
         if (tabs->count() && pathHistory) { tabs->addHistory(curIndex.filePath()); }
         if (!pathHistory && pathEdit->count()>0) { pathEdit->clear(); }
         pathEdit->insertItem(0,curIndex.filePath());
         syncPathComboDecorations();
         pathEdit->setCurrentIndex(0);
+        savePathBarToPane(activeFilePane());
     }
+
+    activeFilePane()->setCurrentPath(curIndex.filePath());
 
     if (!bookmarksList->hasFocus()) { bookmarksList->clearSelection(); }
 
@@ -1150,11 +1205,12 @@ void MainWindow::treeSelectionChanged(QModelIndex current, QModelIndex previous)
 
     //////
     QModelIndex baseIndex = modelView->mapFromSource(modelList->index(name.filePath()));
+    FileBrowserPane *pane = activeFilePane();
 
-    if (currentView == 2) { detailTree->setRootIndex(baseIndex); }
+    if (currentView == 2) { pane->detailTree()->setRootIndex(baseIndex); }
     else {
-        list->setRootIndex(baseIndex);
-        if (auto *iconList = qobject_cast<IconFileListView *>(list)) {
+        pane->listView()->setRootIndex(baseIndex);
+        if (auto *iconList = qobject_cast<IconFileListView *>(pane->listView())) {
             iconList->suppressRubberBandUntilMouseRelease();
         }
     }
@@ -1280,6 +1336,12 @@ void MainWindow::listSelectionChanged(const QItemSelection selected, const QItem
 {
     Q_UNUSED(selected)
     Q_UNUSED(deselected)
+
+    if (auto *sm = qobject_cast<QItemSelectionModel *>(sender())) {
+        if (sm != activeFilePane()->selectionModel()) {
+            return;
+        }
+    }
 
     QModelIndexList items;
 
@@ -1688,6 +1750,7 @@ void MainWindow::applyNavToolBarInsets()
         mwLayout->setContentsMargins(0, 0, 0, 0);
     }
 #endif
+    applyFilePaneChrome();
 }
 
 void MainWindow::updateTabBarPalette()
@@ -1773,16 +1836,39 @@ void MainWindow::listDoubleClicked(QModelIndex current) {
   if (mods == Qt::ControlModifier || mods == Qt::ShiftModifier) {
     return;
   }
+
+  FileBrowserPane *pane = nullptr;
+  if (auto *lv = qobject_cast<IconFileListView *>(sender())) {
+      pane = paneForWidget(lv);
+  } else if (auto *dt = qobject_cast<DfmQTreeView *>(sender())) {
+      pane = paneForWidget(dt);
+  }
+  if (!pane) {
+      pane = activeFilePane();
+  }
+  if (pane->paneIndex() != m_activePaneIndex) {
+      setActivePaneIndex(pane->paneIndex());
+  }
+
+  viewsSortProxyModel *proxy = pane->proxyModel();
+  QItemSelectionModel *sel = pane->selectionModel();
+
 #ifdef Q_OS_MAC
-  if (modelList->isDir(modelView->mapToSource(current)) && !modelList->fileName(modelView->mapToSource(current)).endsWith(".app")) {
+  if (modelList->isDir(proxy->mapToSource(current)) && !modelList->fileName(proxy->mapToSource(current)).endsWith(".app")) {
 #else
-  if (modelList->isDir(modelView->mapToSource(current))) {
+  if (modelList->isDir(proxy->mapToSource(current))) {
 #endif
-    listSelectionModel->setCurrentIndex(current, QItemSelectionModel::ClearAndSelect);
-    QModelIndex i = modelView->mapToSource(current);
+    sel->setCurrentIndex(current, QItemSelectionModel::ClearAndSelect);
+    QModelIndex i = proxy->mapToSource(current);
     tree->setCurrentIndex(modelTree->mapFromSource(i));
   } else {
+    const viewsSortProxyModel *prevView = modelView;
+    QItemSelectionModel *prevSel = listSelectionModel;
+    modelView = proxy;
+    listSelectionModel = sel;
     executeFile(current, 0);
+    modelView = const_cast<viewsSortProxyModel *>(prevView);
+    listSelectionModel = prevSel;
   }
 }
 //---------------------------------------------------------------------------
@@ -2067,6 +2153,11 @@ void MainWindow::writeSettings() {
   settings->setValue("sortBy", currentSortColumn);
   settings->setValue("sortOrder", currentSortOrder);
   settings->setValue("showThumbs", thumbsAct->isChecked());
+  settings->setValue(QStringLiteral("dualPane"), m_dualPaneEnabled);
+  if (m_fileSplitter) {
+      settings->setValue(QStringLiteral("dualPaneSplitter"), m_fileSplitter->saveState());
+  }
+  savePathBarToPane(activeFilePane());
   settings->setValue("hiddenMode", hiddenAct->isChecked());
   settings->setValue("lockLayout", lockLayoutAct->isChecked());
   settings->setValue("tabsOnTop", tabsOnTopAct->isChecked());
@@ -3218,4 +3309,233 @@ void MainWindow::clearCutItems()
 
     qDebug() << "trigger updateDir from clearCutItems";
     QTimer::singleShot(50,this,SLOT(updateDir()));
+}
+
+FileBrowserPane *MainWindow::activeFilePane() const
+{
+    return m_filePane[m_activePaneIndex];
+}
+
+FileBrowserPane *MainWindow::paneForWidget(QWidget *widget) const
+{
+    if (!widget) {
+        return nullptr;
+    }
+    for (int i = 0; i < 2; ++i) {
+        if (!m_filePane[i]) {
+            continue;
+        }
+        if (widget == m_filePane[i]->listView() || widget == m_filePane[i]->detailTree()
+            || widget == m_filePane[i]->listView()->viewport()
+            || widget == m_filePane[i]->detailTree()->viewport()
+            || m_filePane[i]->isAncestorOf(widget)) {
+            return m_filePane[i];
+        }
+    }
+    return nullptr;
+}
+
+void MainWindow::savePathBarToPane(FileBrowserPane *pane)
+{
+    if (!pane || !pathEdit) {
+        return;
+    }
+    QStringList history;
+    for (int i = 0; i < pathEdit->count(); ++i) {
+        history.append(pathEdit->itemText(i));
+    }
+    pane->setPathHistory(history);
+    pane->setForwardStack(m_navForward);
+    if (!history.isEmpty()) {
+        pane->setCurrentPath(history.constFirst());
+    }
+}
+
+void MainWindow::loadPathBarFromPane(FileBrowserPane *pane)
+{
+    if (!pane || !pathEdit) {
+        return;
+    }
+    pathEdit->blockSignals(true);
+    pathEdit->clear();
+    QStringList history = pane->pathHistory();
+    if (!history.isEmpty()) {
+        pathEdit->addItems(history);
+    } else if (!pane->currentPath().isEmpty()) {
+        pathEdit->insertItem(0, pane->currentPath());
+    }
+    syncPathComboDecorations();
+    pathEdit->setCurrentIndex(0);
+    pathEdit->blockSignals(false);
+    m_navForward = pane->forwardStack();
+}
+
+void MainWindow::wireFilePane(FileBrowserPane *pane)
+{
+    if (!pane) {
+        return;
+    }
+    IconFileListView *lv = pane->listView();
+    DfmQTreeView *dt = pane->detailTree();
+    connect(pane, &FileBrowserPane::paneActivated, this, &MainWindow::setActivePaneIndex);
+    connect(lv, &QListView::activated, this, &MainWindow::listDoubleClicked);
+    connect(dt, &QTreeView::activated, this, &MainWindow::listDoubleClicked);
+    connect(lv, &QListView::pressed, this, &MainWindow::listItemPressed);
+    connect(dt, &QTreeView::pressed, this, &MainWindow::listItemPressed);
+    const int singleClick = settings->value(QStringLiteral("singleClick")).toInt();
+    if (singleClick == 1) {
+        connect(lv, &QListView::clicked, this, &MainWindow::listItemClicked);
+        connect(dt, &QTreeView::clicked, this, &MainWindow::listItemClicked);
+    } else if (singleClick == 2) {
+        connect(lv, &QListView::clicked, this, &MainWindow::listDoubleClicked);
+        connect(dt, &QTreeView::clicked, this, &MainWindow::listDoubleClicked);
+    }
+}
+
+void MainWindow::applyFilePaneChrome()
+{
+    const QColor base = palette().color(QPalette::Base);
+    for (int i = 0; i < 2; ++i) {
+        if (m_filePane[i]) {
+            m_filePane[i]->applyChromeTint(base);
+        }
+    }
+}
+
+void MainWindow::navigateFilePane(FileBrowserPane *pane, const QString &path, bool syncTree)
+{
+    if (!pane || path.isEmpty() || !QFileInfo(path).isDir()) {
+        return;
+    }
+    pane->setCurrentPath(path);
+    QModelIndex src = modelList->index(path);
+    if (!src.isValid()) {
+        return;
+    }
+    if (pane == activeFilePane()) {
+        if (syncTree) {
+            tree->setCurrentIndex(modelTree->mapFromSource(src));
+        }
+        return;
+    }
+    modelList->setRootPath(path);
+    const QModelIndex proxyIndex = pane->proxyModel()->mapFromSource(src);
+    pane->setRootIndex(proxyIndex);
+    Q_UNUSED(syncTree)
+}
+
+void MainWindow::setActivePaneIndex(int paneIndex)
+{
+    if (paneIndex < 0 || paneIndex > 1 || !m_filePane[paneIndex]) {
+        return;
+    }
+    if (!m_dualPaneEnabled && paneIndex == 1) {
+        return;
+    }
+    if (paneIndex == m_activePaneIndex) {
+        return;
+    }
+
+    savePathBarToPane(m_filePane[m_activePaneIndex]);
+
+    m_activePaneIndex = paneIndex;
+    FileBrowserPane *pane = m_filePane[paneIndex];
+    list = pane->listView();
+    detailTree = pane->detailTree();
+    stackWidget = pane->stackWidget();
+    modelView = pane->proxyModel();
+    listSelectionModel = pane->selectionModel();
+
+    loadPathBarFromPane(pane);
+
+    const QString path = pane->currentPath();
+    if (!path.isEmpty() && QFileInfo(path).isDir()) {
+        curIndex = QFileInfo(path);
+        modelList->setRootPath(path);
+        const QModelIndex baseIndex = modelView->mapFromSource(modelList->index(path));
+        pane->setRootIndex(baseIndex);
+        tree->blockSignals(true);
+        tree->setCurrentIndex(modelTree->mapFromSource(modelList->index(path)));
+        tree->blockSignals(false);
+        if (showPathInWindowTitle) {
+            const QString folderPart = curIndex.fileName().isEmpty() ? curIndex.absolutePath()
+                                                                     : curIndex.fileName();
+            setWindowTitle(QStringLiteral("%1 — %2").arg(QLatin1String(APP_NAME), folderPart));
+        }
+    }
+
+    applyFilePaneChrome();
+}
+
+void MainWindow::toggleDualPane()
+{
+    if (!dualPaneAct || !m_fileSplitter) {
+        return;
+    }
+    m_dualPaneEnabled = dualPaneAct->isChecked();
+    settings->setValue(QStringLiteral("dualPane"), m_dualPaneEnabled);
+
+    if (m_dualPaneEnabled) {
+        m_filePane[1]->setVisible(true);
+        const QString path = m_filePane[0]->currentPath();
+        if (path.isEmpty() && pathEdit->count() > 0) {
+            m_filePane[0]->setCurrentPath(pathEdit->itemText(0));
+        }
+        const QString rightPath = m_filePane[0]->currentPath().isEmpty()
+                                      ? pathEdit->itemText(0)
+                                      : m_filePane[0]->currentPath();
+        m_filePane[1]->setPathHistory(m_filePane[0]->pathHistory());
+        if (m_filePane[1]->pathHistory().isEmpty() && !rightPath.isEmpty()) {
+            m_filePane[1]->setPathHistory({rightPath});
+        }
+        m_filePane[1]->clearForward();
+        navigateFilePane(m_filePane[1], rightPath, false);
+        m_fileSplitter->setSizes({1, 1});
+    } else {
+        savePathBarToPane(m_filePane[m_activePaneIndex]);
+        if (m_activePaneIndex == 1) {
+            setActivePaneIndex(0);
+        }
+        m_filePane[1]->setVisible(false);
+        m_fileSplitter->setSizes({100000, 0});
+    }
+    applyFilePaneChrome();
+}
+
+void MainWindow::applyStartupDualPaneLayout()
+{
+    if (!m_forceStartupDualPane || !m_fileSplitter || !m_filePane[0] || !m_filePane[1]) {
+        return;
+    }
+
+    m_dualPaneEnabled = true;
+    if (dualPaneAct) {
+        dualPaneAct->setChecked(true);
+    }
+    m_filePane[1]->setVisible(true);
+    m_fileSplitter->setSizes({1, 1});
+
+    const QString leftPath = startPath;
+    if (!leftPath.isEmpty()) {
+        m_filePane[0]->setCurrentPath(leftPath);
+        QStringList leftHistory;
+        for (int i = 0; i < pathEdit->count(); ++i) {
+            leftHistory.append(pathEdit->itemText(i));
+        }
+        if (leftHistory.isEmpty()) {
+            leftHistory.append(leftPath);
+        }
+        m_filePane[0]->setPathHistory(leftHistory);
+        m_filePane[0]->clearForward();
+    }
+
+    if (!m_startupRightPath.isEmpty()) {
+        m_filePane[1]->setPathHistory({m_startupRightPath});
+        m_filePane[1]->setCurrentPath(m_startupRightPath);
+        m_filePane[1]->clearForward();
+        navigateFilePane(m_filePane[1], m_startupRightPath, false);
+    }
+
+    setActivePaneIndex(0);
+    applyFilePaneChrome();
 }

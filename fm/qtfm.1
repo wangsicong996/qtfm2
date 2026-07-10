@@ -3,10 +3,16 @@
 QtFM -\ desktop independent file manager
 .SH SYNOPSIS
 .B qtfm
-.I file
-.B ...
+[\fIdirectory\fR]
+.br
+.B qtfm
+\fIleft-directory\fR \fIright-directory\fR
 .SH DESCRIPTION
 Lightweight file manager using Qt.
+.PP
+With two directory arguments, QtFM opens in dual-pane mode: the left pane shows
+\fIleft-directory\fR and the right pane shows \fIright-directory\fR.
+A single argument opens that folder (or the parent folder if the argument is a file).
 .SH FILES
 .I ~/.config/qtfm6/qtfm6.conf
 .RS

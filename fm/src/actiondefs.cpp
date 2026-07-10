@@ -118,6 +118,9 @@ void MainWindow::applyBundledToolbarIcons()
   if (thumbsAct) {
     thumbsAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("show-thumbs")));
   }
+  if (dualPaneAct) {
+    dualPaneAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("split-pane")));
+  }
   if (aboutAct) {
     aboutAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("about-qtfm")));
   }
@@ -222,6 +225,13 @@ void MainWindow::createActions() {
   connect(upAct, SIGNAL(triggered()),this,SLOT(goUpDir()));
   upAct->setIcon(actionIcons->at(5));
   actionList->append(upAct);
+
+  dualPaneAct = new QAction(tr("Dual pane"), this);
+  dualPaneAct->setCheckable(true);
+  dualPaneAct->setStatusTip(tr("Show left and right file panes with independent navigation"));
+  dualPaneAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("split-pane")));
+  connect(dualPaneAct, &QAction::triggered, this, &MainWindow::toggleDualPane);
+  actionList->append(dualPaneAct);
 
   backAct = new QAction(tr("Back"),this);
   backAct->setStatusTip(tr("Go back one directory"));
@@ -479,6 +489,11 @@ void MainWindow::createActions() {
   connect(thumbnailHelpAct, SIGNAL(triggered()), this, SLOT(showThumbnailHelp()));
   actionList->append(thumbnailHelpAct);
 
+  dualPaneHelpAct = new QAction(tr("Dual-pane usage…"), this);
+  dualPaneHelpAct->setStatusTip(tr("Toolbar dual pane and command-line examples"));
+  connect(dualPaneHelpAct, SIGNAL(triggered()), this, SLOT(showDualPaneHelp()));
+  actionList->append(dualPaneHelpAct);
+
 #ifdef Q_OS_MAC
   macOpenWithHelpAct = new QAction(tr("macOS 打开方式设置…"), this);
   macOpenWithHelpAct->setStatusTip(tr("如何在设置里配置 Open with"));
@@ -690,6 +705,7 @@ void MainWindow::createMenus() {
   viewMenu->addSeparator();
   viewMenu->addAction(tabsOnTopAct);
   viewMenu->addAction(thumbsAct);
+  viewMenu->addAction(dualPaneAct);
   viewMenu->addSeparator();
   viewMenu->addAction(zoomInAct);
   viewMenu->addAction(zoomOutAct);
@@ -708,6 +724,7 @@ void MainWindow::createMenus() {
   helpMenu->addSeparator();
 #endif
   helpMenu->addAction(thumbnailHelpAct);
+  helpMenu->addAction(dualPaneHelpAct);
   helpMenu->addAction(viewDiagnosticLogAct);
   helpMenu->addSeparator();
   helpMenu->addAction(aboutAct);
@@ -747,6 +764,7 @@ void MainWindow::createToolBars() {
   settingsAct->setText(QString());
   settingsAct->setToolTip(tr("Settings..."));
 #endif
+  navToolBar->addAction(dualPaneAct);
   navToolBar->addAction(backAct);
   navToolBar->addAction(upAct);
   navToolBar->addAction(refreshAct);

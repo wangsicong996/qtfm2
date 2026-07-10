@@ -28,6 +28,8 @@
 class QTimer;
 #include <QAtomicInt>
 #include <QSplitter>
+#include "filebrowserpane.h"
+
 #include <QTreeView>
 #include <QListView>
 #include <QTabWidget>
@@ -195,6 +197,9 @@ public slots:
     void showAboutBox();
     void showDiagnosticLog();
     void showThumbnailHelp();
+    void showDualPaneHelp();
+    void setActivePaneIndex(int paneIndex);
+    void toggleDualPane();
 #ifdef Q_OS_MAC
     void showMacOpenWithHelp();
     void showMacFileAccessHelp();
@@ -218,6 +223,16 @@ private slots:
     void openWithConfiguredApp();
     void updateGrid();
     void setupFileListHeader();
+    void setupFileListHeaderFor(DfmQTreeView *tree);
+    FileBrowserPane *activeFilePane() const;
+    FileBrowserPane *paneForWidget(QWidget *widget) const;
+    void savePathBarToPane(FileBrowserPane *pane);
+    void loadPathBarFromPane(FileBrowserPane *pane);
+    void wireFilePane(FileBrowserPane *pane);
+    void applyFilePaneChrome();
+    void navigateFilePane(FileBrowserPane *pane, const QString &path, bool syncTree);
+    void applyStartupDualPaneLayout();
+    static QString resolveLaunchDirectory(const QString &raw, QString *singleFileTarget);
     void applyListRowHeight();
     void applyListColumnWidths();
     // Sidebar disks (UDisks on Linux, diskutil on macOS)
@@ -273,6 +288,12 @@ private:
     QDockWidget *dockBookmarks;
     QTabWidget *sidebarTabs = nullptr;
     QVBoxLayout *mainLayout;
+    QSplitter *m_fileSplitter = nullptr;
+    FileBrowserPane *m_filePane[2] = {nullptr, nullptr};
+    int m_activePaneIndex = 0;
+    bool m_dualPaneEnabled = false;
+    bool m_forceStartupDualPane = false;
+    QString m_startupRightPath;
     QStackedWidget *stackWidget;
     QTreeView *tree;
     DfmQTreeView *detailTree;
@@ -323,6 +344,7 @@ private:
     QAction *exitAct;
     QAction *upAct;
     QAction *backAct;
+    QAction *dualPaneAct = nullptr;
     QAction *homeAct;
     QAction *newTabAct;
     QAction *hiddenAct;
@@ -378,6 +400,7 @@ private:
     QAction *aboutQtAct;
     QAction *viewDiagnosticLogAct = nullptr;
     QAction *thumbnailHelpAct = nullptr;
+    QAction *dualPaneHelpAct = nullptr;
 #ifdef Q_OS_MAC
     QAction *macOpenWithHelpAct;
     QAction *macFileAccessHelpAct;

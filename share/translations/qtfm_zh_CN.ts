@@ -178,6 +178,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
   <context>
     <name>MainWindow</name>
     <message>
+      <source>&lt;p&gt;&lt;b&gt;In the window&lt;/b&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Click the &lt;b&gt;Dual pane&lt;/b&gt; button on the toolbar (rectangle with a vertical line), or use &lt;b&gt;View → Dual pane&lt;/b&gt;.&lt;/li&gt;&lt;li&gt;Click the left or right pane to make it active; the path bar follows the active pane.&lt;/li&gt;&lt;li&gt;Back, forward, up, and mouse side buttons apply to the active pane only.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;&lt;b&gt;Start with two folders from the command line&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Pass two paths: left pane first, right pane second. QtFM opens in dual-pane mode automatically.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Linux (AppImage)&lt;/b&gt;&lt;/p&gt;&lt;pre&gt;./qtfm-6.3.0-x86_64.AppImage /path/to/left /path/to/right&lt;/pre&gt;&lt;p&gt;&lt;b&gt;Linux (installed or extracted AppDir)&lt;/b&gt;&lt;/p&gt;&lt;pre&gt;./usr/bin/qtfm /home/user/Downloads /home/user/Documents&lt;/pre&gt;&lt;p&gt;&lt;b&gt;macOS&lt;/b&gt;&lt;/p&gt;&lt;pre&gt;open -na qtfm.app --args /path/to/left /path/to/right&lt;/pre&gt;&lt;p&gt;Use your actual .app name if it differs (e.g. QtFM.app). &lt;code&gt;--args&lt;/code&gt; is required so both paths reach the application.&lt;/p&gt;&lt;p&gt;A single path argument opens one folder as before (dual pane off unless you enable it in the UI).&lt;/p&gt;</source>
+      <translation>&lt;p&gt;&lt;b&gt;在窗口内&lt;/b&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;点击工具栏上的 &lt;b&gt;双栏&lt;/b&gt; 按钮（带竖线的矩形），或使用 &lt;b&gt;视图 → 双栏&lt;/b&gt;。&lt;/li&gt;&lt;li&gt;点击左侧或右侧文件区以切换活动栏；顶部路径栏随活动栏变化。&lt;/li&gt;&lt;li&gt;后退、前进、上一级和鼠标侧键仅作用于当前活动栏。&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;&lt;b&gt;用命令行指定左右两个文件夹&lt;/b&gt;&lt;/p&gt;&lt;p&gt;传入两个路径：第一个为左栏，第二个为右栏；QtFM 会自动以双栏模式打开。&lt;/p&gt;&lt;p&gt;&lt;b&gt;Linux（AppImage）&lt;/b&gt;&lt;/p&gt;&lt;pre&gt;./qtfm-6.3.0-x86_64.AppImage /path/to/left /path/to/right&lt;/pre&gt;&lt;p&gt;&lt;b&gt;Linux（安装版或解压后的 AppDir）&lt;/b&gt;&lt;/p&gt;&lt;pre&gt;./usr/bin/qtfm /home/sun/Downloads /home/sun/Documents&lt;/pre&gt;&lt;p&gt;&lt;b&gt;macOS&lt;/b&gt;&lt;/p&gt;&lt;pre&gt;open -na qtfm.app --args /path/to/left /path/to/right&lt;/pre&gt;&lt;p&gt;若应用名不同请改用实际名称（如 QtFM.app）。必须使用 &lt;code&gt;--args&lt;/code&gt; 才能把两个路径传给程序。&lt;/p&gt;&lt;p&gt;只传一个路径时与以前相同（默认单栏，可在界面中再开双栏）。&lt;/p&gt;</translation>
+    </message>
+    <message>
       <source>&lt;p&gt;打开 &lt;b&gt;设置 (Settings) → Open with&lt;/b&gt;。这里的规则优先于系统默认关联。&lt;/p&gt;</source>
       <translation>&lt;p&gt;打开 &lt;b&gt;设置 → 打开方式&lt;/b&gt;。此处的规则优先于系统默认关联。&lt;/p&gt;</translation>
     </message>
@@ -306,6 +310,18 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>磁盘</translation>
     </message>
     <message>
+      <source>Dual pane</source>
+      <translation>双栏</translation>
+    </message>
+    <message>
+      <source>Dual-pane usage</source>
+      <translation>双栏用法</translation>
+    </message>
+    <message>
+      <source>Dual-pane usage…</source>
+      <translation>双栏用法…</translation>
+    </message>
+    <message>
       <source>Edit</source>
       <translation>编辑</translation>
     </message>
@@ -388,6 +404,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Layout</source>
       <translation>Layout</translation>
+    </message>
+    <message>
+      <source>Left and right file panes</source>
+      <translation>左右文件栏</translation>
     </message>
     <message>
       <source>Link here</source>
@@ -632,6 +652,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Toggle hidden files</source>
       <translation>Toggle hidden files</translation>
+    </message>
+    <message>
+      <source>Toolbar dual pane and command-line examples</source>
+      <translation>工具栏双栏与命令行启动说明</translation>
     </message>
     <message>
       <source>Tree</source>

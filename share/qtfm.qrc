@@ -26,6 +26,8 @@
         <file>icons/toolbar/refresh.svg</file>
         <file>icons/toolbar/terminal.svg</file>
         <file>icons/toolbar/sort.svg</file>
+        <file>icons/toolbar/show-thumbs.svg</file>
+        <file>icons/toolbar/split-pane.svg</file>
         <file>icons/toolbar/tab-add.svg</file>
         <file>icons/toolbar/view-icon-mode.svg</file>
         <file>icons/toolbar/view-list-mode.svg</file>
@@ -69,6 +71,7 @@
         <file>icons/toolbar/white/refresh.svg</file>
         <file>icons/toolbar/white/rename.svg</file>
         <file>icons/toolbar/white/sort.svg</file>
+        <file>icons/toolbar/white/split-pane.svg</file>
         <file>icons/toolbar/white/tab-add.svg</file>
         <file>icons/toolbar/white/terminal.svg</file>
         <file>icons/toolbar/white/up.svg</file>

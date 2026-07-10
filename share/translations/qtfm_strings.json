@@ -1484,6 +1484,30 @@
     "source": "Showing thumbnails in the file list"
   },
   {
+    "context": "MainWindow",
+    "source": "Dual-pane usage…"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Toolbar dual pane and command-line examples"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Dual-pane usage"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Left and right file panes"
+  },
+  {
+    "context": "MainWindow",
+    "source": "<p><b>In the window</b></p><ul><li>Click the <b>Dual pane</b> button on the toolbar (rectangle with a vertical line), or use <b>View → Dual pane</b>.</li><li>Click the left or right pane to make it active; the path bar follows the active pane.</li><li>Back, forward, up, and mouse side buttons apply to the active pane only.</li></ul><p><b>Start with two folders from the command line</b></p><p>Pass two paths: left pane first, right pane second. QtFM opens in dual-pane mode automatically.</p><p><b>Linux (AppImage)</b></p><pre>./qtfm-6.3.0-x86_64.AppImage /path/to/left /path/to/right</pre><p><b>Linux (installed or extracted AppDir)</b></p><pre>./usr/bin/qtfm /home/user/Downloads /home/user/Documents</pre><p><b>macOS</b></p><pre>open -na qtfm.app --args /path/to/left /path/to/right</pre><p>Use your actual .app name if it differs (e.g. QtFM.app). <code>--args</code> is required so both paths reach the application.</p><p>A single path argument opens one folder as before (dual pane off unless you enable it in the UI).</p>"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Dual pane"
+  },
+  {
     "context": "DiagnosticLog",
     "source": "Thumbnail debug ([Thumb])"
   },

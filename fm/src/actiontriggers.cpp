@@ -213,6 +213,7 @@ void MainWindow::goBackDir() {
   // Sets new dir index
   QModelIndex i = modelList->index(pathEdit->itemText(0));
   tree->setCurrentIndex(modelTree->mapFromSource(i));
+  savePathBarToPane(activeFilePane());
 }
 
 void MainWindow::goForwardDir()
@@ -230,6 +231,7 @@ void MainWindow::goForwardDir()
     return;
   }
   tree->setCurrentIndex(modelTree->mapFromSource(i));
+  savePathBarToPane(activeFilePane());
 }
 //---------------------------------------------------------------------------
 
@@ -715,6 +717,20 @@ void MainWindow::applyIconView() {
 
   modelList->setShowListDecorations(true);
   modelList->setMode(thumbsAct->isChecked());
+  for (int pi = 0; pi < 2; ++pi) {
+      if (!m_filePane[pi]) {
+          continue;
+      }
+      m_filePane[pi]->setViewStackIndex(0);
+      IconFileListView *lv = m_filePane[pi]->listView();
+      lv->setViewMode(QListView::IconMode);
+      lv->setItemDelegate(ivdelegate);
+      lv->setGridSize(QSize(zoom, zoom));
+      lv->setIconSize(QSize(zoom, zoom));
+      lv->setFlow(QListView::LeftToRight);
+      lv->setDragDropMode(QAbstractItemView::DragDrop);
+      lv->setDefaultDropAction(Qt::MoveAction);
+  }
   stackWidget->setCurrentIndex(0);
   detailTree->setMouseTracking(false);
   list->setMouseTracking(true);
@@ -751,6 +767,19 @@ void MainWindow::applyListView() {
   }
 
   modelList->setMode(thumbsAct->isChecked());
+  for (int pi = 0; pi < 2; ++pi) {
+      if (!m_filePane[pi]) {
+          continue;
+      }
+      m_filePane[pi]->setViewStackIndex(1);
+      DfmQTreeView *dt = m_filePane[pi]->detailTree();
+      dt->setMouseTracking(true);
+      m_filePane[pi]->listView()->setMouseTracking(false);
+      const QModelIndex proxyRoot = m_filePane[pi]->proxyModel()->mapFromSource(i);
+      if (dt->rootIndex() != proxyRoot) {
+          dt->setRootIndex(proxyRoot);
+      }
+  }
   detailTree->setMouseTracking(true);
   list->setMouseTracking(false);
   stackWidget->setCurrentIndex(1);
@@ -767,7 +796,15 @@ void MainWindow::applyListView() {
 
 void MainWindow::setupFileListHeader()
 {
-    QHeaderView *header = detailTree->header();
+    setupFileListHeaderFor(detailTree);
+}
+
+void MainWindow::setupFileListHeaderFor(DfmQTreeView *tree)
+{
+    if (!tree) {
+        return;
+    }
+    QHeaderView *header = tree->header();
     header->setStretchLastSection(true);
     header->setSectionsClickable(true);
     header->setSectionsMovable(false);
@@ -1007,6 +1044,39 @@ void MainWindow::showThumbnailHelp()
            "</ul>"
            "<p>Use <b>Help → View diagnostic log</b> and filter <b>[Thumb]</b> to see ffmpeg "
            "commands and errors.</p>"));
+    box.setStandardButtons(QMessageBox::Ok);
+    box.exec();
+}
+//---------------------------------------------------------------------------
+
+void MainWindow::showDualPaneHelp()
+{
+    QMessageBox box(this);
+    box.setWindowTitle(tr("Dual-pane usage"));
+    box.setIcon(QMessageBox::Information);
+    box.setText(tr("Left and right file panes"));
+    box.setInformativeText(
+        tr("<p><b>In the window</b></p>"
+           "<ul>"
+           "<li>Click the <b>Dual pane</b> button on the toolbar (rectangle with a vertical "
+           "line), or use <b>View → Dual pane</b>.</li>"
+           "<li>Click the left or right pane to make it active; the path bar follows the "
+           "active pane.</li>"
+           "<li>Back, forward, up, and mouse side buttons apply to the active pane only.</li>"
+           "</ul>"
+           "<p><b>Start with two folders from the command line</b></p>"
+           "<p>Pass two paths: left pane first, right pane second. QtFM opens in dual-pane "
+           "mode automatically.</p>"
+           "<p><b>Linux (AppImage)</b></p>"
+           "<pre>./qtfm-6.3.0-x86_64.AppImage /path/to/left /path/to/right</pre>"
+           "<p><b>Linux (installed or extracted AppDir)</b></p>"
+           "<pre>./usr/bin/qtfm /home/user/Downloads /home/user/Documents</pre>"
+           "<p><b>macOS</b></p>"
+           "<pre>open -na qtfm.app --args /path/to/left /path/to/right</pre>"
+           "<p>Use your actual .app name if it differs (e.g. QtFM.app). "
+           "<code>--args</code> is required so both paths reach the application.</p>"
+           "<p>A single path argument opens one folder as before (dual pane off unless you "
+           "enable it in the UI).</p>"));
     box.setStandardButtons(QMessageBox::Ok);
     box.exec();
 }
