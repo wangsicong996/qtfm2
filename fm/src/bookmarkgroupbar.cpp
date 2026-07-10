@@ -142,20 +142,21 @@ void BookmarkGroupBar::rebuildButtons()
         m_buttonGroup->addButton(btn);
         m_tabButtons.insert(g.id, btn);
         m_tabsLayout->addWidget(btn, 0, Qt::AlignHCenter);
-        connect(btn, &QToolButton::clicked, this, [this, id = g.id]() {
-            selectGroup(id);
+        const QString groupId = g.id;
+        connect(btn, &QToolButton::clicked, this, [this, groupId]() {
+            selectGroup(groupId);
         });
-        connect(btn, &QWidget::customContextMenuRequested, this, [this, btn, id = g.id](const QPoint &pos) {
+        connect(btn, &QWidget::customContextMenuRequested, this, [this, btn, groupId](const QPoint &pos) {
             QMenu menu;
             QAction *setIcon = menu.addAction(tr("Set group icon…"));
-            connect(setIcon, &QAction::triggered, this, [this, id]() {
-                emit groupIconChangeRequested(id);
+            connect(setIcon, &QAction::triggered, this, [this, groupId]() {
+                emit groupIconChangeRequested(groupId);
             });
             if (m_groups.size() > 1) {
                 menu.addSeparator();
                 QAction *delGroup = menu.addAction(tr("Delete group…"));
-                connect(delGroup, &QAction::triggered, this, [this, id]() {
-                    emit groupDeleteRequested(id);
+                connect(delGroup, &QAction::triggered, this, [this, groupId]() {
+                    emit groupDeleteRequested(groupId);
                 });
             }
             menu.exec(btn->mapToGlobal(pos));

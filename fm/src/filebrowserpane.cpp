@@ -1,6 +1,7 @@
 #include "filebrowserpane.h"
 
 #include "iconview.h"
+#include "mymodel.h"
 
 #include <QEvent>
 #include <QHBoxLayout>

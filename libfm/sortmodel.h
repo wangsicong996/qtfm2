@@ -11,6 +11,12 @@
 //---------------------------------------------------------------------------------
 class mainTreeFilterProxyModel : public QSortFilterProxyModel
 {
+public:
+    explicit mainTreeFilterProxyModel(QObject *parent = nullptr)
+        : QSortFilterProxyModel(parent)
+    {
+    }
+
 protected:
     virtual bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const;
 };
@@ -22,6 +28,11 @@ protected:
 class viewsSortProxyModel : public QSortFilterProxyModel
 {
 public:
+    explicit viewsSortProxyModel(QObject *parent = nullptr)
+        : QSortFilterProxyModel(parent)
+    {
+    }
+
     void setSingleFileFilter(const QString &absoluteFilePath);
     void clearSingleFileFilter();
     bool hasSingleFileFilter() const { return !m_singleFileCanonical.isEmpty(); }
