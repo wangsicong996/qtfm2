@@ -88,14 +88,12 @@ void FileBrowserPane::setRootIndex(const QModelIndex &proxyIndex)
     m_detailTree->setRootIndex(proxyIndex);
 }
 
-void FileBrowserPane::applyChromeTint(const QColor &windowBase)
+void FileBrowserPane::applyChromeTint(const QColor &windowBase, bool activePane)
 {
     QPalette pal = palette();
     QColor bg = windowBase;
-    if (m_paneIndex == 0) {
-        bg = bg.lighter(104);
-    } else {
-        bg = bg.darker(104);
+    if (activePane) {
+        bg = bg.darker(120);
     }
     pal.setColor(QPalette::Window, bg);
     pal.setColor(QPalette::Base, bg);

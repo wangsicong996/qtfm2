@@ -398,6 +398,9 @@ MainWindow::MainWindow(const QString &forcedStartPath)
     m_fileSplitter->addWidget(m_filePane[0]);
     m_fileSplitter->addWidget(m_filePane[1]);
     m_fileSplitter->setChildrenCollapsible(false);
+    connect(m_fileSplitter, &QSplitter::splitterMoved, this, [this](int, int) {
+        updateGrid();
+    });
     mainLayout->addWidget(m_fileSplitter);
 
     tabs = new tabBar(modelList->folderIcons);
@@ -683,6 +686,13 @@ void MainWindow::lateStart() {
 #ifdef Q_OS_MAC
   QTimer::singleShot(500, this, SLOT(maybeShowMacFileAccessHint()));
 #endif
+
+  if (m_dualPaneEnabled) {
+      QTimer::singleShot(0, this, [this]() {
+          syncAllFilePaneRootIndices();
+          updateGrid();
+      });
+  }
 }
 //---------------------------------------------------------------------------
 
@@ -1714,8 +1724,10 @@ void MainWindow::applyViewChromeStyles()
     ).arg(rowH)
      .arg(hover.name(QColor::HexArgb), selected.name(QColor::HexArgb),
           pal.color(QPalette::Mid).name());
-    if (detailTree) {
-        detailTree->setStyleSheet(treeQss);
+    for (int pi = 0; pi < 2; ++pi) {
+        if (m_filePane[pi] && m_filePane[pi]->detailTree()) {
+            m_filePane[pi]->detailTree()->setStyleSheet(treeQss);
+        }
     }
 
     applyNavToolBarInsets();
@@ -2724,9 +2736,7 @@ void MainWindow::refresh(bool modelRefresh, bool loadDir)
         modelList->forceRefresh();
     }
 
-    QModelIndex baseIndex = modelView->mapFromSource(modelList->index(pathEdit->currentText()));
-    if (currentView == 2) { detailTree->setRootIndex(baseIndex); }
-    else { list->setRootIndex(baseIndex); }
+    syncAllFilePaneRootIndices();
 
     pathEditChanged(pathEdit->currentText());
 
@@ -2837,15 +2847,34 @@ void MainWindow::openInApp()
     }
 }
 
-void MainWindow::updateGrid()
+void MainWindow::updateGridForList(IconFileListView *lv)
 {
-    if (list->viewMode() != QListView::IconMode) { return; }
+    if (!lv || lv->viewMode() != QListView::IconMode) {
+        return;
+    }
     ivdelegate->setCellGaps(iconViewGapH, iconViewGapV);
     const QSize grid = IconViewDelegate::iconGridSize(
         zoom, iconViewGapH, iconViewGapV, fontMetrics());
-    list->setIconSize(QSize(zoom, zoom));
-    if (list->gridSize() != grid) {
-        list->setGridSize(grid);
+    lv->setIconSize(QSize(zoom, zoom));
+    if (lv->gridSize() != grid) {
+        lv->setGridSize(grid);
+    }
+    lv->scheduleDelayedItemsLayout();
+}
+
+void MainWindow::updateGrid()
+{
+    for (int i = 0; i < 2; ++i) {
+        if (m_filePane[i]) {
+            updateGridForList(m_filePane[i]->listView());
+        }
+    }
+    if (modelView && currentView == 1) {
+        const int sortCol = currentSortColumn == COLUMN_FOLDER ? COLUMN_NAME : currentSortColumn;
+        modelView->sort(sortCol, currentSortOrder);
+        if (list) {
+            list->viewport()->update();
+        }
     }
 }
 
@@ -3302,10 +3331,7 @@ void MainWindow::clearCutItems()
     modelList->clearCutItems();
     modelList->update();
 
-    QModelIndex baseIndex = modelView->mapFromSource(modelList->index(pathEdit->currentText()));
-
-    if (currentView == 2) { detailTree->setRootIndex(baseIndex); }
-    else { list->setRootIndex(baseIndex); }
+    syncAllFilePaneRootIndices();
 
     qDebug() << "trigger updateDir from clearCutItems";
     QTimer::singleShot(50,this,SLOT(updateDir()));
@@ -3397,8 +3423,41 @@ void MainWindow::applyFilePaneChrome()
     const QColor base = palette().color(QPalette::Base);
     for (int i = 0; i < 2; ++i) {
         if (m_filePane[i]) {
-            m_filePane[i]->applyChromeTint(base);
+            const bool active = (i == m_activePaneIndex);
+            m_filePane[i]->applyChromeTint(base, active);
         }
+    }
+}
+
+void MainWindow::syncFilePaneRootIndex(FileBrowserPane *pane)
+{
+    if (!pane || !pane->proxyModel()) {
+        return;
+    }
+    QString path = pane->currentPath();
+    if (path.isEmpty() && pane == activeFilePane() && pathEdit && pathEdit->count() > 0) {
+        path = pathEdit->itemText(0);
+    }
+    if (path.isEmpty() || !QFileInfo(path).isDir()) {
+        return;
+    }
+    const QModelIndex src = modelList->index(path);
+    if (!src.isValid()) {
+        return;
+    }
+    const QModelIndex proxyRoot = pane->proxyModel()->mapFromSource(src);
+    if (!proxyRoot.isValid()) {
+        return;
+    }
+    pane->setRootIndex(proxyRoot);
+    updateGridForList(pane->listView());
+}
+
+void MainWindow::syncAllFilePaneRootIndices()
+{
+    const int paneCount = m_dualPaneEnabled ? 2 : 1;
+    for (int i = 0; i < paneCount; ++i) {
+        syncFilePaneRootIndex(m_filePane[i]);
     }
 }
 
@@ -3491,6 +3550,10 @@ void MainWindow::toggleDualPane()
         m_filePane[1]->clearForward();
         navigateFilePane(m_filePane[1], rightPath, false);
         m_fileSplitter->setSizes({1, 1});
+        QTimer::singleShot(0, this, [this]() {
+            syncAllFilePaneRootIndices();
+            updateGrid();
+        });
     } else {
         savePathBarToPane(m_filePane[m_activePaneIndex]);
         if (m_activePaneIndex == 1) {
@@ -3538,4 +3601,11 @@ void MainWindow::applyStartupDualPaneLayout()
 
     setActivePaneIndex(0);
     applyFilePaneChrome();
+    QTimer::singleShot(0, this, [this]() {
+        syncAllFilePaneRootIndices();
+        updateGrid();
+        if (m_fileSplitter) {
+            m_fileSplitter->updateGeometry();
+        }
+    });
 }

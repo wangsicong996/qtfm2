@@ -230,6 +230,9 @@ private slots:
     void loadPathBarFromPane(FileBrowserPane *pane);
     void wireFilePane(FileBrowserPane *pane);
     void applyFilePaneChrome();
+    void syncFilePaneRootIndex(FileBrowserPane *pane);
+    void syncAllFilePaneRootIndices();
+    void updateGridForList(IconFileListView *listView);
     void navigateFilePane(FileBrowserPane *pane, const QString &path, bool syncTree);
     void applyStartupDualPaneLayout();
     static QString resolveLaunchDirectory(const QString &raw, QString *singleFileTarget);
