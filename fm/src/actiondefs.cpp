@@ -371,12 +371,6 @@ void MainWindow::createActions() {
   connect(renameAct, SIGNAL(triggered()),this, SLOT(renameFile()));
   actionList->append(renameAct);
 
-  renamePopupAct = new QAction(tr("Rename"), this);
-  renamePopupAct->setStatusTip(tr("Rename file"));
-  renamePopupAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("rename")));
-  connect(renamePopupAct, SIGNAL(triggered()), this, SLOT(renameFileDialog()));
-  actionList->append(renamePopupAct);
-
   terminalAct = new QAction(tr("Terminal"), this);
   terminalAct->setStatusTip(tr("Open virtual terminal"));
   connect(terminalAct, SIGNAL(triggered()), this, SLOT(terminalRun()));

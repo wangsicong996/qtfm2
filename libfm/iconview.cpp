@@ -2,22 +2,23 @@
 #include "bundledicons.h"
 
 #include <QListView>
+#include <QPlainTextEdit>
 #include <QAbstractItemView>
 #include <QItemSelectionModel>
 #include <QFrame>
 #include <QPainterPath>
 #include <QPlainTextEdit>
-#include <QScrollBar>
 #include <QShowEvent>
 #include <QResizeEvent>
-#include <QFocusEvent>
 #include <QTimer>
 #include <QTextBlockFormat>
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QTextLayout>
 #include <QTextOption>
+#include <QTextDocument>
 #include <QApplication>
+#include <QtMath>
 
 namespace {
 
@@ -66,52 +67,32 @@ public:
         setStyleSheet(renameEditorStyleSheet());
     }
 
-    void applyRenameLayout(Qt::Alignment align)
+    void applyRenameLayout(Qt::Alignment alignment)
     {
         QTextCursor cursor(document());
         cursor.select(QTextCursor::Document);
         QTextBlockFormat blockFormat;
-        blockFormat.setAlignment(align);
+        blockFormat.setAlignment(alignment);
         cursor.mergeBlockFormat(blockFormat);
         cursor.clearSelection();
     }
 
-    void pinScrollToTop()
+    void keepCursorVisible()
     {
-        if (QScrollBar *v = verticalScrollBar()) {
-            v->setValue(v->minimum());
-        }
-        if (QScrollBar *h = horizontalScrollBar()) {
-            h->setValue(h->minimum());
-        }
-    }
-
-    void selectAllFromTop()
-    {
-        QTextCursor cursor(document());
-        cursor.movePosition(QTextCursor::Start);
-        cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
-        setTextCursor(cursor);
-        pinScrollToTop();
+        ensureCursorVisible();
     }
 
 protected:
     void showEvent(QShowEvent *event) override
     {
         QPlainTextEdit::showEvent(event);
-        QTimer::singleShot(0, this, [this]() { pinScrollToTop(); });
+        QTimer::singleShot(0, this, [this]() { keepCursorVisible(); });
     }
 
     void resizeEvent(QResizeEvent *event) override
     {
         QPlainTextEdit::resizeEvent(event);
-        pinScrollToTop();
-    }
-
-    void focusInEvent(QFocusEvent *event) override
-    {
-        QPlainTextEdit::focusInEvent(event);
-        pinScrollToTop();
+        keepCursorVisible();
     }
 };
 
@@ -132,13 +113,14 @@ int twoLineTextHeight(const QFontMetrics &fm)
     return fm.height() * 2 + 2;
 }
 
-bool fileNameUsesMultipleLines(const QString &text, const QFont &font, int width)
+bool fileNameUsesMultipleDisplayLines(const QString &text, const QFont &font, int width)
 {
     if (text.isEmpty() || width <= 0) {
         return false;
     }
     QTextLayout layout(text, font);
     QTextOption opt;
+    opt.setAlignment(Qt::AlignLeft);
     opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     layout.setTextOption(opt);
     layout.beginLayout();
@@ -148,10 +130,29 @@ bool fileNameUsesMultipleLines(const QString &text, const QFont &font, int width
         return false;
     }
     line1.setLineWidth(width);
-    QTextLine line2 = layout.createLine();
-    const bool multi = line2.isValid();
+    const QTextLine line2 = layout.createLine();
     layout.endLayout();
-    return multi;
+    return line2.isValid();
+}
+
+int renameEditorHeightForText(const QString &text, const QFont &font, int width,
+                              int minHeight, int maxLines = 16)
+{
+    if (width <= 0) {
+        return minHeight;
+    }
+    QTextDocument doc;
+    QTextOption opt;
+    opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+    doc.setDefaultFont(font);
+    doc.setDefaultTextOption(opt);
+    doc.setPlainText(text);
+    doc.setTextWidth(width);
+    const QFontMetrics fm(font);
+    const int maxH = fm.lineSpacing() * maxLines + 4;
+    int h = qCeil(doc.size().height()) + 2;
+    h = qMax(h, minHeight);
+    return qMin(h, maxH);
 }
 
 void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &text,
@@ -165,6 +166,7 @@ void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &te
 
     QTextLayout layout(text, font);
     QTextOption opt;
+    opt.setAlignment(Qt::AlignLeft);
     opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     layout.setTextOption(opt);
 
@@ -177,31 +179,38 @@ void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &te
     line1.setLineWidth(rect.width());
 
     QTextLine line2 = layout.createLine();
-    if (!line2.isValid()) {
-        layout.endLayout();
-        painter->setPen(color);
-        painter->drawText(rect, Qt::AlignHCenter | Qt::AlignTop,
-                          fm.elidedText(text, Qt::ElideRight, rect.width()));
-        return;
+    const bool multiLine = line2.isValid();
+    bool truncated = false;
+    if (multiLine) {
+        line2.setLineWidth(rect.width());
+        QTextLine line3 = layout.createLine();
+        truncated = line3.isValid();
     }
-
-    line2.setLineWidth(rect.width());
-    const QTextLine line3 = layout.createLine();
-    const bool truncated = line3.isValid();
+    layout.endLayout();
 
     painter->setPen(color);
-    line1.draw(painter, QPointF(rect.left(), rect.top()));
-    const qreal y2 = rect.top() + lineHeight;
-    if (truncated) {
-        const QString rest = text.mid(line2.textStart());
-        layout.endLayout();
-        painter->drawText(QRect(rect.left(), int(y2), rect.width(), lineHeight),
-                          Qt::AlignLeft | Qt::AlignTop,
-                          fm.elidedText(rest, Qt::ElideRight, rect.width()));
+
+    if (!multiLine) {
+        painter->drawText(rect, Qt::AlignHCenter | Qt::AlignTop | Qt::TextSingleLine,
+                          fm.elidedText(text, Qt::ElideMiddle, rect.width()));
         return;
     }
-    line2.draw(painter, QPointF(rect.left(), y2));
-    layout.endLayout();
+
+    qreal y = rect.top();
+    line1.draw(painter, QPointF(rect.left(), y));
+    y += lineHeight;
+
+    if (!line2.isValid()) {
+        return;
+    }
+    if (truncated) {
+        const QString rest = text.mid(line2.textStart());
+        painter->drawText(QRect(rect.left(), int(y), rect.width(), lineHeight),
+                          Qt::AlignLeft | Qt::AlignTop,
+                          fm.elidedText(rest, Qt::ElideRight, rect.width()));
+    } else {
+        line2.draw(painter, QPointF(rect.left(), y));
+    }
 }
 
 } // namespace
@@ -272,7 +281,7 @@ QWidget *IconViewDelegate::createEditor(QWidget *parent,
 {
     Q_UNUSED(index);
     auto *editor = new RenameEditor(parent);
-    editor->setFixedHeight(twoLineTextHeight(option.fontMetrics));
+    editor->setMinimumHeight(twoLineTextHeight(option.fontMetrics));
     return editor;
 }
 
@@ -280,11 +289,16 @@ void IconViewDelegate::updateEditorGeometry(QWidget *editor,
                                             const QStyleOptionViewItem &option,
                                             const QModelIndex &index) const
 {
-    Q_UNUSED(index);
     const int zoom = iconPaintSize(option);
     const QRect txtRect = textLabelRect(option.rect, zoom, _cellGapH, option.fontMetrics);
-    editor->setGeometry(txtRect);
-    static_cast<RenameEditor *>(editor)->pinScrollToTop();
+    const QString name = index.data(Qt::EditRole).toString();
+    const int minH = txtRect.height();
+    const int editH = renameEditorHeightForText(name, option.font, txtRect.width(), minH);
+    editor->setGeometry(QRect(txtRect.left(), txtRect.top(), txtRect.width(), editH));
+    if (auto *plain = qobject_cast<QPlainTextEdit *>(editor)) {
+        plain->setFixedHeight(editH);
+    }
+    editor->raise();
 }
 
 void IconViewDelegate::setEditorData(QWidget *editor,
@@ -297,13 +311,32 @@ void IconViewDelegate::setEditorData(QWidget *editor,
         return;
     }
     plain->setPlainText(index.data(Qt::EditRole).toString());
-    const QString name = plain->toPlainText();
-    const Qt::Alignment align = fileNameUsesMultipleLines(name, plain->font(), plain->width())
-                                    ? Qt::AlignLeft
-                                    : Qt::AlignHCenter;
-    plain->applyRenameLayout(align);
-    plain->selectAllFromTop();
-    QTimer::singleShot(0, plain, [plain]() { plain->selectAllFromTop(); });
+    const QString name = index.data(Qt::EditRole).toString();
+
+    const QListView *listView = nullptr;
+    for (const QWidget *w = editor->parentWidget(); w; w = w->parentWidget()) {
+        listView = qobject_cast<const QListView *>(w);
+        if (listView) {
+            break;
+        }
+    }
+
+    int labelWidth = editor->width();
+    QFont labelFont = editor->font();
+    if (listView && index.isValid()) {
+        const QRect itemRect = listView->visualRect(index);
+        const int zoom = qMax(listView->iconSize().width(), IconViewDelegate::iconZoomMin);
+        const QRect txtRect = textLabelRect(itemRect, zoom, _cellGapH, listView->fontMetrics());
+        labelWidth = txtRect.width();
+        labelFont = listView->font();
+    }
+    if (labelWidth > 0) {
+        const bool multi = fileNameUsesMultipleDisplayLines(name, labelFont, labelWidth);
+        plain->applyRenameLayout(multi ? Qt::AlignLeft : Qt::AlignHCenter);
+    } else {
+        plain->applyRenameLayout(Qt::AlignHCenter);
+    }
+    plain->selectAll();
 }
 
 void IconViewDelegate::setModelData(QWidget *editor,

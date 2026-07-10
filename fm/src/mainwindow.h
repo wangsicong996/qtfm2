@@ -139,7 +139,6 @@ public slots:
     void toggleWrapBookmarks();
     void showEditDialog();
     void renameFile();
-    void renameFileDialog();
     void actionMapper(QString);
     void folderPropertiesLauncher();
     void bookmarkClicked(QModelIndex);
@@ -353,7 +352,6 @@ private:
     QAction *pasteAct;
     QAction *settingsAct;
     QAction *renameAct;
-    QAction *renamePopupAct = nullptr;
     QAction *terminalAct;
     QAction *openAct;
     QAction *runAct;

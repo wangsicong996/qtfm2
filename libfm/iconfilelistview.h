@@ -2,8 +2,6 @@
 #define ICONFILELISTVIEW_H
 
 #include <QListView>
-#include <QModelIndex>
-#include <QPoint>
 
 class IconViewDelegate;
 
@@ -16,6 +14,9 @@ class IconFileListView : public QListView
 public:
     explicit IconFileListView(QWidget *parent = nullptr);
 
+    /** After changing folder, ignore drag/rubber-band until the mouse is released. */
+    void suppressRubberBandUntilMouseRelease();
+
     QModelIndex indexAt(const QPoint &point) const override;
 
 protected:
@@ -26,11 +27,8 @@ protected:
 
 private:
     QRect contentRectForVisualRect(const QRect &cellRect) const;
-    void beginDeferredListViewPress(const QMouseEvent *event);
 
-    bool m_plainLeftPressActive = false;
-    QPoint m_plainLeftPressPos;
-    QModelIndex m_plainLeftPressIndex;
+    bool m_suppressRubberBandUntilRelease = false;
 };
 
 #endif

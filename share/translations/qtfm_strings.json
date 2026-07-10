@@ -1412,18 +1412,6 @@
     "source": "Open in new window"
   },
   {
-    "context": "FileRenameDialog",
-    "source": "Rename file"
-  },
-  {
-    "context": "FileRenameDialog",
-    "source": "File name:"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Could not rename the file."
-  },
-  {
     "context": "MainWindow",
     "source": "View diagnostic log…"
   },
@@ -1442,10 +1430,6 @@
   {
     "context": "SettingsDialog",
     "source": "Enable thumbnail generation"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "On macOS, folders open with a single click; double-click opens files only."
   },
   {
     "context": "MainWindow",

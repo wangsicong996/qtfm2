@@ -50,6 +50,7 @@
 #include "mymodel.h"
 #include "fileutils.h"
 #include "applicationdialog.h"
+#include "iconfilelistview.h"
 #include "sidebaritemdelegate.h"
 #include "pathcombodelegate.h"
 
@@ -1144,7 +1145,12 @@ void MainWindow::treeSelectionChanged(QModelIndex current, QModelIndex previous)
     QModelIndex baseIndex = modelView->mapFromSource(modelList->index(name.filePath()));
 
     if (currentView == 2) { detailTree->setRootIndex(baseIndex); }
-    else { list->setRootIndex(baseIndex); }
+    else {
+        list->setRootIndex(baseIndex);
+        if (auto *iconList = qobject_cast<IconFileListView *>(list)) {
+            iconList->suppressRubberBandUntilMouseRelease();
+        }
+    }
 
     if(tabs->count()) {
         QString tabText = curIndex.fileName();
@@ -1206,7 +1212,7 @@ void MainWindow::dirLoaded(bool thumbs)
     statusSize->setText(QString("%1 items").arg(items.count()));
     statusDate->setText(QString("%1").arg(total));
 
-    if (thumbsAct->isChecked() && thumbs) {
+    if (thumbsAct->isChecked() && thumbs && modelList->thumbnailGenerationEnabled()) {
       myModel *modelListPtr = modelList;
       QMetaObject::invokeMethod(modelList, [modelListPtr, items]() {
         modelListPtr->loadThumbs(items);
@@ -1759,10 +1765,14 @@ void MainWindow::listDoubleClicked(QModelIndex current) {
   if (mods == Qt::ControlModifier || mods == Qt::ShiftModifier) {
     return;
   }
-  const QModelIndex src = modelView->mapToSource(current);
-  if (modelList->isDir(src)) {
+#ifdef Q_OS_MAC
+  if (modelList->isDir(modelView->mapToSource(current)) && !modelList->fileName(modelView->mapToSource(current)).endsWith(".app")) {
+#else
+  if (modelList->isDir(modelView->mapToSource(current))) {
+#endif
     listSelectionModel->setCurrentIndex(current, QItemSelectionModel::ClearAndSelect);
-    tree->setCurrentIndex(modelTree->mapFromSource(src));
+    QModelIndex i = modelView->mapToSource(current);
+    tree->setCurrentIndex(modelTree->mapFromSource(i));
   } else {
     executeFile(current, 0);
   }
@@ -2304,7 +2314,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
         }
 #endif
         popup->addSeparator();
-        popup->addAction(renamePopupAct);
+        popup->addAction(renameAct);
         popup->addSeparator();
 
         // Add custom actions that are associated with all file types
@@ -2342,7 +2352,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
         popup->addAction(macCopyFilePathAct);
 #endif
         popup->addSeparator();
-        popup->addAction(renamePopupAct);
+        popup->addAction(renameAct);
         popup->addSeparator();
 
         foreach (QMenu* parent, customActManager->getMenus()->values("*")) {
@@ -2428,7 +2438,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
           popup->addAction(copyAct);
           popup->addAction(pasteAct);
           popup->addSeparator();
-          popup->addAction(renamePopupAct);
+          popup->addAction(renameAct);
           popup->addSeparator();
           if (modelList->getRootPath() != trashDir) {
             popup->addAction(trashAct);
@@ -2903,12 +2913,7 @@ void MainWindow::applyModuleTogglesFromSettings()
             thumbsAct->setChecked(false);
             modelList->setMode(false);
         } else {
-            const bool show = settings->value(QStringLiteral("showThumbs"), true).toBool();
-            thumbsAct->setChecked(show);
-            modelList->setMode(show);
-            if (show) {
-                QTimer::singleShot(0, this, [this]() { dirLoaded(true); });
-            }
+            modelList->setMode(thumbsAct->isChecked());
         }
     }
 
