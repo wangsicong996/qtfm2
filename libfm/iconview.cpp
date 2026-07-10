@@ -284,9 +284,7 @@ void IconViewDelegate::updateEditorGeometry(QWidget *editor,
     const int zoom = iconPaintSize(option);
     const QRect txtRect = textLabelRect(option.rect, zoom, _cellGapH, option.fontMetrics);
     editor->setGeometry(txtRect);
-    if (auto *plain = qobject_cast<RenameEditor *>(editor)) {
-        plain->pinScrollToTop();
-    }
+    static_cast<RenameEditor *>(editor)->pinScrollToTop();
 }
 
 void IconViewDelegate::setEditorData(QWidget *editor,
