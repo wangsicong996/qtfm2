@@ -1421,7 +1421,7 @@
   },
   {
     "context": "SettingsDialog",
-    "source": "Turn off individual modules to see whether freezes or high CPU come from disks or thumbnail generation. Takes effect when you save settings."
+    "source": "Turn off the disk sidebar to see whether freezes or high CPU come from disk refresh. Takes effect when you save settings."
   },
   {
     "context": "SettingsDialog",
@@ -1429,7 +1429,15 @@
   },
   {
     "context": "SettingsDialog",
-    "source": "Enable thumbnail generation"
+    "source": "Log thumbnail commands to diagnostic log"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Thumbnail debug ([Thumb])"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "(No thumbnail debug lines yet.)\n\nEnable “Log thumbnail commands” in Settings → Advanced, open a folder with images/videos, enable View → Show thumbs, then Refresh."
   },
   {
     "context": "MainWindow",

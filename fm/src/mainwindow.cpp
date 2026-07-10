@@ -50,7 +50,7 @@
 #include "mymodel.h"
 #include "fileutils.h"
 #include "applicationdialog.h"
-#include "iconfilelistview.h"
+#include "thumbdiag.h"
 #include "sidebaritemdelegate.h"
 #include "pathcombodelegate.h"
 
@@ -852,6 +852,8 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
 
   settings->remove(QStringLiteral("enableThumbnailGeneration"));
 
+  ThumbDiag::setLoggingEnabled(settings->value(QStringLiteral("logThumbnailDiag"), true).toBool());
+
   modelList->setMode(thumbsAct->isChecked());
   if (thumbsAct->isChecked()) {
     QTimer::singleShot(0, this, [this]() { dirLoaded(true); });
@@ -1221,6 +1223,10 @@ void MainWindow::dirLoaded(bool thumbs)
 
     if (thumbsAct->isChecked() && thumbs) {
       modelList->loadThumbs(items);
+    } else if (!thumbsAct->isChecked()) {
+      ThumbDiag::warn(QStringLiteral("dirLoaded: View → Show thumbs is off"));
+    } else if (!thumbs) {
+      ThumbDiag::info(QStringLiteral("dirLoaded: thumbs refresh skipped (thumbs=false)"));
     }
 
     if (!pendingSingleFileTarget.isEmpty()) {

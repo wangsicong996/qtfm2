@@ -4,6 +4,7 @@
 #endif
 #include "mainwindow.h"
 #include "common.h"
+#include "thumbdiag.h"
 #include "diagnosticlog.h"
 #include "settingsdialog.h"
 #include "openwithconfig.h"
@@ -1086,7 +1087,9 @@ void MainWindow::showEditDialog() {
 
   // Creates settings dialog
   SettingsDialog *d = new SettingsDialog(actionList, settings, mimeUtils, this);
-  if (d->exec()) {
+    if (d->exec()) {
+
+    ThumbDiag::setLoggingEnabled(settings->value(QStringLiteral("logThumbnailDiag"), true).toBool());
 
     // Reload settings
     loadSettings(false /* don't reload window state/geo */,

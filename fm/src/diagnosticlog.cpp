@@ -163,6 +163,18 @@ QString filteredIssueText(const QString &fullLog)
     return out.join(QLatin1Char('\n'));
 }
 
+QString filteredThumbText(const QString &fullLog)
+{
+    const QStringList lines = fullLog.split(QLatin1Char('\n'));
+    QStringList out;
+    for (const QString &line : lines) {
+        if (line.contains(QStringLiteral("[Thumb]"))) {
+            out.append(line);
+        }
+    }
+    return out.join(QLatin1Char('\n'));
+}
+
 void showViewerDialog(QWidget *parent)
 {
     QDialog dlg(parent);
@@ -192,6 +204,8 @@ void showViewerDialog(QWidget *parent)
                   QStringLiteral("issues"));
     mode->addItem(QApplication::translate("DiagnosticLog", "Full log"),
                   QStringLiteral("full"));
+    mode->addItem(QApplication::translate("DiagnosticLog", "Thumbnail debug ([Thumb])"),
+                  QStringLiteral("thumb"));
     layout->addWidget(mode);
 
     auto *editor = new QPlainTextEdit(&dlg);
@@ -209,8 +223,8 @@ void showViewerDialog(QWidget *parent)
 
     auto reload = [&]() {
         const QString full = readLogText();
-        const bool issuesOnly = mode->currentData().toString() == QLatin1String("issues");
-        if (issuesOnly) {
+        const QString modeId = mode->currentData().toString();
+        if (modeId == QLatin1String("issues")) {
             QString issues = filteredIssueText(full);
             if (issues.trimmed().isEmpty()) {
                 issues = QApplication::translate(
@@ -220,6 +234,16 @@ void showViewerDialog(QWidget *parent)
                     "and refresh.");
             }
             editor->setPlainText(issues);
+        } else if (modeId == QLatin1String("thumb")) {
+            QString thumb = filteredThumbText(full);
+            if (thumb.trimmed().isEmpty()) {
+                thumb = QApplication::translate(
+                    "DiagnosticLog",
+                    "(No thumbnail debug lines yet.)\n\n"
+                    "Enable “Log thumbnail commands” in Settings → Advanced, open a folder "
+                    "with images/videos, enable View → Show thumbs, then Refresh.");
+            }
+            editor->setPlainText(thumb);
         } else {
             if (full.isEmpty()) {
                 editor->setPlainText(QApplication::translate(

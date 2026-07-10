@@ -571,6 +571,9 @@ QWidget *SettingsDialog::createAdvSettings()
     layoutModules->addWidget(modulesHint);
     checkEnableDiskSidebar = new QCheckBox(tr("Enable disk sidebar"), grpModules);
     layoutModules->addWidget(checkEnableDiskSidebar);
+    checkLogThumbnailDiag = new QCheckBox(tr("Log thumbnail commands to diagnostic log"), widget);
+    checkLogThumbnailDiag->setChecked(true);
+    layoutWidget->addWidget(checkLogThumbnailDiag);
     layoutWidget->addWidget(grpModules);
     layoutWidget->addStretch();
 
@@ -837,6 +840,10 @@ void SettingsDialog::readSettings() {
       checkEnableDiskSidebar->setChecked(
           settingsPtr->value(QStringLiteral("enableDiskSidebar"), true).toBool());
   }
+  if (checkLogThumbnailDiag) {
+      checkLogThumbnailDiag->setChecked(
+          settingsPtr->value(QStringLiteral("logThumbnailDiag"), true).toBool());
+  }
   if (customActionsSettingsWidget) {
       customActionsSettingsWidget->loadFromSettings(settingsPtr);
   }
@@ -1070,6 +1077,10 @@ bool SettingsDialog::saveSettings() {
   if (checkEnableDiskSidebar) {
       settingsPtr->setValue(QStringLiteral("enableDiskSidebar"),
                             checkEnableDiskSidebar->isChecked());
+  }
+  if (checkLogThumbnailDiag) {
+      settingsPtr->setValue(QStringLiteral("logThumbnailDiag"),
+                            checkLogThumbnailDiag->isChecked());
   }
   if (customActionsSettingsWidget) {
       customActionsSettingsWidget->saveToSettings(settingsPtr);

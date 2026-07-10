@@ -98,8 +98,9 @@ protected:
   QCheckBox* checkFileColor;
   QCheckBox* checkPathHistory;
   QCheckBox* checkOutput;
-  QCheckBox* checkEnableDiskSidebar = nullptr;
-  QTreeWidget* shortsWidget;
+    QCheckBox* checkEnableDiskSidebar = nullptr;
+    QCheckBox* checkLogThumbnailDiag = nullptr;
+    QTreeWidget* shortsWidget;
   QGroupBox* grpAssoc;
   QTreeWidget* mimesWidget;
   QListWidget* listAssoc;

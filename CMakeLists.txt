@@ -75,6 +75,7 @@ add_library(
     libfm/applicationdialog.cpp
     libfm/bookmarkmodel.cpp
     libfm/common.cpp
+    libfm/thumbdiag.cpp
     libfm/completer.cpp
     libfm/customactionsmanager.cpp
     libfm/desktopfile.cpp

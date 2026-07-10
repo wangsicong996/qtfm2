@@ -27,6 +27,7 @@
 #include <QUrl>
 #include <QStandardPaths>
 #include <QBuffer>
+#include "thumbdiag.h"
 #include <QProcess>
 #include <QTemporaryFile>
 #include <QImageReader>
@@ -788,6 +789,7 @@ QString Common::writeThumbnailForFile(const QString &absoluteFilePath,
     }
     QDir().mkpath(QFileInfo(outPath).absolutePath());
     if (!canvas.save(outPath, "PNG")) {
+        ThumbDiag::warn(QStringLiteral("failed to write PNG cache: %1").arg(outPath));
         return QString();
     }
     clearThumbnailFailure(absoluteFilePath);
@@ -801,6 +803,7 @@ QImage Common::pdfFirstPageImage(const QString &pdfPath)
     }
     const QString pdftoppm = QStandardPaths::findExecutable(QStringLiteral("pdftoppm"));
     if (pdftoppm.isEmpty()) {
+        ThumbDiag::warn(QStringLiteral("pdftoppm not found on PATH"));
         return QImage();
     }
 
@@ -814,7 +817,7 @@ QImage Common::pdfFirstPageImage(const QString &pdfPath)
 
     QProcess proc;
     proc.setProgram(pdftoppm);
-    proc.setArguments({
+    const QStringList args = {
         QStringLiteral("-png"),
         QStringLiteral("-singlefile"),
         QStringLiteral("-f"), QStringLiteral("1"),
@@ -822,14 +825,18 @@ QImage Common::pdfFirstPageImage(const QString &pdfPath)
         QStringLiteral("-scale-to"), QString::number(thumbnailPixelSize),
         pdfPath,
         prefix,
-    });
+    };
+    proc.setArguments(args);
     proc.start();
     if (!proc.waitForFinished(120000)) {
         proc.kill();
         QFile::remove(prefix + QStringLiteral(".png"));
+        ThumbDiag::command(pdftoppm, args, -1, QByteArrayLiteral("timeout"));
         return QImage();
     }
     if (proc.exitStatus() != QProcess::NormalExit || proc.exitCode() != 0) {
+        ThumbDiag::command(pdftoppm, args, proc.exitCode(), proc.readAllStandardError(),
+                           proc.readAllStandardOutput());
         QFile::remove(prefix + QStringLiteral(".png"));
         return QImage();
     }
@@ -896,12 +903,21 @@ bool runFfmpegExtract(const QString &ffmpeg, const QStringList &extraArgs,
     if (!proc.waitForFinished(15000)) {
         proc.kill();
         proc.waitForFinished(2000);
+        ThumbDiag::command(ffmpeg, args, -1, QByteArrayLiteral("timeout"),
+                           proc.readAllStandardOutput());
         return false;
     }
-    return proc.exitStatus() == QProcess::NormalExit
-        && proc.exitCode() == 0
-        && QFileInfo::exists(outPng)
-        && QFileInfo(outPng).size() > 0;
+    const int code = proc.exitCode();
+    const QByteArray stderrOut = proc.readAllStandardError();
+    const QByteArray stdoutOut = proc.readAllStandardOutput();
+    const bool ok = proc.exitStatus() == QProcess::NormalExit
+                    && code == 0
+                    && QFileInfo::exists(outPng)
+                    && QFileInfo(outPng).size() > 0;
+    if (!ok) {
+        ThumbDiag::command(ffmpeg, args, code, stderrOut, stdoutOut);
+    }
+    return ok;
 }
 
 /**
@@ -964,8 +980,12 @@ QImage Common::videoFirstFrameImage(const QString &mediaPath)
     }
     const QString ffmpeg = findMediaToolExecutable(QStringLiteral("ffmpeg"));
     if (ffmpeg.isEmpty()) {
+        ThumbDiag::warn(QStringLiteral("ffmpeg not found (PATH, Homebrew, /usr/bin, or "
+                                       "QtFM.app/Contents/Resources/ffmpeg)"));
         return QImage();
     }
+    ThumbDiag::info(QStringLiteral("video decode: %1 (ffmpeg=%2)")
+                        .arg(mediaPath, ffmpeg));
 
     QTemporaryFile tmp(QDir::tempPath() + QStringLiteral("/qtfm-vid-XXXXXX"));
     tmp.setAutoRemove(false);
@@ -1007,6 +1027,7 @@ QImage Common::videoFirstFrameImage(const QString &mediaPath)
 
     if (!ok) {
         QFile::remove(outPng);
+        ThumbDiag::warn(QStringLiteral("videoFirstFrameImage failed: %1").arg(mediaPath));
         return QImage();
     }
 

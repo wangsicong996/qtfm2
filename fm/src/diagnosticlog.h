@@ -21,6 +21,8 @@ QString readLogText(qint64 maxBytes = 3 * 1024 * 1024);
 /** Warning / Critical / Fatal lines with session markers. */
 QString filteredIssueText(const QString &fullLog);
 
+QString filteredThumbText(const QString &fullLog);
+
 void showViewerDialog(QWidget *parent);
 
 } // namespace DiagnosticLog

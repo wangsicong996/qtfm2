@@ -21,6 +21,7 @@ SOURCES += \
     propertiesdlg.cpp \
     processdialog.cpp \
     common.cpp \
+    thumbdiag.cpp \
     apptranslator.cpp \
     completer.cpp \
     sortmodel.cpp \
@@ -43,6 +44,7 @@ HEADERS += \
     mimeutils.h \
     properties.h \
     common.h \
+    thumbdiag.h \
     apptranslator.h \
     processdialog.h \
     icondlg.h \

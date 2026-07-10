@@ -116,6 +116,14 @@
       <translation>（日志文件为空或尚未创建。）</translation>
     </message>
     <message>
+      <source>(No thumbnail debug lines yet.)
+
+Enable “Log thumbnail commands” in Settings → Advanced, open a folder with images/videos, enable View → Show thumbs, then Refresh.</source>
+      <translation>（尚无缩略图调试记录。）
+
+请在 设置 → 高级 中开启「将缩略图命令写入诊断日志」，打开含图片/视频的文件夹，并启用 视图 → 显示缩略图 后点刷新。</translation>
+    </message>
+    <message>
       <source>(No warnings or errors in the log file yet.)
 
 Switch to “Full log” to see all messages, or reproduce the problem and refresh.</source>
@@ -150,6 +158,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Refresh</source>
       <translation>刷新</translation>
+    </message>
+    <message>
+      <source>Thumbnail debug ([Thumb])</source>
+      <translation>缩略图调试 ([Thumb])</translation>
     </message>
     <message>
       <source>Warnings and errors</source>
@@ -1337,10 +1349,6 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>启用路径历史</translation>
     </message>
     <message>
-      <source>Enable thumbnail generation</source>
-      <translation>启用缩略图生成</translation>
-    </message>
-    <message>
       <source>Everything</source>
       <translation>全部</translation>
     </message>
@@ -1391,6 +1399,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>List row height</source>
       <translation>列表行高</translation>
+    </message>
+    <message>
+      <source>Log thumbnail commands to diagnostic log</source>
+      <translation>将缩略图命令写入诊断日志</translation>
     </message>
     <message>
       <source>Mime</source>
@@ -1505,8 +1517,8 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>工具栏留白（四边相同）</translation>
     </message>
     <message>
-      <source>Turn off individual modules to see whether freezes or high CPU come from disks or thumbnail generation. Takes effect when you save settings.</source>
-      <translation>可单独关闭模块，排查卡死或高 CPU 是否由磁盘侧栏或缩略图生成引起。保存设置后立即生效。</translation>
+      <source>Turn off the disk sidebar to see whether freezes or high CPU come from disk refresh. Takes effect when you save settings.</source>
+      <translation>可关闭磁盘侧栏，排查卡死或高 CPU 是否由磁盘刷新引起。保存设置后立即生效。</translation>
     </message>
     <message>
       <source>Use "Dark Mode"</source>

@@ -20,6 +20,7 @@
 ****************************************************************************/
 
 #include "mymodel.h"
+#include "thumbdiag.h"
 #include "bundledicons.h"
 #include "dfmqstyleditemdelegate.h"
 #include <sys/inotify.h>
@@ -751,6 +752,8 @@ void myModel::cacheInfo()
  */
 void myModel::setMode(bool icons) {
   showThumbs = icons;
+  ThumbDiag::info(QStringLiteral("showThumbs=%1").arg(icons ? QStringLiteral("on")
+                                                             : QStringLiteral("off")));
 }
 //---------------------------------------------------------------------------
 
@@ -789,6 +792,10 @@ void myModel::loadThumbs(QModelIndexList indexes) {
     }
   }
 
+  ThumbDiag::info(QStringLiteral("cache dir: %1").arg(Common::qtfmThumbnailCacheDir()));
+  ThumbDiag::info(QStringLiteral("loadThumbs: %1 candidate(s) in %2")
+                      .arg(files.count())
+                      .arg(currentRootPath));
   enqueueThumbnailPaths(files);
 }
 
@@ -800,6 +807,10 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
 
   bool scheduled = false;
   QStringList decorationUpdates;
+  int cacheHits = 0;
+  int skipFail = 0;
+  int queued = 0;
+  int queueLen = 0;
   {
     QMutexLocker lock(&thumbMutex);
     for (const QString &path : files) {
@@ -809,9 +820,11 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
           thumbPaths->insert(path, cache);
           decorationUpdates.append(path);
         }
+        ++cacheHits;
         continue;
       }
       if (Common::isThumbnailFailureMarkerValid(path)) {
+        ++skipFail;
         continue;
       }
       if (!thumbQueue.contains(path)) {
@@ -820,9 +833,19 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
         }
         thumbQueue.append(path);
         scheduled = true;
+        ++queued;
       }
     }
+    queueLen = thumbQueue.size();
   }
+
+  ThumbDiag::info(QStringLiteral("enqueue: queued=%1 cache_hit=%2 skip_fail_marker=%3 "
+                                 "active_jobs=%4 queue_len=%5")
+                      .arg(queued)
+                      .arg(cacheHits)
+                      .arg(skipFail)
+                      .arg(thumbActiveJobs.loadRelaxed())
+                      .arg(queueLen));
 
   for (const QString &path : decorationUpdates) {
     queueThumbnailDecorationUpdate(path);
@@ -908,6 +931,7 @@ void myModel::pumpThumbnailQueue()
     }
 
     thumbActiveJobs.ref();
+    ThumbDiag::info(QStringLiteral("worker start: %1").arg(path));
     QtConcurrent::run([this, path, itemMime]() {
       const QString cache = generateThumbnailToCache(path, itemMime);
       if (!cache.isEmpty()) {
@@ -926,7 +950,10 @@ void myModel::pumpThumbnailQueue()
 void myModel::finishThumbnailJob(QString path, QString cachePath)
 {
   if (!cachePath.isEmpty()) {
+    ThumbDiag::info(QStringLiteral("worker ok: %1 -> %2").arg(path, cachePath));
     queueThumbnailDecorationUpdate(path);
+  } else {
+    ThumbDiag::warn(QStringLiteral("worker failed: %1").arg(path));
   }
   pumpThumbnailQueue();
 }
@@ -970,6 +997,8 @@ QString myModel::generateThumbnailToCache(const QString &item, const QString &it
   if (item.isEmpty()) {
     return QString();
   }
+
+  ThumbDiag::info(QStringLiteral("generate: %1 mime=%2").arg(item, itemMime));
 
   if (item.endsWith(QLatin1String(".desktop"))) {
     const QString iconFile = Common::findIcon(
@@ -1034,6 +1063,8 @@ QString myModel::generateThumbnailToCache(const QString &item, const QString &it
   QImageReader pic(item);
   pic.setAutoTransform(true);
   if (!pic.canRead()) {
+    ThumbDiag::warn(QStringLiteral("QImageReader cannot read: %1 error=%2")
+                        .arg(item, pic.errorString()));
     return QString();
   }
   const QSize srcSize = pic.size();
@@ -1045,6 +1076,7 @@ QString myModel::generateThumbnailToCache(const QString &item, const QString &it
   }
   const QImage img = pic.read();
   if (img.isNull()) {
+    ThumbDiag::warn(QStringLiteral("QImageReader read failed: %1").arg(item));
     return QString();
   }
   return Common::writeThumbnailForFile(item, img);
