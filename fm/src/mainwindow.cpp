@@ -544,12 +544,6 @@ void MainWindow::lateStart() {
   tabs->setExpanding(0);
 
   // Connect mouse clicks in views
-#ifdef Q_OS_MAC
-  connect(list, SIGNAL(clicked(QModelIndex)),
-          this, SLOT(listItemClicked(QModelIndex)));
-  connect(detailTree, SIGNAL(clicked(QModelIndex)),
-          this, SLOT(listItemClicked(QModelIndex)));
-#else
   if (settings->value("singleClick").toInt() == 1) {
     connect(list, SIGNAL(clicked(QModelIndex)),
             this, SLOT(listItemClicked(QModelIndex)));
@@ -562,7 +556,6 @@ void MainWindow::lateStart() {
     connect(detailTree, SIGNAL(clicked(QModelIndex)),
             this, SLOT(listDoubleClicked(QModelIndex)));
   }
-#endif
 
   // Connect list view
   connect(list, SIGNAL(activated(QModelIndex)),
@@ -653,9 +646,6 @@ void MainWindow::lateStart() {
 void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thumbState) {
 
   // first run?
-#ifdef Q_OS_MAC
-  settings->setValue(QStringLiteral("singleClick"), 1);
-#endif
     bool isFirstRun = false;
     if (!settings->value("firstRun").isValid()) {
         isFirstRun = true;
@@ -1770,13 +1760,6 @@ void MainWindow::listDoubleClicked(QModelIndex current) {
     return;
   }
   const QModelIndex src = modelView->mapToSource(current);
-#ifdef Q_OS_MAC
-  if (modelList->isDir(src) && !modelList->fileName(src).endsWith(QLatin1String(".app"))) {
-    return;
-  }
-  executeFile(current, 0);
-  return;
-#endif
   if (modelList->isDir(src)) {
     listSelectionModel->setCurrentIndex(current, QItemSelectionModel::ClearAndSelect);
     tree->setCurrentIndex(modelTree->mapFromSource(src));
@@ -2924,7 +2907,7 @@ void MainWindow::applyModuleTogglesFromSettings()
             thumbsAct->setChecked(show);
             modelList->setMode(show);
             if (show) {
-                dirLoaded(true);
+                QTimer::singleShot(0, this, [this]() { dirLoaded(true); });
             }
         }
     }

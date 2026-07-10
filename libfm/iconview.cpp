@@ -10,6 +10,7 @@
 #include <QScrollBar>
 #include <QShowEvent>
 #include <QResizeEvent>
+#include <QFocusEvent>
 #include <QTimer>
 #include <QTextBlockFormat>
 #include <QTextCursor>
@@ -80,10 +81,17 @@ public:
         if (QScrollBar *v = verticalScrollBar()) {
             v->setValue(v->minimum());
         }
+        if (QScrollBar *h = horizontalScrollBar()) {
+            h->setValue(h->minimum());
+        }
     }
 
-    void keepCursorVisible()
+    void selectAllFromTop()
     {
+        QTextCursor cursor(document());
+        cursor.movePosition(QTextCursor::Start);
+        cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+        setTextCursor(cursor);
         pinScrollToTop();
     }
 
@@ -91,13 +99,19 @@ protected:
     void showEvent(QShowEvent *event) override
     {
         QPlainTextEdit::showEvent(event);
-        QTimer::singleShot(0, this, [this]() { keepCursorVisible(); });
+        QTimer::singleShot(0, this, [this]() { pinScrollToTop(); });
     }
 
     void resizeEvent(QResizeEvent *event) override
     {
         QPlainTextEdit::resizeEvent(event);
-        keepCursorVisible();
+        pinScrollToTop();
+    }
+
+    void focusInEvent(QFocusEvent *event) override
+    {
+        QPlainTextEdit::focusInEvent(event);
+        pinScrollToTop();
     }
 };
 
@@ -270,6 +284,9 @@ void IconViewDelegate::updateEditorGeometry(QWidget *editor,
     const int zoom = iconPaintSize(option);
     const QRect txtRect = textLabelRect(option.rect, zoom, _cellGapH, option.fontMetrics);
     editor->setGeometry(txtRect);
+    if (auto *plain = qobject_cast<RenameEditor *>(editor)) {
+        plain->pinScrollToTop();
+    }
 }
 
 void IconViewDelegate::setEditorData(QWidget *editor,
@@ -287,8 +304,8 @@ void IconViewDelegate::setEditorData(QWidget *editor,
                                     ? Qt::AlignLeft
                                     : Qt::AlignHCenter;
     plain->applyRenameLayout(align);
-    plain->selectAll();
-    plain->pinScrollToTop();
+    plain->selectAllFromTop();
+    QTimer::singleShot(0, plain, [plain]() { plain->selectAllFromTop(); });
 }
 
 void IconViewDelegate::setModelData(QWidget *editor,

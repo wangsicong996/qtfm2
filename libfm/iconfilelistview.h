@@ -2,6 +2,8 @@
 #define ICONFILELISTVIEW_H
 
 #include <QListView>
+#include <QModelIndex>
+#include <QPoint>
 
 class IconViewDelegate;
 
@@ -18,10 +20,17 @@ public:
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
 
 private:
     QRect contentRectForVisualRect(const QRect &cellRect) const;
+    void beginDeferredListViewPress(const QMouseEvent *event);
+
+    bool m_plainLeftPressActive = false;
+    QPoint m_plainLeftPressPos;
+    QModelIndex m_plainLeftPressIndex;
 };
 
 #endif

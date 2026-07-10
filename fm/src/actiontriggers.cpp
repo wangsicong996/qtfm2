@@ -1130,6 +1130,7 @@ void MainWindow::showEditDialog() {
 
     modelList->clearIconCache();
     modelList->refreshItems();
+    applyModuleTogglesFromSettings();
     OpenWithConfig::load(settings);
     customActManager->readActions();
   }

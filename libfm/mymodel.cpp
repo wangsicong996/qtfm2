@@ -734,7 +734,20 @@ void myModel::cacheInfo()
  * @param icons
  */
 void myModel::setMode(bool icons) {
+  if (showThumbs == icons) {
+    return;
+  }
   showThumbs = icons;
+  const QModelIndex dir = index(currentRootPath);
+  if (!dir.isValid()) {
+    return;
+  }
+  const int rows = rowCount(dir);
+  if (rows <= 0) {
+    return;
+  }
+  const int lastCol = qMax(0, columnCount(dir) - 1);
+  emit dataChanged(index(0, 0, dir), index(rows - 1, lastCol, dir), {Qt::DecorationRole});
 }
 
 void myModel::setThumbnailGenerationEnabled(bool enabled)
