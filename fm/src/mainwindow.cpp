@@ -2859,7 +2859,7 @@ void MainWindow::updateGridForList(IconFileListView *lv)
     if (lv->gridSize() != grid) {
         lv->setGridSize(grid);
     }
-    lv->scheduleDelayedItemsLayout();
+    lv->doItemsLayout();
 }
 
 void MainWindow::updateGrid()
