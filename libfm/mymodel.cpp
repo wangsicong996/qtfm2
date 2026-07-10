@@ -425,7 +425,7 @@ void myModel::notifyProcess(int eventID, QString fileName)
         qDebug() << "folder modified" << folderChanged;
         emit reloadDir(folderChanged);
     }
-    if (!newFilePaths.isEmpty() && showThumbs && m_thumbnailGenerationEnabled) {
+    if (!newFilePaths.isEmpty() && showThumbs) {
         enqueueThumbnailPaths(newFilePaths);
     }
 }
@@ -736,15 +736,6 @@ void myModel::cacheInfo()
 void myModel::setMode(bool icons) {
   showThumbs = icons;
 }
-
-void myModel::setThumbnailGenerationEnabled(bool enabled)
-{
-  m_thumbnailGenerationEnabled = enabled;
-  if (!enabled) {
-    QMutexLocker lock(&thumbMutex);
-    thumbQueue.clear();
-  }
-}
 //---------------------------------------------------------------------------
 
 /**
@@ -770,10 +761,6 @@ void myModel::loadMimeTypes() const {
  */
 void myModel::loadThumbs(QModelIndexList indexes) {
 
-  if (!m_thumbnailGenerationEnabled) {
-    return;
-  }
-
   QStringList files;
 
   for (const QModelIndex &item : indexes) {
@@ -791,7 +778,7 @@ void myModel::loadThumbs(QModelIndexList indexes) {
 
 void myModel::enqueueThumbnailPaths(const QStringList &files)
 {
-  if (files.isEmpty() || !m_thumbnailGenerationEnabled) {
+  if (files.isEmpty()) {
     return;
   }
 
@@ -891,9 +878,6 @@ int thumbnailMaxConcurrentJobs()
 
 void myModel::pumpThumbnailQueue()
 {
-  if (!m_thumbnailGenerationEnabled) {
-    return;
-  }
   const int kMaxConcurrent = thumbnailMaxConcurrentJobs();
   while (thumbActiveJobs.loadRelaxed() < kMaxConcurrent) {
     QString path;

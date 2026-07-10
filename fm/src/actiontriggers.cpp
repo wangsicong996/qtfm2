@@ -907,11 +907,6 @@ void MainWindow::toggleSortOrder() {
  * @brief Switches from thumbs to details and vice versa
  */
 void MainWindow::toggleThumbs() {
-  if (!settings->value(QStringLiteral("enableThumbnailGeneration"), true).toBool()) {
-    thumbsAct->setChecked(false);
-    modelList->setMode(false);
-    return;
-  }
   modelList->setMode(thumbsAct->isChecked());
 }
 //---------------------------------------------------------------------------

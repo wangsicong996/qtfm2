@@ -1212,7 +1212,7 @@ void MainWindow::dirLoaded(bool thumbs)
     statusSize->setText(QString("%1 items").arg(items.count()));
     statusDate->setText(QString("%1").arg(total));
 
-    if (thumbsAct->isChecked() && thumbs && modelList->thumbnailGenerationEnabled()) {
+    if (thumbsAct->isChecked() && thumbs) {
       myModel *modelListPtr = modelList;
       QMetaObject::invokeMethod(modelList, [modelListPtr, items]() {
         modelListPtr->loadThumbs(items);
@@ -2904,18 +2904,6 @@ void MainWindow::scheduleMacPopulateMedia()
 void MainWindow::applyModuleTogglesFromSettings()
 {
     const bool disksOn = settings->value(QStringLiteral("enableDiskSidebar"), true).toBool();
-    const bool thumbGen = settings->value(QStringLiteral("enableThumbnailGeneration"), true).toBool();
-
-    modelList->setThumbnailGenerationEnabled(thumbGen);
-    if (thumbsAct) {
-        thumbsAct->setEnabled(thumbGen);
-        if (!thumbGen) {
-            thumbsAct->setChecked(false);
-            modelList->setMode(false);
-        } else {
-            modelList->setMode(thumbsAct->isChecked());
-        }
-    }
 
 #if defined(QTFM_HAVE_SIDEBAR_DISKS)
     if (sidebarTabs && disksList) {

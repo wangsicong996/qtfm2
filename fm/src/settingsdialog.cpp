@@ -564,16 +564,13 @@ QWidget *SettingsDialog::createAdvSettings()
     QGroupBox *grpModules = new QGroupBox(tr("Module testing (stability)"), widget);
     QVBoxLayout *layoutModules = new QVBoxLayout(grpModules);
     auto *modulesHint = new QLabel(
-        tr("Turn off individual modules to see whether freezes or high CPU come from "
-           "disks or thumbnail generation. Takes effect when you save settings."),
+        tr("Turn off the disk sidebar to see whether freezes or high CPU come from "
+           "disk refresh. Takes effect when you save settings."),
         grpModules);
     modulesHint->setWordWrap(true);
     layoutModules->addWidget(modulesHint);
     checkEnableDiskSidebar = new QCheckBox(tr("Enable disk sidebar"), grpModules);
-    checkEnableThumbnailGeneration =
-        new QCheckBox(tr("Enable thumbnail generation"), grpModules);
     layoutModules->addWidget(checkEnableDiskSidebar);
-    layoutModules->addWidget(checkEnableThumbnailGeneration);
     layoutWidget->addWidget(grpModules);
     layoutWidget->addStretch();
 
@@ -840,10 +837,6 @@ void SettingsDialog::readSettings() {
       checkEnableDiskSidebar->setChecked(
           settingsPtr->value(QStringLiteral("enableDiskSidebar"), true).toBool());
   }
-  if (checkEnableThumbnailGeneration) {
-      checkEnableThumbnailGeneration->setChecked(
-          settingsPtr->value(QStringLiteral("enableThumbnailGeneration"), true).toBool());
-  }
   if (customActionsSettingsWidget) {
       customActionsSettingsWidget->loadFromSettings(settingsPtr);
   }
@@ -1077,10 +1070,6 @@ bool SettingsDialog::saveSettings() {
   if (checkEnableDiskSidebar) {
       settingsPtr->setValue(QStringLiteral("enableDiskSidebar"),
                             checkEnableDiskSidebar->isChecked());
-  }
-  if (checkEnableThumbnailGeneration) {
-      settingsPtr->setValue(QStringLiteral("enableThumbnailGeneration"),
-                            checkEnableThumbnailGeneration->isChecked());
   }
   if (customActionsSettingsWidget) {
       customActionsSettingsWidget->saveToSettings(settingsPtr);
