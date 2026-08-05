@@ -679,6 +679,8 @@ void MainWindow::toggleLockLayout() {
     navToolBar->setMovable(0);
     addressToolBar->setMovable(0);
     lockLayoutAct->setText(tr("Unlock layout"));
+    lockLayoutAct->setToolTip(tr("Unlock layout"));
+    lockLayoutAct->setStatusTip(tr("Lock or unlock toolbars and docks"));
   } else {
     dockTree->setTitleBarWidget(nullptr);
     dockBookmarks->setTitleBarWidget(nullptr);
@@ -692,6 +694,8 @@ void MainWindow::toggleLockLayout() {
     addressToolBar->setMovable(1);
 
     lockLayoutAct->setText(tr("Lock layout"));
+    lockLayoutAct->setToolTip(tr("Lock layout"));
+    lockLayoutAct->setStatusTip(tr("Lock or unlock toolbars and docks"));
   }
 }
 //---------------------------------------------------------------------------

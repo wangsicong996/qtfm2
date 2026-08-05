@@ -219,7 +219,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Add separator to bookmarks list</source>
-      <translation>添加分隔线到书签列表</translation>
+      <translation>向书签列表添加分隔线</translation>
     </message>
     <message>
       <source>Add this folder to bookmarks</source>
@@ -287,7 +287,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Copy the current file</source>
-      <translation>复制 the current file</translation>
+      <translation>复制当前文件</translation>
     </message>
     <message>
       <source>Create a new Markdown (.md) file</source>
@@ -307,7 +307,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Date</source>
-      <translation>Date</translation>
+      <translation>日期</translation>
     </message>
     <message>
       <source>Delete</source>
@@ -319,7 +319,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Delete selected</source>
-      <translation>删除 selected</translation>
+      <translation>删除所选项目</translation>
     </message>
     <message>
       <source>Disks</source>
@@ -343,7 +343,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Edit custom actions</source>
-      <translation>Edit 自定义操作s</translation>
+      <translation>编辑自定义操作</translation>
     </message>
     <message>
       <source>Edit icon</source>
@@ -363,39 +363,39 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Filter current directory</source>
-      <translation>筛选 current 目录</translation>
+      <translation>过滤当前目录</translation>
     </message>
     <message>
       <source>Filter...</source>
-      <translation>筛选...</translation>
+      <translation>过滤…</translation>
     </message>
     <message>
       <source>Focus address</source>
-      <translation>Focus address</translation>
+      <translation>聚焦地址栏</translation>
     </message>
     <message>
       <source>Focus bookmarks</source>
-      <translation>Focus bookmarks</translation>
+      <translation>聚焦书签</translation>
     </message>
     <message>
       <source>Focus list</source>
-      <translation>Focus list</translation>
+      <translation>聚焦文件列表</translation>
     </message>
     <message>
       <source>Focus tree</source>
-      <translation>Focus tree</translation>
+      <translation>聚焦目录树</translation>
     </message>
     <message>
       <source>Go back one directory</source>
-      <translation>Go back one 目录</translation>
+      <translation>后退到上一个目录</translation>
     </message>
     <message>
       <source>Go to home directory</source>
-      <translation>Go to home 目录</translation>
+      <translation>转到主目录</translation>
     </message>
     <message>
       <source>Go up one directory</source>
-      <translation>Go up one 目录</translation>
+      <translation>转到上一级目录</translation>
     </message>
     <message>
       <source>Help</source>
@@ -419,7 +419,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Layout</source>
-      <translation>Layout</translation>
+      <translation>布局</translation>
     </message>
     <message>
       <source>Left and right file panes</source>
@@ -435,31 +435,31 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>List view with columns (no icons)</source>
-      <translation>列表视图 with columns (no icons)</translation>
+      <translation>列表视图（分列，无图标）</translation>
     </message>
     <message>
       <source>Lock layout</source>
-      <translation>Lock layout</translation>
+      <translation>锁定布局</translation>
     </message>
     <message>
       <source>Menu</source>
-      <translation>Menu</translation>
+      <translation>菜单</translation>
     </message>
     <message>
       <source>Middle-click tabs to close</source>
-      <translation>Middle-click tabs to close</translation>
+      <translation>中键点击标签可关闭</translation>
     </message>
     <message>
       <source>Middle-click things to open tab</source>
-      <translation>Middle-click things to open tab</translation>
+      <translation>中键点击可在新标签中打开</translation>
     </message>
     <message>
       <source>Move selected to trash</source>
-      <translation>移动 selected to trash</translation>
+      <translation>将所选项目移到回收站</translation>
     </message>
     <message>
       <source>Move to Trash</source>
-      <translation>移动 to Trash</translation>
+      <translation>移动到回收站</translation>
     </message>
     <message>
       <source>Name</source>
@@ -467,7 +467,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Navigate</source>
-      <translation>Navigate</translation>
+      <translation>导航</translation>
     </message>
     <message>
       <source>New Markdown file</source>
@@ -491,7 +491,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>New window</source>
-      <translation>New window</translation>
+      <translation>新建窗口</translation>
     </message>
     <message>
       <source>Open</source>
@@ -507,15 +507,15 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Open new tab</source>
-      <translation>打开 新建标签</translation>
+      <translation>打开新标签</translation>
     </message>
     <message>
       <source>Open the file</source>
-      <translation>打开 the file</translation>
+      <translation>打开文件</translation>
     </message>
     <message>
       <source>Open virtual terminal</source>
-      <translation>打开 virtual terminal</translation>
+      <translation>打开终端</translation>
     </message>
     <message>
       <source>Open warnings and errors saved from previous sessions</source>
@@ -531,7 +531,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Paste the file here</source>
-      <translation>粘贴 the file here</translation>
+      <translation>粘贴到此处</translation>
     </message>
     <message>
       <source>Places</source>
@@ -539,11 +539,11 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Quit</source>
-      <translation>Quit</translation>
+      <translation>退出</translation>
     </message>
     <message>
       <source>Quit %1</source>
-      <translation>Quit %1</translation>
+      <translation>退出 %1</translation>
     </message>
     <message>
       <source>Refresh</source>
@@ -591,7 +591,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Run this program</source>
-      <translation>运行 this program</translation>
+      <translation>运行此程序</translation>
     </message>
     <message>
       <source>Safely Remove</source>
@@ -599,7 +599,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Select application for opening the file</source>
-      <translation>选择 application for opening the file</translation>
+      <translation>选择用于打开文件的应用程序</translation>
     </message>
     <message>
       <source>Select file action</source>
@@ -619,7 +619,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Settings...</source>
-      <translation>设置...</translation>
+      <translation>设置…</translation>
     </message>
     <message>
       <source>Show thumbs</source>
@@ -639,23 +639,23 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Sort By</source>
-      <translation>Sort By</translation>
+      <translation>排序方式</translation>
     </message>
     <message>
       <source>Sort icons by date</source>
-      <translation>Sort icons by date</translation>
+      <translation>按日期排序</translation>
     </message>
     <message>
       <source>Sort icons by name</source>
-      <translation>Sort icons by name</translation>
+      <translation>按名称排序</translation>
     </message>
     <message>
       <source>Sort icons by size</source>
-      <translation>Sort icons by size</translation>
+      <translation>按大小排序</translation>
     </message>
     <message>
       <source>Sort icons in ascending order</source>
-      <translation>Sort icons in ascending order</translation>
+      <translation>升序排列</translation>
     </message>
     <message>
       <source>Storage</source>
@@ -679,7 +679,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Toggle hidden files</source>
-      <translation>Toggle hidden files</translation>
+      <translation>显示/隐藏隐藏文件</translation>
     </message>
     <message>
       <source>Toolbar dual pane and command-line examples</source>
@@ -691,7 +691,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Unlock layout</source>
-      <translation>Unlock layout</translation>
+      <translation>解锁布局</translation>
     </message>
     <message>
       <source>Up</source>
@@ -707,23 +707,23 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>View thumbnails for image files</source>
-      <translation>View thumbnails for image files</translation>
+      <translation>显示图片缩略图</translation>
     </message>
     <message>
       <source>Wrap bookmarks</source>
-      <translation>Wrap bookmarks</translation>
+      <translation>书签自动换行</translation>
     </message>
     <message>
       <source>Zoom in</source>
-      <translation>Zoom in</translation>
+      <translation>放大</translation>
     </message>
     <message>
       <source>Zoom out</source>
-      <translation>Zoom out</translation>
+      <translation>缩小</translation>
     </message>
     <message>
       <source>Zoom: %1</source>
-      <translation>Zoom: %1</translation>
+      <translation>缩放：%1</translation>
     </message>
     <message>
       <source>macOS 打开方式设置</source>
@@ -733,7 +733,55 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <source>在 QtFM 中配置默认打开与「Open with」</source>
       <translation>在 QtFM 中配置默认打开与「Open with」</translation>
     </message>
-  </context>
+      <message>
+      <source>Cut</source>
+      <translation>剪切</translation>
+    </message>
+    <message>
+      <source>Copy</source>
+      <translation>复制</translation>
+    </message>
+    <message>
+      <source>Clear cache</source>
+      <translation>清除缓存</translation>
+    </message>
+    <message>
+      <source>Move the current file</source>
+      <translation>剪切当前文件</translation>
+    </message>
+    <message>
+      <source>About Qt</source>
+      <translation>关于 Qt</translation>
+    </message>
+    <message>
+      <source>Show left and right file panes with independent navigation</source>
+      <translation>显示左右文件栏，各自独立导航</translation>
+    </message>
+    <message>
+      <source>Add current path to bookmarks</source>
+      <translation>将当前路径添加到书签</translation>
+    </message>
+    <message>
+      <source>Favorite</source>
+      <translation>收藏</translation>
+    </message>
+    <message>
+      <source>Filter files in the focused pane (Enter)</source>
+      <translation>在当前文件栏中过滤文件（回车）</translation>
+    </message>
+    <message>
+      <source>Open a new window</source>
+      <translation>打开新窗口</translation>
+    </message>
+    <message>
+      <source>Lock or unlock toolbars and docks</source>
+      <translation>锁定或解锁工具栏与停靠面板</translation>
+    </message>
+    <message>
+      <source>Clear icon and thumbnail caches</source>
+      <translation>清除图标与缩略图缓存</translation>
+    </message>
+</context>
   <context>
     <name>MimeUtils</name>
     <message>
@@ -1040,7 +1088,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Move the current file</source>
-      <translation>移动 the current file</translation>
+      <translation>剪切当前文件</translation>
     </message>
     <message>
       <source>Properties</source>
@@ -1052,7 +1100,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>View properties of selected items</source>
-      <translation>View properties of selected items</translation>
+      <translation>查看所选项目的属性</translation>
     </message>
     <message>
       <source>macOS 打开方式设置…</source>
@@ -1078,7 +1126,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Close window</source>
-      <translation>关闭 window</translation>
+      <translation>关闭窗口</translation>
     </message>
     <message>
       <source>Delete bookmark group</source>
@@ -1362,7 +1410,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Bookmark group bar background</source>
-      <translation>书签分组栏背景</translation>
+      <translation>书签分组栏背景（左侧）</translation>
     </message>
     <message>
       <source>Bookmark group button background</source>
@@ -1374,7 +1422,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Bookmarks list background</source>
-      <translation>书签列表背景</translation>
+      <translation>书签列表背景（右侧）</translation>
     </message>
     <message>
       <source>Cancel</source>

@@ -1773,6 +1773,8 @@ void MainWindow::retranslateUi()
     }
     if (newWinAct) {
         newWinAct->setText(tr("New window"));
+        newWinAct->setStatusTip(tr("Open a new window"));
+        newWinAct->setToolTip(tr("New window"));
     }
     if (openTabAct) {
         openTabAct->setText(tr("New tab"));
@@ -1795,42 +1797,52 @@ void MainWindow::retranslateUi()
     if (cutAct) {
         cutAct->setText(tr("Cut"));
         cutAct->setStatusTip(tr("Move the current file"));
+        cutAct->setToolTip(tr("Cut"));
     }
     if (copyAct) {
         copyAct->setText(tr("Copy"));
         copyAct->setStatusTip(tr("Copy the current file"));
+        copyAct->setToolTip(tr("Copy"));
     }
     if (pasteAct) {
         pasteAct->setText(tr("Paste"));
         pasteAct->setStatusTip(tr("Paste the file here"));
+        pasteAct->setToolTip(tr("Paste"));
     }
     if (upAct) {
         upAct->setText(tr("Up"));
         upAct->setStatusTip(tr("Go up one directory"));
+        upAct->setToolTip(tr("Go up one directory"));
     }
     if (dualPaneAct) {
         dualPaneAct->setText(tr("Dual pane"));
         dualPaneAct->setStatusTip(tr("Show left and right file panes with independent navigation"));
+        dualPaneAct->setToolTip(tr("Dual pane"));
     }
     if (backAct) {
         backAct->setText(tr("Back"));
         backAct->setStatusTip(tr("Go back one directory"));
+        backAct->setToolTip(tr("Go back one directory"));
     }
     if (homeAct) {
         homeAct->setText(tr("Home"));
         homeAct->setStatusTip(tr("Go to home directory"));
+        homeAct->setToolTip(tr("Go to home directory"));
     }
     if (newTabAct) {
         newTabAct->setText(tr("New tab"));
         newTabAct->setStatusTip(tr("Open new tab"));
+        newTabAct->setToolTip(tr("Open new tab"));
     }
     if (listViewAct) {
         listViewAct->setText(tr("List view"));
         listViewAct->setStatusTip(tr("List view with columns (no icons)"));
+        listViewAct->setToolTip(tr("List view"));
     }
     if (iconAct) {
         iconAct->setText(tr("Icon view"));
         iconAct->setStatusTip(tr("Icon view"));
+        iconAct->setToolTip(tr("Icon view"));
     }
     if (sortNameAct) {
         sortNameAct->setText(tr("Name"));
@@ -1883,12 +1895,18 @@ void MainWindow::retranslateUi()
     }
     if (refreshAct) {
         refreshAct->setText(tr("Refresh"));
+        refreshAct->setStatusTip(tr("Refresh"));
+        refreshAct->setToolTip(tr("Refresh"));
     }
     if (zoomInAct) {
         zoomInAct->setText(tr("Zoom in"));
+        zoomInAct->setStatusTip(tr("Zoom in"));
+        zoomInAct->setToolTip(tr("Zoom in"));
     }
     if (zoomOutAct) {
         zoomOutAct->setText(tr("Zoom out"));
+        zoomOutAct->setStatusTip(tr("Zoom out"));
+        zoomOutAct->setToolTip(tr("Zoom out"));
     }
     if (settingsAct) {
         settingsAct->setText(tr("Settings..."));
@@ -1905,10 +1923,12 @@ void MainWindow::retranslateUi()
     if (trashAct) {
         trashAct->setText(tr("Move to Trash"));
         trashAct->setStatusTip(tr("Move selected to trash"));
+        trashAct->setToolTip(tr("Move to Trash"));
     }
     if (terminalAct) {
         terminalAct->setText(tr("Terminal"));
         terminalAct->setStatusTip(tr("Open virtual terminal"));
+        terminalAct->setToolTip(tr("Open virtual terminal"));
     }
     if (openAct) {
         openAct->setText(tr("Open"));
@@ -1919,16 +1939,21 @@ void MainWindow::retranslateUi()
         thumbsAct->setStatusTip(tr("View thumbnails for image files"));
     }
     if (lockLayoutAct) {
-        lockLayoutAct->setText(tr("Lock layout"));
+        lockLayoutAct->setText(lockLayoutAct->isChecked() ? tr("Unlock layout") : tr("Lock layout"));
+        lockLayoutAct->setStatusTip(tr("Lock or unlock toolbars and docks"));
+        lockLayoutAct->setToolTip(lockLayoutAct->isChecked() ? tr("Unlock layout") : tr("Lock layout"));
     }
     if (clearCacheAct) {
         clearCacheAct->setText(tr("Clear cache"));
+        clearCacheAct->setStatusTip(tr("Clear icon and thumbnail caches"));
+        clearCacheAct->setToolTip(tr("Clear cache"));
     }
     if (aboutAct) {
         aboutAct->setText(tr("About %1").arg(APP_NAME));
     }
     if (aboutQtAct) {
         aboutQtAct->setText(tr("About Qt"));
+        aboutQtAct->setStatusTip(tr("About Qt"));
     }
     if (viewDiagnosticLogAct) {
         viewDiagnosticLogAct->setText(tr("View diagnostic log…"));
@@ -1983,6 +2008,12 @@ void MainWindow::retranslateUi()
         if (layoutMenuPtr->menuAction()) {
             layoutMenuPtr->menuAction()->setText(tr("Layout"));
         }
+    }
+    if (menuToolBar) {
+        menuToolBar->setWindowTitle(tr("Menu"));
+    }
+    if (navToolBar) {
+        navToolBar->setWindowTitle(tr("Navigate"));
     }
 
     if (dockTree) {

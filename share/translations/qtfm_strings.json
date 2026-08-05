@@ -1750,5 +1750,53 @@
   {
     "context": "uDisks2",
     "source": "Storage"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Cut"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Copy"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Clear cache"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Move the current file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "About Qt"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Show left and right file panes with independent navigation"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Add current path to bookmarks"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Favorite"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Filter files in the focused pane (Enter)"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Open a new window"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Lock or unlock toolbars and docks"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Clear icon and thumbnail caches"
   }
 ]

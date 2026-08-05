@@ -177,6 +177,8 @@ void MainWindow::createActions() {
   actionList->append(newTxtFileAct);
 
   newWinAct = new QAction(tr("New window"), this);
+  newWinAct->setStatusTip(tr("Open a new window"));
+  newWinAct->setToolTip(tr("New window"));
   connect(newWinAct, SIGNAL(triggered()), this, SLOT(newWindow()));
   newWinAct->setIcon(actionIcons->at(29));
   actionList->append(newWinAct);
@@ -210,18 +212,21 @@ void MainWindow::createActions() {
 
   cutAct = new QAction(tr("Cut"), this);
   cutAct->setStatusTip(tr("Move the current file"));
+  cutAct->setToolTip(tr("Cut"));
   connect(cutAct, SIGNAL(triggered()), this, SLOT(cutFile()));
   cutAct->setIcon(actionIcons->at(2));
   actionList->append(cutAct);
 
   copyAct = new QAction(tr("Copy"), this);
   copyAct->setStatusTip(tr("Copy the current file"));
+  copyAct->setToolTip(tr("Copy"));
   connect(copyAct, SIGNAL(triggered()), this, SLOT(copyFile()));
   copyAct->setIcon(actionIcons->at(3));
   actionList->append(copyAct);
 
   pasteAct = new QAction(tr("Paste"), this);
   pasteAct->setStatusTip(tr("Paste the file here"));
+  pasteAct->setToolTip(tr("Paste"));
   pasteAct->setEnabled(false);
   connect(pasteAct, SIGNAL(triggered()), this, SLOT(pasteClipboard()));
   pasteAct->setIcon(actionIcons->at(4));
@@ -229,6 +234,7 @@ void MainWindow::createActions() {
 
   upAct = new QAction(tr("Up"),this);
   upAct->setStatusTip(tr("Go up one directory"));
+  upAct->setToolTip(tr("Go up one directory"));
   connect(upAct, SIGNAL(triggered()),this,SLOT(goUpDir()));
   upAct->setIcon(actionIcons->at(5));
   actionList->append(upAct);
@@ -236,12 +242,14 @@ void MainWindow::createActions() {
   dualPaneAct = new QAction(tr("Dual pane"), this);
   dualPaneAct->setCheckable(true);
   dualPaneAct->setStatusTip(tr("Show left and right file panes with independent navigation"));
+  dualPaneAct->setToolTip(tr("Dual pane"));
   dualPaneAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("split-pane")));
   connect(dualPaneAct, &QAction::triggered, this, &MainWindow::toggleDualPane);
   actionList->append(dualPaneAct);
 
   backAct = new QAction(tr("Back"),this);
   backAct->setStatusTip(tr("Go back one directory"));
+  backAct->setToolTip(tr("Go back one directory"));
   connect(backAct, SIGNAL(triggered()),this,SLOT(goBackDir()));
   actionIcons->append(newDirAct->icon());
   backAct->setIcon(actionIcons->at(6));
@@ -249,6 +257,7 @@ void MainWindow::createActions() {
 
   homeAct = new QAction(tr("Home"),this);
   homeAct->setStatusTip(tr("Go to home directory"));
+  homeAct->setToolTip(tr("Go to home directory"));
   connect(homeAct, SIGNAL(triggered()),this,SLOT(goHomeDir()));
   actionIcons->append(newDirAct->icon());
   homeAct->setIcon(actionIcons->at(7));
@@ -256,17 +265,20 @@ void MainWindow::createActions() {
 
   newTabAct = new QAction(tr("New tab"), this);
   newTabAct->setStatusTip(tr("Open new tab"));
+  newTabAct->setToolTip(tr("Open new tab"));
   connect(newTabAct, SIGNAL(triggered()), this, SLOT(openTab()));
   newTabAct->setIcon(actionIcons->at(26));
 
   listViewAct = new QAction(tr("List view"), this);
   listViewAct->setStatusTip(tr("List view with columns (no icons)"));
+  listViewAct->setToolTip(tr("List view"));
   listViewAct->setCheckable(true);
   listViewAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("view-list-mode")));
   actionList->append(listViewAct);
 
   iconAct = new QAction(tr("Icon view"), this);
   iconAct->setStatusTip(tr("Icon view"));
+  iconAct->setToolTip(tr("Icon view"));
   iconAct->setCheckable(true);
   connect(iconAct, SIGNAL(triggered()), this, SLOT(applyIconView()));
   iconAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("view-icon-mode")));
@@ -371,6 +383,7 @@ void MainWindow::createActions() {
 
   trashAct = new QAction(tr("Move to Trash"), this);
   trashAct->setStatusTip(tr("Move selected to trash"));
+  trashAct->setToolTip(tr("Move to Trash"));
   connect(trashAct, SIGNAL(triggered(bool)), this, SLOT(trashFile()));
   trashAct->setIcon(actionIcons->at(27));
   actionList->append(trashAct);
@@ -397,6 +410,7 @@ void MainWindow::createActions() {
 
   terminalAct = new QAction(tr("Terminal"), this);
   terminalAct->setStatusTip(tr("Open virtual terminal"));
+  terminalAct->setToolTip(tr("Open virtual terminal"));
   connect(terminalAct, SIGNAL(triggered()), this, SLOT(terminalRun()));
   terminalAct->setIcon(actionIcons->at(17));
   actionList->append(terminalAct);
@@ -419,6 +433,7 @@ void MainWindow::createActions() {
 
   exitAct = new QAction(tr("Quit"), this);
   exitAct->setStatusTip(tr("Quit %1").arg(APP_NAME));
+  exitAct->setToolTip(tr("Quit"));
   connect(exitAct, SIGNAL(triggered()), this, SLOT(exitAction()));
   exitAct->setIcon(actionIcons->at(20));
   actionList->append(exitAct);
@@ -444,6 +459,8 @@ void MainWindow::createActions() {
 
   lockLayoutAct = new QAction(tr("Lock layout"), this);
   lockLayoutAct->setCheckable(true);
+  lockLayoutAct->setStatusTip(tr("Lock or unlock toolbars and docks"));
+  lockLayoutAct->setToolTip(tr("Lock layout"));
   connect(lockLayoutAct, SIGNAL(triggered()), this, SLOT(toggleLockLayout()));
   lockLayoutAct->setIcon(actionIcons->at(21));
   actionList->append(lockLayoutAct);
@@ -453,16 +470,22 @@ void MainWindow::createActions() {
   actionList->append(escapeAct);*/
 
   refreshAct = new QAction(tr("Refresh"), this);
+  refreshAct->setStatusTip(tr("Refresh"));
+  refreshAct->setToolTip(tr("Refresh"));
   connect(refreshAct, SIGNAL(triggered()), this, SLOT(refresh()));
   refreshAct->setIcon(actionIcons->at(19));
   actionList->append(refreshAct);
 
   zoomInAct = new QAction(tr("Zoom in"), this);
+  zoomInAct->setStatusTip(tr("Zoom in"));
+  zoomInAct->setToolTip(tr("Zoom in"));
   connect(zoomInAct, SIGNAL(triggered()), this, SLOT(zoomInAction()));
   zoomInAct->setIcon(actionIcons->at(23));
   actionList->append(zoomInAct);
 
   zoomOutAct = new QAction(tr("Zoom out"), this);
+  zoomOutAct->setStatusTip(tr("Zoom out"));
+  zoomOutAct->setToolTip(tr("Zoom out"));
   connect(zoomOutAct, SIGNAL(triggered()), this, SLOT(zoomOutAction()));
   zoomOutAct->setIcon(actionIcons->at(24));
   actionList->append(zoomOutAct);
@@ -489,6 +512,7 @@ void MainWindow::createActions() {
   actionList->append(aboutAct);
 
   aboutQtAct = new QAction(tr("About Qt"), this);
+  aboutQtAct->setStatusTip(tr("About Qt"));
   aboutQtAct->setIcon(QIcon::fromTheme("qt-logo"));
   connect(aboutQtAct, SIGNAL(triggered(bool)), qApp, SLOT(aboutQt()));
   actionList->append(aboutQtAct);
@@ -550,6 +574,8 @@ void MainWindow::createActions() {
   connect(mediaEjectAct, SIGNAL(triggered(bool)), this, SLOT(handleMediaEject()));
 #endif
   clearCacheAct = new QAction(tr("Clear cache"), this);
+  clearCacheAct->setStatusTip(tr("Clear icon and thumbnail caches"));
+  clearCacheAct->setToolTip(tr("Clear cache"));
   clearCacheAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("clear-cache")));
   connect(clearCacheAct, SIGNAL(triggered()), this, SLOT(clearCache()));
 
