@@ -1,4 +1,5 @@
 #include "uicolors.h"
+#include "common.h"
 
 #include <QFile>
 #include <QJsonDocument>
@@ -125,6 +126,33 @@ UiColorId UiColors::idFromJsonKey(const QString &key)
         }
     }
     return UiColorId::Count;
+}
+
+QColor UiColors::themeDefault(UiColorId id, bool dark)
+{
+    const QPalette pal = dark ? Common::darkTheme() : Common::lightTheme();
+    switch (id) {
+    case UiColorId::FilePaneInactive:
+        return dark ? QColor(0x25, 0x25, 0x28) : QColor(0xFF, 0xFF, 0xFF);
+    case UiColorId::FilePaneActive:
+        return dark ? QColor(0x1F, 0x1F, 0x22) : QColor(0xDC, 0xDC, 0xDC);
+    case UiColorId::BookmarksList:
+        return dark ? QColor(0x25, 0x25, 0x28) : pal.color(QPalette::Base);
+    case UiColorId::BookmarkGroupBar:
+        return dark ? QColor(0x2C, 0x2C, 0x2E) : QColor(0xEC, 0xEC, 0xEE);
+    case UiColorId::BookmarkGroupButton:
+        return dark ? pal.color(QPalette::Button) : QColor(0xDE, 0xDE, 0xDE);
+    case UiColorId::SidebarTabSelected:
+        return dark ? QColor(0x37, 0x37, 0x3A) : QColor(0xE1, 0xE1, 0xE1);
+    case UiColorId::SidebarTabUnselected:
+        return dark ? QColor(0x2C, 0x2C, 0x2E) : pal.color(QPalette::Window);
+    case UiColorId::TopChrome:
+        return dark ? QColor(0x2C, 0x2C, 0x2E) : pal.color(QPalette::Window);
+    case UiColorId::TopChromeButton:
+        return pal.color(QPalette::Button);
+    default:
+        return pal.color(QPalette::Base);
+    }
 }
 
 void UiColors::load(QSettings *settings, UiColorSet *light, UiColorSet *dark)

@@ -53,6 +53,9 @@ public:
     static void load(QSettings *settings, UiColorSet *light, UiColorSet *dark);
     static void save(QSettings *settings, const UiColorSet &light, const UiColorSet &dark);
 
+    /** Built-in default when the user has not overridden a color. */
+    static QColor themeDefault(UiColorId id, bool dark);
+
     static QColor resolve(const UiColorSet &set, UiColorId id, const QColor &fallback);
 
     static bool exportToJson(const QString &filePath,

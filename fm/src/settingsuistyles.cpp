@@ -24,12 +24,14 @@ QColor inputBackgroundForModule(const QColor &moduleBg)
     return moduleBg.darker(120); // ~20% darker on light panels
 }
 
-/** Darken a module card background by N steps (~8% each). */
+/** Shift module card background by N steps (~8–12% each).
+ *  Light theme: darker; dark theme: lighter (so the change is visible). */
 QColor deepenModuleBg(const QColor &base, int steps)
 {
     QColor c = base;
+    const bool darkPanel = base.lightness() < 128;
     for (int i = 0; i < steps; ++i) {
-        c = c.darker(108);
+        c = darkPanel ? c.lighter(112) : c.darker(108);
     }
     return c;
 }

@@ -721,27 +721,7 @@ QString SettingsDialog::uiColorLabel(UiColorId id)
 
 QColor SettingsDialog::uiColorFallback(UiColorId id, bool dark) const
 {
-    const QPalette pal = dark ? Common::darkTheme() : Common::lightTheme();
-    switch (id) {
-    case UiColorId::FilePaneInactive:
-    case UiColorId::BookmarksList:
-        return pal.color(QPalette::Base);
-    case UiColorId::FilePaneActive: {
-        const QColor base = pal.color(QPalette::Base);
-        return (base.lightness() < 128) ? base.lighter(125) : base.darker(118);
-    }
-    case UiColorId::BookmarkGroupBar:
-    case UiColorId::SidebarTabUnselected:
-    case UiColorId::TopChrome:
-        return pal.color(QPalette::Window);
-    case UiColorId::BookmarkGroupButton:
-    case UiColorId::TopChromeButton:
-        return pal.color(QPalette::Button);
-    case UiColorId::SidebarTabSelected:
-        return pal.color(QPalette::Base);
-    default:
-        return pal.color(QPalette::Base);
-    }
+    return UiColors::themeDefault(id, dark);
 }
 
 QWidget *SettingsDialog::buildUiColorThemePage(bool dark)

@@ -2190,32 +2190,50 @@ void MainWindow::applyViewChromeStyles()
     if (selected.alpha() < 100) {
         selected.setAlpha(100);
     }
-    // File tabs: selected is a clear light blue; hover is half that depth so it won't
-    // look identical to the selected tab when pointing at a neighbor.
-    QColor tabSelectedBg = highlight;
-    tabSelectedBg.setAlpha(120);
-    QColor tabHoverBg = highlight;
-    tabHoverBg.setAlpha(60);
-
     const QColor chromeLine = pal.color(QPalette::Mid);
-    const QColor contentBg = UiColors::resolve(uiColors, UiColorId::BookmarksList, pal.color(QPalette::Base));
-    const QColor controlBg = UiColors::resolve(uiColors, UiColorId::TopChromeButton, pal.color(QPalette::Button));
-    const QColor windowBg = UiColors::resolve(uiColors, UiColorId::TopChrome, pal.color(QPalette::Window));
+    const QColor contentBg = UiColors::resolve(
+        uiColors, UiColorId::BookmarksList, UiColors::themeDefault(UiColorId::BookmarksList, darkUi));
+    const QColor controlBg = UiColors::resolve(
+        uiColors, UiColorId::TopChromeButton, UiColors::themeDefault(UiColorId::TopChromeButton, darkUi));
+    const QColor windowBg = UiColors::resolve(
+        uiColors, UiColorId::TopChrome, UiColors::themeDefault(UiColorId::TopChrome, darkUi));
     const QColor flatBorder = pal.color(QPalette::Mid);
     QColor flatHover = highlight;
     flatHover.setAlpha(72);
 
     const QColor sidebarTabSelected = UiColors::resolve(
-        uiColors, UiColorId::SidebarTabSelected, contentBg);
+        uiColors, UiColorId::SidebarTabSelected,
+        UiColors::themeDefault(UiColorId::SidebarTabSelected, darkUi));
     const QColor sidebarTabUnselected = UiColors::resolve(
-        uiColors, UiColorId::SidebarTabUnselected, windowBg);
+        uiColors, UiColorId::SidebarTabUnselected,
+        UiColors::themeDefault(UiColorId::SidebarTabUnselected, darkUi));
     QColor sidebarTabHover = highlight;
     sidebarTabHover.setAlpha(72);
 
     const QColor bookmarkGroupBarBg = UiColors::resolve(
-        uiColors, UiColorId::BookmarkGroupBar, windowBg);
+        uiColors, UiColorId::BookmarkGroupBar,
+        UiColors::themeDefault(UiColorId::BookmarkGroupBar, darkUi));
     const QColor bookmarkGroupBtnBg = UiColors::resolve(
-        uiColors, UiColorId::BookmarkGroupButton, controlBg);
+        uiColors, UiColorId::BookmarkGroupButton,
+        UiColors::themeDefault(UiColorId::BookmarkGroupButton, darkUi));
+
+    // File tabs: unselected matches top chrome; selected uses opaque accent (dark: white text).
+    QColor tabUnselectedBg = windowBg;
+    QColor tabSelectedBg;
+    QColor tabSelectedFg;
+    QColor tabHoverBg;
+    if (darkUi) {
+        tabSelectedBg = QColor(0x0A, 0x84, 0xFF);
+        tabSelectedFg = Qt::white;
+        tabHoverBg = tabSelectedBg;
+        tabHoverBg.setAlpha(90);
+    } else {
+        tabSelectedBg = highlight;
+        tabSelectedBg.setAlpha(160);
+        tabSelectedFg = pal.color(QPalette::WindowText);
+        tabHoverBg = highlight;
+        tabHoverBg.setAlpha(70);
+    }
 
     const QString chromeBtnSize = QString::number(kPathBarHeight);
     const QString flatToolBtnQss = QStringLiteral(
@@ -2295,14 +2313,20 @@ void MainWindow::applyViewChromeStyles()
     }
 
     const QString tabQss = QStringLiteral(
+        "QTabBar { background: %4; border: none; }"
         "QTabBar::tab { min-height: %1px; max-height: %1px; padding: 4px 12px;"
-        " border: none; border-radius: 0px; margin: 0px; background: transparent; }"
-        "QTabBar::tab:selected { background: %2; }"
+        " border: none; border-radius: 0px; margin: 0px;"
+        " background: %4; color: %5; }"
+        "QTabBar::tab:selected { background: %2; color: %6; }"
         "QTabBar::tab:hover:!selected { background: %3; }"
         "QTabBar::tab:!selected { min-height: %1px; max-height: %1px; }"
         "QTabBar::tab:selected:!hover { min-height: %1px; max-height: %1px; }"
-    ).arg(QString::number(kTabHeight), tabSelectedBg.name(QColor::HexArgb),
-          tabHoverBg.name(QColor::HexArgb));
+    ).arg(QString::number(kTabHeight),
+          tabSelectedBg.name(QColor::HexArgb),
+          tabHoverBg.name(QColor::HexArgb))
+     .arg(tabUnselectedBg.name(),
+          pal.color(QPalette::WindowText).name(),
+          tabSelectedFg.name());
 
     tabs->setStyleSheet(tabQss);
     tabs->setUsesScrollButtons(false);
@@ -4369,16 +4393,18 @@ void MainWindow::applySingleClickMode()
 
 void MainWindow::applyFilePaneChrome()
 {
-    const QColor base = qApp->palette().color(QPalette::Base);
     if (!m_uiColorsCached) {
         reloadUiColorCache();
     }
     const UiColorSet &uiColors = activeUiColorSet();
+    const bool darkUi = settings && settings->value(QStringLiteral("darkTheme")).toBool();
 
-    const QColor inactiveDefault = base;
-    const QColor activeDefault = (base.lightness() < 128) ? base.lighter(125) : base.darker(118);
-    const QColor inactiveColor = UiColors::resolve(uiColors, UiColorId::FilePaneInactive, inactiveDefault);
-    const QColor activeColor = UiColors::resolve(uiColors, UiColorId::FilePaneActive, activeDefault);
+    const QColor inactiveColor = UiColors::resolve(
+        uiColors, UiColorId::FilePaneInactive,
+        UiColors::themeDefault(UiColorId::FilePaneInactive, darkUi));
+    const QColor activeColor = UiColors::resolve(
+        uiColors, UiColorId::FilePaneActive,
+        UiColors::themeDefault(UiColorId::FilePaneActive, darkUi));
 
     for (int i = 0; i < 2; ++i) {
         if (!m_filePane[i]) {
