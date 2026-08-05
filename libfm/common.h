@@ -113,6 +113,8 @@ public:
     static ThumbnailVideoSample thumbnailVideoSample();
     /** Newest-only: keep at most `limit` paths by modification time (newest first). */
     static QStringList filterThumbnailGenerationPaths(const QStringList &absolutePaths);
+    /** Sort paths by last-modified time, newest first (for thumbnail queue priority). */
+    static QStringList sortPathsByNewestFirst(const QStringList &absolutePaths);
 
     static QString formatSize(qint64 num);
     /** Details/list view “Date Modified” cell (macOS: yy-M-d 上午/下午h:mm). */

@@ -115,7 +115,10 @@ private:
 
   mutable QMutex thumbMutex;
   QStringList thumbQueue;
+  QSet<QString> thumbInFlight;
   QAtomicInt thumbActiveJobs;
+  /** Bumped on every root-path change so in-flight thumb jobs can discard stale work. */
+  QAtomicInt thumbEpoch;
 
   QTimer m_thumbDecorationCoalesce;
   QSet<QString> m_pendingThumbDecorationPaths;

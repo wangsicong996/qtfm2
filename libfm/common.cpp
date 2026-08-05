@@ -452,6 +452,18 @@ QStringList Common::filterThumbnailGenerationPaths(const QStringList &absolutePa
         return absolutePaths;
     }
     const int limit = thumbnailNewestLimit();
+    QStringList ranked = sortPathsByNewestFirst(absolutePaths);
+    if (ranked.size() > limit) {
+        ranked = ranked.mid(0, limit);
+    }
+    return ranked;
+}
+
+QStringList Common::sortPathsByNewestFirst(const QStringList &absolutePaths)
+{
+    if (absolutePaths.size() <= 1) {
+        return absolutePaths;
+    }
     QVector<QPair<qint64, QString>> ranked;
     ranked.reserve(absolutePaths.size());
     for (const QString &path : absolutePaths) {
@@ -459,13 +471,15 @@ QStringList Common::filterThumbnailGenerationPaths(const QStringList &absolutePa
     }
     std::sort(ranked.begin(), ranked.end(),
               [](const QPair<qint64, QString> &a, const QPair<qint64, QString> &b) {
-                  return a.first > b.first;
+                  if (a.first != b.first) {
+                      return a.first > b.first;
+                  }
+                  return a.second < b.second;
               });
     QStringList out;
-    const int take = qMin(limit, ranked.size());
-    out.reserve(take);
-    for (int i = 0; i < take; ++i) {
-        out.append(ranked.at(i).second);
+    out.reserve(ranked.size());
+    for (const auto &pair : ranked) {
+        out.append(pair.second);
     }
     return out;
 }
@@ -780,6 +794,14 @@ bool Common::isThumbnailFailureMarkerValid(const QString &absoluteFilePath)
         return false;
     }
     const QString markerPath = thumbnailFailureMarkerFile(absoluteFilePath);
+    const QFileInfo markerInfo(markerPath);
+    if (!markerInfo.exists()) {
+        return false;
+    }
+    // Soft TTL: after a few minutes allow retry so partial runs / busy timeouts resume.
+    if (markerInfo.lastModified().secsTo(QDateTime::currentDateTime()) > 180) {
+        return false;
+    }
     QFile marker(markerPath);
     if (!marker.open(QIODevice::ReadOnly)) {
         return false;

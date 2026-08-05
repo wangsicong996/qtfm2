@@ -59,6 +59,7 @@ myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
   icons = new QCache<QString,QIcon>;
   icons->setMaxCost(500);
   thumbActiveJobs.storeRelaxed(0);
+  thumbEpoch.storeRelaxed(0);
   showThumbs = true;
 
   // Loads cached mime icons
@@ -440,9 +441,16 @@ void myModel::notifyProcess(int eventID, QString fileName)
 void myModel::addWatcher(myModelItem *item)
 {
     qDebug() << "addWatcher" << item->absoluteFilePath();
-    while(item != rootItem) {
-        watchers.insert(inotify_add_watch(inotifyFD, item->absoluteFilePath().toLocal8Bit(), IN_CREATE | IN_MODIFY | IN_MOVE | IN_DELETE),item->absoluteFilePath()); //IN_ONESHOT | IN_ALL_EVENTS)
-        item->watched = 1;
+    while (item != rootItem) {
+        if (!item->watched) {
+            const QString abs = item->absoluteFilePath();
+            const int wd = inotify_add_watch(inotifyFD, abs.toLocal8Bit(),
+                                             IN_CREATE | IN_MODIFY | IN_MOVE | IN_DELETE);
+            if (wd >= 0) {
+                watchers.insert(wd, abs);
+            }
+            item->watched = 1;
+        }
         item = item->parent();
     }
 }
@@ -453,6 +461,8 @@ bool myModel::setRootPath(const QString& path)
     if (path != currentRootPath) {
         QMutexLocker lock(&thumbMutex);
         thumbQueue.clear();
+        // Invalidate in-flight workers so they skip ffmpeg / failure markers.
+        thumbEpoch.ref();
     }
     currentRootPath = path;
 
@@ -797,6 +807,9 @@ void myModel::loadThumbs(QModelIndexList indexes) {
     }
   }
 
+  // Newest files first so browsing a folder fills recent media quickly.
+  files = Common::sortPathsByNewestFirst(files);
+
   ThumbDiag::info(QStringLiteral("cache dir: %1").arg(Common::qtfmThumbnailCacheDir()));
   ThumbDiag::info(QStringLiteral("loadThumbs: %1 candidate(s) in %2")
                       .arg(files.count())
@@ -833,12 +846,13 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
   bool scheduled = false;
   QStringList decorationUpdates;
   int cacheHits = 0;
-  int skipFail = 0;
   int queued = 0;
   int queueLen = 0;
   const bool allowNewJobs = Common::thumbnailGenerationMode() != Common::ThumbGenOff;
   {
     QMutexLocker lock(&thumbMutex);
+    // Prepend newest-first so they run before any leftover older entries.
+    QStringList pendingNewestFirst;
     for (const QString &path : files) {
       const QString cache = Common::thumbnailCacheFile(path);
       if (Common::isThumbnailCacheValid(path, cache)) {
@@ -849,30 +863,33 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
         ++cacheHits;
         continue;
       }
+      // Revisit / resume: drop soft failure markers so incomplete folders continue.
       if (Common::isThumbnailFailureMarkerValid(path)) {
-        ++skipFail;
-        continue;
+        Common::clearThumbnailFailure(path);
       }
       if (!allowNewJobs) {
         continue;
       }
-      if (!thumbQueue.contains(path)) {
-        if (thumbQueue.size() >= 512) {
+      if (!thumbQueue.contains(path) && !thumbInFlight.contains(path)) {
+        if (thumbQueue.size() + pendingNewestFirst.size() >= 2048) {
           continue;
         }
-        thumbQueue.append(path);
-        scheduled = true;
+        pendingNewestFirst.append(path);
         ++queued;
       }
+    }
+    // files are already newest-first; put them at the front of the queue.
+    for (int i = pendingNewestFirst.size() - 1; i >= 0; --i) {
+      thumbQueue.prepend(pendingNewestFirst.at(i));
+      scheduled = true;
     }
     queueLen = thumbQueue.size();
   }
 
-  ThumbDiag::info(QStringLiteral("enqueue: queued=%1 cache_hit=%2 skip_fail_marker=%3 "
-                                 "active_jobs=%4 queue_len=%5")
+  ThumbDiag::info(QStringLiteral("enqueue: queued=%1 cache_hit=%2 "
+                                 "active_jobs=%3 queue_len=%4")
                       .arg(queued)
                       .arg(cacheHits)
-                      .arg(skipFail)
                       .arg(thumbActiveJobs.loadRelaxed())
                       .arg(queueLen));
 
@@ -950,23 +967,34 @@ void myModel::pumpThumbnailQueue()
   while (thumbActiveJobs.loadRelaxed() < kMaxConcurrent) {
     QString path;
     QString itemMime;
+    int epoch = 0;
     {
       QMutexLocker lock(&thumbMutex);
       if (thumbQueue.isEmpty()) {
         return;
       }
       path = thumbQueue.takeFirst();
-      itemMime = mimeUtilsPtr->getMimeType(path);
+      thumbInFlight.insert(path);
+      epoch = thumbEpoch.loadRelaxed();
     }
+    itemMime = mimeUtilsPtr ? mimeUtilsPtr->getMimeType(path) : QString();
 
     thumbActiveJobs.ref();
     ThumbDiag::info(QStringLiteral("worker start: %1").arg(path));
-    QtConcurrent::run([this, path, itemMime]() {
-      const QString cache = generateThumbnailToCache(path, itemMime);
+    QtConcurrent::run([this, path, itemMime, epoch]() {
+      QString cache;
+      const bool abandoned = thumbEpoch.loadRelaxed() != epoch;
+      if (!abandoned) {
+        cache = generateThumbnailToCache(path, itemMime);
+      } else {
+        ThumbDiag::info(QStringLiteral("worker abandon (dir changed): %1").arg(path));
+      }
+
+      const bool stale = thumbEpoch.loadRelaxed() != epoch;
       if (!cache.isEmpty()) {
         QMutexLocker lock(&thumbMutex);
         thumbPaths->insert(path, cache);
-      } else {
+      } else if (!abandoned && !stale) {
         Common::recordThumbnailFailure(path);
       }
       thumbActiveJobs.deref();
@@ -978,11 +1006,25 @@ void myModel::pumpThumbnailQueue()
 
 void myModel::finishThumbnailJob(QString path, QString cachePath)
 {
+  {
+    QMutexLocker lock(&thumbMutex);
+    thumbInFlight.remove(path);
+  }
+
   if (!cachePath.isEmpty()) {
     ThumbDiag::info(QStringLiteral("worker ok: %1 -> %2").arg(path, cachePath));
-    queueThumbnailDecorationUpdate(path);
+    const QString root = currentRootPath;
+    const QString parentDir = QFileInfo(path).absolutePath();
+    const bool inCurrentFolder =
+        !root.isEmpty()
+        && (parentDir == root
+            || path.startsWith(root.endsWith(QLatin1Char('/')) ? root
+                                                               : root + QLatin1Char('/')));
+    if (inCurrentFolder) {
+      queueThumbnailDecorationUpdate(path);
+    }
   } else {
-    ThumbDiag::warn(QStringLiteral("worker failed: %1").arg(path));
+    ThumbDiag::info(QStringLiteral("worker done without cache: %1").arg(path));
   }
   pumpThumbnailQueue();
 }
