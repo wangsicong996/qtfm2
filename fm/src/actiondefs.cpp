@@ -821,14 +821,15 @@ void MainWindow::createToolBars() {
   navToolBar->addAction(iconAct);
   navToolBar->addAction(listViewAct);
   navToolBar->addAction(favoriteAct);
+  // Appearance settings: show these on the right of the left button group.
+  navToolBar->addAction(newTabAct);
+  navToolBar->addAction(terminalAct);
 
   navToolBar->addWidget(pathEdit);
   navToolBar->addWidget(searchEdit);
   if (searchClearAct) {
     navToolBar->addAction(searchClearAct);
   }
-  navToolBar->addAction(newTabAct);
-  navToolBar->addAction(terminalAct);
 
   addressToolBar = navToolBar;
   applyNavToolBarInsets();

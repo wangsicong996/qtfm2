@@ -35,6 +35,8 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QWindow>
+#include <QScreen>
+#include <QGuiApplication>
 #include <QAbstractButton>
 #include <QAbstractSpinBox>
 #include <QScrollBar>
@@ -156,7 +158,11 @@ bool shouldListWholeDisk(Device *whole, const QMap<QString, Device *> &devices)
 {
     Q_UNUSED(devices);
     if (uDisks2::isIgnoredBlockDevice(whole->dev)) { return false; }
+    if (uDisks2::isIgnoredBlockDevice(whole->path)) { return false; }
     if (uDisks2::isPartitionBlock(whole->path)) { return false; }
+
+    const QString mp = whole->mountpoint;
+    if (uDisks2::isIgnoredMountPoint(mp)) { return false; }
 
     if (whole->isOptical) {
         return whole->hasMedia;
@@ -2161,11 +2167,13 @@ void MainWindow::applyViewChromeStyles()
         " border: 1px solid %1; border-radius: 4px; background: %2;"
         " padding: 0px; min-width: %4px; max-width: %4px;"
         " min-height: %4px; max-height: %4px; }"
-        "QToolBar#Navigate QToolButton:hover {"
+        "QToolBar#Navigate QToolButton:enabled:hover {"
         " background: %3; }"
-        "QToolBar#Navigate QToolButton:pressed {"
+        "QToolBar#Navigate QToolButton:enabled:pressed {"
         " background: %3; }"
         "QToolBar#Navigate QToolButton:checked {"
+        " background: %2; border: 1px solid %1; }"
+        "QToolBar#Navigate QToolButton:disabled {"
         " background: %2; border: 1px solid %1; }")
         .arg(flatBorder.name(), controlBg.name(), flatHover.name(QColor::HexArgb), chromeBtnSize);
     const QString topModuleChromeQss = QStringLiteral(
@@ -2204,6 +2212,15 @@ void MainWindow::applyViewChromeStyles()
 
     if (navToolBar) {
         navToolBar->setStyleSheet(flatToolBtnQss + topModuleChromeQss);
+        // Toolbar actions default to autoRaise; that fights our bordered hover chrome.
+        for (QAction *act : navToolBar->actions()) {
+            if (!act || act->isSeparator()) {
+                continue;
+            }
+            if (QToolButton *btn = qobject_cast<QToolButton *>(navToolBar->widgetForAction(act))) {
+                btn->setAutoRaise(false);
+            }
+        }
     }
 
     const QString tabQss = QStringLiteral(
@@ -3388,36 +3405,86 @@ bool MainWindow::isWindowChromeDragArea(QObject *receiver, const QMouseEvent *me
         }
     }
 
+    const QWidget *chromeRoot = nullptr;
+    bool onMenuChrome = false;
+
     if (appMenuBar && (w == appMenuBar || appMenuBar->isAncestorOf(w))) {
         const QPoint mbPos = (w == appMenuBar)
             ? me->pos()
             : appMenuBar->mapFromGlobal(w->mapToGlobal(me->pos()));
-        return appMenuBar->actionAt(mbPos) == nullptr;
+        if (appMenuBar->actionAt(mbPos) != nullptr) {
+            return false;
+        }
+        chromeRoot = menuToolBar ? static_cast<const QWidget *>(menuToolBar) : appMenuBar;
+        onMenuChrome = true;
+    } else if (menuToolBar && (w == menuToolBar || menuToolBar->isAncestorOf(w))) {
+        chromeRoot = menuToolBar;
+        onMenuChrome = true;
+    } else if (navToolBar && w == navToolBar) {
+        chromeRoot = navToolBar;
+    } else {
+        return false;
     }
 
-    if (menuToolBar && (w == menuToolBar || menuToolBar->isAncestorOf(w))) {
-        return true;
+    // Leave the top-right corner alone so WM min/max/close stay easy to hit
+    // (near-misses into the client menubar used to steal those clicks).
+    if (chromeRoot && onMenuChrome) {
+        const QPoint clickGlobal = w->mapToGlobal(me->pos());
+        const int reservePx = isMaximized() ? 180 : 140;
+        if (clickGlobal.x() >= chromeRoot->mapToGlobal(QPoint(chromeRoot->width(), 0)).x() - reservePx) {
+            return false;
+        }
     }
 
-    // Empty gaps on the navigate/address toolbar (not buttons / path / search).
-    if (navToolBar && w == navToolBar) {
-        return true;
-    }
+    return true;
 #else
     Q_UNUSED(receiver);
     Q_UNUSED(me);
-#endif
     return false;
+#endif
 }
 
 bool MainWindow::tryStartWindowSystemMove()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-    if (QWindow *wh = windowHandle()) {
-        return wh->startSystemMove();
+    QWindow *wh = windowHandle();
+    if (!wh) {
+        return false;
+    }
+
+#ifndef Q_OS_MAC
+    // Many X11/Wayland compositors ignore move while maximized — restore first
+    // and keep the cursor on the same relative X of the window.
+    if (isMaximized()) {
+        const QPoint global = QCursor::pos();
+        const QRect geo = geometry();
+        const int geoW = qMax(1, geo.width());
+        const qreal xRatio = qBound(0.0, double(global.x() - geo.x()) / double(geoW), 1.0);
+        const int yOffset = qBound(0, global.y() - geo.y(), 48);
+
+        showNormal();
+
+        QRect n = geometry();
+        int newX = global.x() - int(xRatio * n.width());
+        int newY = global.y() - yOffset;
+        if (QScreen *sc = QGuiApplication::screenAt(global)) {
+            const QRect ag = sc->availableGeometry();
+            newX = qBound(ag.left(), newX, ag.right() - n.width() + 1);
+            newY = qBound(ag.top(), newY, ag.bottom() - n.height() + 1);
+        }
+        move(newX, newY);
+
+        wh = windowHandle();
+        if (!wh) {
+            return true;
+        }
     }
 #endif
+
+    return wh->startSystemMove();
+#else
     return false;
+#endif
 }
 
 bool MainWindow::eventFilter(QObject *o, QEvent *e)
@@ -3851,6 +3918,7 @@ void MainWindow::populateMedia()
         if (!shouldListWholeDisk(d, disks->devices)) { continue; }
 
         const QString mp = effectiveMountpointForWholeDisk(d, disks->devices);
+        if (uDisks2::isIgnoredMountPoint(mp)) { continue; }
         QString subtitle = d->name;
         if (subtitle.isEmpty()) { subtitle = tr("Storage"); }
         const QString rowTitle = QStringLiteral("%1 — %2").arg(d->dev, subtitle);

@@ -298,12 +298,40 @@ QString uDisks2::blockDeviceName(const QString &blockObjectPath)
 
 bool uDisks2::isIgnoredBlockDevice(const QString &blockDeviceName)
 {
-    if (blockDeviceName.startsWith(QLatin1String("loop"))) { return true; }
-    if (blockDeviceName.startsWith(QLatin1String("snap"))) { return true; }
-    if (blockDeviceName.startsWith(QLatin1String("zram"))) { return true; }
-    if (blockDeviceName.startsWith(QLatin1String("ram"))) { return true; }
-    if (blockDeviceName.startsWith(QLatin1String("fd"))) { return true; }
-    if (blockDeviceName.startsWith(QLatin1String("sr"))) { return false; } // optical handled separately
+    QString name = blockDeviceName.trimmed();
+    if (name.startsWith(QLatin1String("/dev/"))) {
+        name = name.mid(5);
+    }
+    // UDisks object path: .../block_devices/loop10
+    if (name.contains(QLatin1Char('/'))) {
+        name = name.section(QLatin1Char('/'), -1);
+    }
+    if (name.isEmpty()) {
+        return true;
+    }
+
+    // Virtual / synthetic block devices (snap loops, nbd for qcow2, zram, …)
+    if (name.startsWith(QLatin1String("loop"))) { return true; }
+    if (name.startsWith(QLatin1String("nbd"))) { return true; }
+    if (name.startsWith(QLatin1String("snap"))) { return true; }
+    if (name.startsWith(QLatin1String("zram"))) { return true; }
+    if (name.startsWith(QLatin1String("ram"))) { return true; }
+    if (name.startsWith(QLatin1String("fd"))) { return true; }
+    if (name.startsWith(QLatin1String("sr"))) { return false; } // optical handled separately
+    return false;
+}
+
+bool uDisks2::isIgnoredMountPoint(const QString &mountpoint)
+{
+    if (mountpoint.isEmpty()) {
+        return false;
+    }
+    // Snap / Flatpak / container bind mounts — not real removable disks
+    if (mountpoint.startsWith(QLatin1String("/var/lib/snapd/"))) { return true; }
+    if (mountpoint.startsWith(QLatin1String("/snap/"))) { return true; }
+    if (mountpoint.startsWith(QLatin1String("/var/lib/flatpak/"))) { return true; }
+    if (mountpoint.startsWith(QLatin1String("/var/lib/docker/"))) { return true; }
+    if (mountpoint.startsWith(QLatin1String("/run/snapd/"))) { return true; }
     return false;
 }
 

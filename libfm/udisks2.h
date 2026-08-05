@@ -45,8 +45,10 @@ public:
 
     /** Block node name only (e.g. sda, nvme0n1), not sda1 / nvme0n1p1. */
     static QString blockDeviceName(const QString &blockObjectPath);
-    /** loop*, snap*, zram*, etc. — hide from the external disks panel. */
+    /** loop*, nbd*, snap*, zram*, etc. — hide from the external disks panel. */
     static bool isIgnoredBlockDevice(const QString &blockDeviceName);
+    /** Snap/Flatpak/docker mount paths that should not appear as disks. */
+    static bool isIgnoredMountPoint(const QString &mountpoint);
     /** True when this UDisks block object is a partition (sda1, nvme0n1p1, …). */
     static bool isPartitionBlock(const QString &blockObjectPath);
     /** User/data mounts (e.g. /media, /run/media), not system root. */
