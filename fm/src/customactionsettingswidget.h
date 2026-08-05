@@ -41,7 +41,7 @@ public slots:
 private:
     void rebuildModules();
     void regroupBySubmenu();
-    QFrame *buildModuleFrame(int index);
+    QFrame *buildModuleFrame(int index, int submenuDepth);
 
     QScrollArea *scrollArea;
     QVBoxLayout *modulesLayout;

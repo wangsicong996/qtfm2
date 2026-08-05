@@ -22,10 +22,16 @@
 
 namespace {
 
-QFrame *makeModuleFrame(QWidget *parent)
+QFrame *makeModuleFrame(QWidget *parent, int submenuDepth)
 {
     auto *frame = new QFrame(parent);
-    frame->setObjectName(QStringLiteral("settingsModule"));
+    if (submenuDepth == 1) {
+        frame->setObjectName(QStringLiteral("settingsModuleSub1"));
+    } else if (submenuDepth == 2) {
+        frame->setObjectName(QStringLiteral("settingsModuleSub2"));
+    } else {
+        frame->setObjectName(QStringLiteral("settingsModule"));
+    }
     frame->setFrameShape(QFrame::StyledPanel);
     return frame;
 }
@@ -172,8 +178,7 @@ void CustomActionSettingsWidget::loadFromSettings(QSettings *settings)
 
 void CustomActionSettingsWidget::regroupBySubmenu()
 {
-    // Keep empty-submenu actions first (in original relative order), then group
-    // identical submenu titles together (stable within each group).
+    // Submenu groups pinned to top (same title kept together); no-submenu last.
     QVector<CustomActionEntry> empty;
     QVector<QString> submenuOrder;
     QHash<QString, QVector<CustomActionEntry>> groups;
@@ -190,10 +195,11 @@ void CustomActionSettingsWidget::regroupBySubmenu()
         groups[key].append(entry);
     }
 
-    QVector<CustomActionEntry> sorted = empty;
+    QVector<CustomActionEntry> sorted;
     for (const QString &key : submenuOrder) {
         sorted += groups.value(key);
     }
+    sorted += empty;
     actionEntries = sorted;
 }
 
@@ -285,17 +291,35 @@ void CustomActionSettingsWidget::rebuildModules()
         auto *emptyLabel = new QLabel(tr("No custom actions yet. Click “Add module”."));
         emptyLabel->setWordWrap(true);
         modulesLayout->addWidget(emptyLabel);
-    } else {
-        for (int i = 0; i < actionEntries.size(); ++i) {
-            modulesLayout->addWidget(buildModuleFrame(i));
+        return;
+    }
+
+    // Depth 0 = no submenu; depth 1/2 alternate by consecutive submenu groups.
+    QVector<int> depths(actionEntries.size(), 0);
+    QString lastSub;
+    int groupIndex = -1;
+    for (int i = 0; i < actionEntries.size(); ++i) {
+        const QString sub = actionEntries.at(i).submenu.trimmed();
+        if (sub.isEmpty()) {
+            depths[i] = 0;
+            continue;
         }
+        if (sub != lastSub) {
+            ++groupIndex;
+            lastSub = sub;
+        }
+        depths[i] = (groupIndex % 2 == 0) ? 1 : 2;
+    }
+
+    for (int i = 0; i < actionEntries.size(); ++i) {
+        modulesLayout->addWidget(buildModuleFrame(i, depths.at(i)));
     }
 }
 
-QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
+QFrame *CustomActionSettingsWidget::buildModuleFrame(int index, int submenuDepth)
 {
     CustomActionEntry *entry = &actionEntries[index];
-    auto *frame = makeModuleFrame(scrollArea->widget());
+    auto *frame = makeModuleFrame(scrollArea->widget(), submenuDepth);
     auto *mainLay = new QVBoxLayout(frame);
 
     // Row 1: file type, name, bundled icon
@@ -303,9 +327,11 @@ QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
     auto *fileTypeEdit = new QLineEdit(entry->fileType);
     fileTypeEdit->setPlaceholderText(tr("File type(s), comma-separated"));
     fileTypeEdit->setMinimumWidth(0);
+    SettingsUiStyles::stylePlaceholderHint(fileTypeEdit);
     auto *nameEdit = new QLineEdit(entry->name);
     nameEdit->setPlaceholderText(tr("Action name"));
     nameEdit->setMinimumWidth(0);
+    SettingsUiStyles::stylePlaceholderHint(nameEdit);
     auto *iconBtn = new QToolButton();
     iconBtn->setIcon(effectiveIcon(*entry));
     iconBtn->setIconSize(QSize(28, 28));
@@ -324,6 +350,7 @@ QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
     auto *iconPathEdit = new QLineEdit(entry->iconPath);
     iconPathEdit->setPlaceholderText(tr("Paste icon file path (overrides bundled icon)"));
     iconPathEdit->setMinimumWidth(0);
+    SettingsUiStyles::stylePlaceholderHint(iconPathEdit);
     auto *pasteIconBtn = new QPushButton(tr("Paste"));
     row2->addWidget(new QLabel(tr("Icon path")));
     row2->addWidget(iconPathEdit, 1);
@@ -334,6 +361,7 @@ QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
     auto *cmdEdit = new QLineEdit(entry->command);
     cmdEdit->setPlaceholderText(tr("Shell command"));
     cmdEdit->setMinimumWidth(0);
+    SettingsUiStyles::stylePlaceholderHint(cmdEdit);
     auto *pasteCmdBtn = new QPushButton(tr("Paste"));
     row3->addWidget(new QLabel(tr("Command")));
     row3->addWidget(cmdEdit, 1);
@@ -344,6 +372,7 @@ QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
     auto *submenuEdit = new QLineEdit(entry->submenu);
     submenuEdit->setPlaceholderText(tr("Submenu title (optional)"));
     submenuEdit->setMinimumWidth(0);
+    SettingsUiStyles::stylePlaceholderHint(submenuEdit);
     auto *delBtn = new QPushButton(tr("Delete module"));
     SettingsUiStyles::styleDeleteButton(delBtn);
     row4->addWidget(new QLabel(tr("Submenu")));
