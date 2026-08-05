@@ -1308,7 +1308,10 @@ void MainWindow::treeSelectionChanged(QModelIndex current, QModelIndex previous)
 
     if (!bookmarksList->hasFocus()) { bookmarksList->clearSelection(); }
 
-    if (modelList->setRootPath(name.filePath())) { modelView->invalidate(); }
+    modelList->setRootPath(name.filePath());
+    // Always refresh the proxy after a root change — first-time populate used to
+    // leave IconMode blank until the user scrolled.
+    modelView->invalidate();
 
     //////
     QModelIndex baseIndex = modelView->mapFromSource(modelList->index(name.filePath()));
@@ -1320,6 +1323,7 @@ void MainWindow::treeSelectionChanged(QModelIndex current, QModelIndex previous)
         if (auto *iconList = qobject_cast<IconFileListView *>(pane->listView())) {
             iconList->suppressRubberBandUntilMouseRelease();
         }
+        pane->listView()->viewport()->update();
     }
 
     if (tabs->count() && (!m_dualPaneEnabled || m_activePaneIndex == 0)) {
@@ -1379,7 +1383,26 @@ void MainWindow::dirLoaded(bool thumbs)
     statusDate->setText(QString("%1").arg(total));
 
     if (thumbsAct->isChecked() && thumbs) {
-      modelList->loadThumbs(items);
+      // Defer thumbnails so the icon grid paints first (bookmark path switches).
+      const QString rootPath = pathEdit->currentText();
+      QTimer::singleShot(0, this, [this, rootPath]() {
+          if (!modelList || pathEdit->currentText() != rootPath) {
+              return;
+          }
+          if (!thumbsAct || !thumbsAct->isChecked()) {
+              return;
+          }
+          QModelIndexList items;
+          const bool includeHidden = hiddenAct && hiddenAct->isChecked();
+          const QModelIndex root = modelList->index(rootPath);
+          for (int x = 0; x < modelList->rowCount(root); ++x) {
+              const QModelIndex idx = modelList->index(x, 0, root);
+              if (includeHidden || !modelList->fileInfo(idx).isHidden()) {
+                  items.append(idx);
+              }
+          }
+          modelList->loadThumbs(items);
+      });
     } else if (!thumbsAct->isChecked()) {
       ThumbDiag::warn(QStringLiteral("dirLoaded: View → Show thumbs is off"));
     } else if (!thumbs) {

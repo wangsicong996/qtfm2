@@ -466,7 +466,8 @@ bool myModel::setRootPath(const QString& path)
     if (!item->watched) { addWatcher(item); }
     if (!item->walked || !item->watched) {
         populateItem(item);
-        return false;
+        // View / proxy must refresh after the first populate (no rowsInserted).
+        return true;
     } else {
         if(item->dirty) { //model is up to date, but view needs to be invalidated
             item->dirty = false;
@@ -932,7 +933,7 @@ int thumbnailMaxConcurrentJobs()
 #elif defined(Q_OS_MAC)
 int thumbnailMaxConcurrentJobs()
 {
-    return 1;
+    return 2;
 }
 #else
 int thumbnailMaxConcurrentJobs()
@@ -996,17 +997,7 @@ bool myModel::fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils)
   if (path.endsWith(QLatin1String(".desktop"))) {
     return true;
   }
-  const QString mime = mimeUtils->getMimeType(path);
-  if (mime.startsWith(QLatin1String("image/"))
-      || mime.startsWith(QLatin1String("video/"))) {
-    return true;
-  }
-  if (mime == QLatin1String("application/pdf")) {
-    return true;
-  }
-  if (mime.startsWith(QLatin1String("audio/"))) {
-    return true;
-  }
+  // Fast path: extension check first (avoids mass QMimeDatabase on dir change).
   static const QSet<QString> kExt = {
       QStringLiteral("jpg"), QStringLiteral("jpeg"), QStringLiteral("png"),
       QStringLiteral("gif"), QStringLiteral("webp"), QStringLiteral("bmp"),
@@ -1015,9 +1006,24 @@ bool myModel::fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils)
       QStringLiteral("mp4"), QStringLiteral("mkv"), QStringLiteral("mov"),
       QStringLiteral("avi"), QStringLiteral("webm"), QStringLiteral("m4v"),
       QStringLiteral("mpeg"), QStringLiteral("mpg"), QStringLiteral("wmv"),
+      QStringLiteral("flv"), QStringLiteral("ts"), QStringLiteral("m2ts"),
+      QStringLiteral("mp3"), QStringLiteral("flac"), QStringLiteral("m4a"),
+      QStringLiteral("ogg"), QStringLiteral("opus"), QStringLiteral("wav"),
       QStringLiteral("pdf"),
   };
-  return kExt.contains(FileUtils::getRealSuffix(path).toLower());
+  if (kExt.contains(FileUtils::getRealSuffix(path).toLower())) {
+    return true;
+  }
+  if (!mimeUtils) {
+    return false;
+  }
+  const QString mime = mimeUtils->getMimeType(path);
+  if (mime.startsWith(QLatin1String("image/"))
+      || mime.startsWith(QLatin1String("video/"))
+      || mime.startsWith(QLatin1String("audio/"))) {
+    return true;
+  }
+  return mime == QLatin1String("application/pdf");
 }
 
 QString myModel::generateThumbnailToCache(const QString &item, const QString &itemMime)

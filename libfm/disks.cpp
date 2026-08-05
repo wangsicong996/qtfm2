@@ -124,7 +124,7 @@ Disks::Disks(QObject *parent)
     , dbus(nullptr)
 {
     setupDBus();
-    timer.setInterval(60000);
+    timer.setInterval(120000); // 2 min — avoid competing with navigation on the UI thread
     connect(&timer, SIGNAL(timeout()), this, SLOT(checkUDisks()));
     timer.start();
 }

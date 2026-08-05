@@ -369,9 +369,9 @@ MimeUtils::~MimeUtils() {
  * @return mime type
  */
 QString MimeUtils::getMimeType(const QString &path) {
-    QMimeDatabase db;
+    // QMimeDatabase is thread-safe and expensive to construct — keep one instance.
+    static QMimeDatabase db;
     QMimeType type = db.mimeTypeForFile(path);
-    //qDebug() << "mime type" << type.name() << path;
     return type.name();
 }
 //---------------------------------------------------------------------------

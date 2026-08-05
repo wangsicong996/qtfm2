@@ -939,6 +939,114 @@ QString findMediaToolExecutable(const QString &toolName)
     return QString();
 }
 
+/** Extract only embedded cover-art streams (attached pics), same idea as:
+ *  ffmpeg -i video -map 0:v -map -0:V -c copy cover.jpg
+ *  (YouTube/yt-dlp --embed-thumbnail, album art, etc.) */
+bool runFfmpegExtractEmbeddedCover(const QString &ffmpeg, const QString &mediaPath,
+                                   QImage *outImage)
+{
+    if (!outImage) {
+        return false;
+    }
+
+    auto tryLoad = [&](const QString &filePath) -> bool {
+        QImage img;
+        if (!img.load(filePath) || img.isNull()) {
+            return false;
+        }
+        const int side = Common::thumbnailPixelSize;
+        if (img.width() > side || img.height() > side) {
+            img = img.scaled(side, side, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        }
+        *outImage = img;
+        return true;
+    };
+
+    // 1) Stream-copy attached pictures (fast; matches the shell script).
+    {
+        QTemporaryFile tmp(QDir::tempPath() + QStringLiteral("/qtfm-cover-XXXXXX.jpg"));
+        tmp.setAutoRemove(false);
+        if (tmp.open()) {
+            const QString outJpg = tmp.fileName();
+            tmp.close();
+            tmp.remove();
+
+            QProcess proc;
+            proc.setProgram(ffmpeg);
+            const QStringList args = {
+                QStringLiteral("-y"),
+                QStringLiteral("-loglevel"), QStringLiteral("error"),
+                QStringLiteral("-nostdin"),
+                QStringLiteral("-i"), mediaPath,
+                QStringLiteral("-map"), QStringLiteral("0:v"),
+                QStringLiteral("-map"), QStringLiteral("-0:V"),
+                QStringLiteral("-c"), QStringLiteral("copy"),
+                QStringLiteral("-frames:v"), QStringLiteral("1"),
+                outJpg,
+            };
+            proc.setArguments(args);
+            proc.setStandardInputFile(QProcess::nullDevice());
+            proc.start();
+            if (!proc.waitForFinished(12000)) {
+                proc.kill();
+                proc.waitForFinished(2000);
+            } else if (proc.exitStatus() == QProcess::NormalExit && proc.exitCode() == 0
+                       && QFileInfo::exists(outJpg) && QFileInfo(outJpg).size() > 0
+                       && tryLoad(outJpg)) {
+                QFile::remove(outJpg);
+                ThumbDiag::info(QStringLiteral("embedded cover (stream copy): %1").arg(mediaPath));
+                return true;
+            }
+            QFile::remove(outJpg);
+        }
+    }
+
+    // 2) Decode attached pictures only (when copy fails / unusual codecs).
+    {
+        QTemporaryFile tmp(QDir::tempPath() + QStringLiteral("/qtfm-cover-XXXXXX.png"));
+        tmp.setAutoRemove(false);
+        if (!tmp.open()) {
+            return false;
+        }
+        const QString outPng = tmp.fileName() + QStringLiteral(".png");
+        tmp.close();
+        tmp.remove();
+
+        QProcess proc;
+        proc.setProgram(ffmpeg);
+        const QStringList args = {
+            QStringLiteral("-y"),
+            QStringLiteral("-loglevel"), QStringLiteral("error"),
+            QStringLiteral("-nostdin"),
+            QStringLiteral("-i"), mediaPath,
+            QStringLiteral("-map"), QStringLiteral("0:v"),
+            QStringLiteral("-map"), QStringLiteral("-0:V"),
+            QStringLiteral("-frames:v"), QStringLiteral("1"),
+            QStringLiteral("-vf"),
+            QStringLiteral("scale='min(%1,iw)':'min(%1,ih)':force_original_aspect_ratio=decrease")
+                .arg(Common::thumbnailPixelSize),
+            outPng,
+        };
+        proc.setArguments(args);
+        proc.setStandardInputFile(QProcess::nullDevice());
+        proc.start();
+        if (!proc.waitForFinished(12000)) {
+            proc.kill();
+            proc.waitForFinished(2000);
+            QFile::remove(outPng);
+            return false;
+        }
+        const bool ok = proc.exitStatus() == QProcess::NormalExit && proc.exitCode() == 0
+                        && QFileInfo::exists(outPng) && QFileInfo(outPng).size() > 0
+                        && tryLoad(outPng);
+        QFile::remove(outPng);
+        if (ok) {
+            ThumbDiag::info(QStringLiteral("embedded cover (decode): %1").arg(mediaPath));
+        }
+        return ok;
+    }
+}
+
 /** Runs ffmpeg with the given extra args, writing a single frame to outPng.
  *  Returns true on success (process exited 0 and the file was written). */
 bool runFfmpegExtract(const QString &ffmpeg, const QStringList &extraArgs,
@@ -950,8 +1058,26 @@ bool runFfmpegExtract(const QString &ffmpeg, const QStringList &extraArgs,
     args << QStringLiteral("-y")
          << QStringLiteral("-loglevel") << QStringLiteral("error")
          << QStringLiteral("-nostdin");
-    args += extraArgs;
+    // Keep -ss (fast seek) before -i; put -map/-an after -i.
+    QStringList preInput;
+    QStringList postInput;
+    for (int i = 0; i < extraArgs.size(); ++i) {
+        const QString &a = extraArgs.at(i);
+        if (a == QLatin1String("-ss") && i + 1 < extraArgs.size()) {
+            preInput << a << extraArgs.at(i + 1);
+            ++i;
+        } else if (a == QLatin1String("-map") && i + 1 < extraArgs.size()) {
+            postInput << a << extraArgs.at(i + 1);
+            ++i;
+        } else if (a == QLatin1String("-an")) {
+            postInput << a;
+        } else {
+            preInput << a;
+        }
+    }
+    args += preInput;
     args << QStringLiteral("-i") << mediaPath;
+    args += postInput;
     args << QStringLiteral("-frames:v") << QStringLiteral("1")
          << QStringLiteral("-vf")
          << QStringLiteral("scale='min(%1,iw)':'min(%1,ih)':force_original_aspect_ratio=decrease")
@@ -1079,6 +1205,15 @@ QImage Common::videoFirstFrameImage(const QString &mediaPath)
     ThumbDiag::info(QStringLiteral("video decode: %1 (ffmpeg=%2)")
                         .arg(mediaPath, ffmpeg));
 
+    // 1) Prefer embedded cover art first (YouTube/yt-dlp embed, album art):
+    //    ffmpeg -i file -map 0:v -map -0:V …  (same as 生成thumbnail.sh)
+    {
+        QImage cover;
+        if (runFfmpegExtractEmbeddedCover(ffmpeg, mediaPath, &cover) && !cover.isNull()) {
+            return cover;
+        }
+    }
+
     QTemporaryFile tmp(QDir::tempPath() + QStringLiteral("/qtfm-vid-XXXXXX"));
     tmp.setAutoRemove(false);
     if (!tmp.open()) {
@@ -1090,8 +1225,7 @@ QImage Common::videoFirstFrameImage(const QString &mediaPath)
 
     bool ok = false;
 
-    // 1) Prefer a precisely-identified embedded cover art stream (e.g. from
-    //    `yt-dlp --embed-thumbnail`), located via ffprobe's disposition info.
+    // 2) ffprobe disposition=attached_pic → map that stream index
     const int attachedPicIndex = findAttachedPicStreamIndex(mediaPath);
     if (attachedPicIndex >= 0) {
         ok = runFfmpegExtract(ffmpeg,
@@ -1100,12 +1234,13 @@ QImage Common::videoFirstFrameImage(const QString &mediaPath)
                               mediaPath, outPng);
     }
 
-    // 2) One decode attempt: embedded cover heuristic, then a single frame.
+    // 3) Heuristic first video packet / frame (may still hit covers in some files)
     if (!ok) {
         ok = runFfmpegExtract(ffmpeg,
                               { QStringLiteral("-an") },
                               mediaPath, outPng);
     }
+    // 4) Seek sample (start or middle per settings)
     if (!ok) {
         QString seekPos = QStringLiteral("1");
         if (Common::thumbnailVideoSample() == Common::ThumbVideoSampleMiddle) {
