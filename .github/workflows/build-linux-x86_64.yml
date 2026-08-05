@@ -1,4 +1,4 @@
-# CI: Linux x86_64 (ubuntu-22.04) + AppImage artifact
+# CI: Linux x86_64 (ubuntu-22.04) — system-linked bin tarball + AppImage
 name: Build Linux x86_64
 
 on:
@@ -119,6 +119,28 @@ jobs:
             }
           fi
 
+      - name: Pack Linux bin (system Qt)
+        env:
+          QTFM_VERSION: ${{ env.QTFM_VERSION }}
+        run: |
+          chmod +x share/scripts/pack-linux-bin.sh
+          share/scripts/pack-linux-bin.sh \
+            "${GITHUB_WORKSPACE}/AppDir" \
+            "${GITHUB_WORKSPACE}" \
+            "${QTFM_VERSION}" \
+            x86_64
+          test -f "qtfm-${QTFM_VERSION}-linux-x86_64-bin.tar.xz"
+          # Must be dynamically linked to system Qt (not a static Qt binary).
+          ldd "${GITHUB_WORKSPACE}/qtfm-${QTFM_VERSION}-linux-x86_64-bin/bin/qtfm" \
+            | grep -E 'libQt5(Core|Widgets)' 
+
+      - name: Upload Linux bin
+        uses: actions/upload-artifact@v4
+        with:
+          name: qtfm-${{ env.QTFM_VERSION }}-linux-x86_64-bin
+          path: qtfm-${{ env.QTFM_VERSION }}-linux-x86_64-bin.tar.xz
+          if-no-files-found: error
+
       - name: Build AppImage
         env:
           LINUXDEPLOY_OUTPUT_VERSION: ${{ env.QTFM_VERSION }}
@@ -185,6 +207,6 @@ jobs:
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
         with:
-          name: qtfm-${{ env.QTFM_VERSION }}-linux-x86_64
+          name: qtfm-${{ env.QTFM_VERSION }}-linux-x86_64-appimage
           path: qtfm-${{ env.QTFM_VERSION }}-x86_64.AppImage
           if-no-files-found: error

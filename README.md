@@ -156,3 +156,23 @@ cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib64 ..
 make -jX
 make DESTDIR=<package> install
 ```
+
+### Linux bin tarball (system Qt)
+
+Produces a portable ``bin/`` + ``share/`` tree that **links against system Qt /
+ImageMagick** (does not bundle them). FFmpeg / Poppler are expected as
+system commands for thumbnails.
+
+```
+mkdir build && cd build
+qmake CONFIG+=with_magick CONFIG+=release PREFIX=/usr ..
+make -j"$(nproc)"
+make INSTALL_ROOT="$PWD/../AppDir" install
+cd ..
+./share/scripts/pack-linux-bin.sh AppDir . 6.3.0 x86_64
+# → qtfm-6.3.0-linux-x86_64-bin.tar.xz
+```
+
+Extract and run ``./bin/qtfm``. See ``README.txt`` inside the archive for
+distro package names. For a fully self-contained binary, use the AppImage
+CI artifact instead.
