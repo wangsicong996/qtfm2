@@ -42,6 +42,7 @@ class QTimer;
 #include <QToolBar>
 #include <QToolButton>
 #include <QMenu>
+#include <QMenuBar>
 #include <QActionGroup>
 #include <QItemDelegate>
 #include <QStyledItemDelegate>
@@ -177,8 +178,9 @@ public slots:
     void reloadUiColorCache();
     const UiColorSet &activeUiColorSet() const;
     void setupSearchClearButton();
-    void polishSearchClearButton();
     void updateSearchClearButtonIcon();
+    bool isWindowChromeDragArea(QObject *receiver, const QMouseEvent *me) const;
+    bool tryStartWindowSystemMove();
     void syncPathComboDecorations();
     void applyNameSearch();
     void clearNameSearch();
@@ -360,6 +362,7 @@ private:
     QToolBar *navToolBar;
     QToolBar *addressToolBar;
     QToolBar *menuToolBar = nullptr;
+    QMenuBar *appMenuBar = nullptr;
     QStatusBar * status;
     QLabel * statusSize;
     QLabel * statusName;

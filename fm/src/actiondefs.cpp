@@ -124,6 +124,9 @@ void MainWindow::applyBundledToolbarIcons()
   if (favoriteAct) {
     favoriteAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("star-favorite")));
   }
+  if (searchClearAct) {
+    searchClearAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("search-clear")));
+  }
   if (aboutAct) {
     aboutAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("about-qtfm")));
   }
@@ -142,7 +145,6 @@ void MainWindow::refreshBundledUiIcons()
 {
   applyBundledToolbarIcons();
   updateSearchClearButtonIcon();
-  polishSearchClearButton();
 }
 //---------------------------------------------------------------------------
 
@@ -751,12 +753,18 @@ void MainWindow::createMenus() {
   mb->addMenu(viewMenuPtr);
   mb->addMenu(helpMenuPtr);
 #else
-  QMenuBar *menuBar = new QMenuBar;
-  menuBar->addMenu(fileMenuPtr);
-  menuBar->addMenu(editMenuPtr);
-  menuBar->addMenu(viewMenuPtr);
-  menuBar->addMenu(helpMenuPtr);
-  menuToolBar->addWidget(menuBar);
+  appMenuBar = new QMenuBar;
+  appMenuBar->setObjectName(QStringLiteral("appMenuBar"));
+  appMenuBar->setNativeMenuBar(false);
+  // Fill the rest of the menu toolbar so empty space can drag the window.
+  appMenuBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+  appMenuBar->addMenu(fileMenuPtr);
+  appMenuBar->addMenu(editMenuPtr);
+  appMenuBar->addMenu(viewMenuPtr);
+  appMenuBar->addMenu(helpMenuPtr);
+  menuToolBar->addWidget(appMenuBar);
+  menuToolBar->setMovable(false);
+  menuToolBar->setFloatable(false);
 #endif
 }
 //---------------------------------------------------------------------------
@@ -765,6 +773,9 @@ void MainWindow::createToolBars() {
 #ifndef Q_OS_MAC
   menuToolBar = addToolBar(tr("Menu"));
   menuToolBar->setObjectName("Menu");
+  menuToolBar->setMovable(false);
+  menuToolBar->setFloatable(false);
+  menuToolBar->setContextMenuPolicy(Qt::PreventContextMenu);
   addToolBarBreak();
 #endif
 
@@ -787,6 +798,9 @@ void MainWindow::createToolBars() {
 
   navToolBar->addWidget(pathEdit);
   navToolBar->addWidget(searchEdit);
+  if (searchClearAct) {
+    navToolBar->addAction(searchClearAct);
+  }
   navToolBar->addAction(newTabAct);
   navToolBar->addAction(terminalAct);
 

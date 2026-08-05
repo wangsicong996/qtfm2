@@ -193,6 +193,22 @@
   },
   {
     "context": "MainWindow",
+    "source": "Remove separator"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Remove this separator line"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Remove this separator line?"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Clear search"
+  },
+  {
+    "context": "MainWindow",
     "source": "Add this folder to bookmarks"
   },
   {
@@ -1217,6 +1233,18 @@
   },
   {
     "context": "SettingsDialog",
+    "source": "General"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Custom Actions"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Language"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Application"
   },
   {
@@ -1250,6 +1278,14 @@
   {
     "context": "SettingsDialog",
     "source": "Behaviour"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Cancel"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Save"
   },
   {
     "context": "SettingsDialog",

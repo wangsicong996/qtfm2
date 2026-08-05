@@ -34,6 +34,11 @@
 #include <QToolButton>
 #include <QMenu>
 #include <QMenuBar>
+#include <QWindow>
+#include <QAbstractButton>
+#include <QAbstractSpinBox>
+#include <QScrollBar>
+#include <QAbstractItemView>
 #ifndef NO_DBUS
 #include <QDBusConnection>
 #include <QDBusError>
@@ -482,13 +487,13 @@ MainWindow::MainWindow(const QString &forcedStartPath)
     searchEdit->setMaximumWidth(kSearchBarWidth);
     searchEdit->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     searchEdit->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    searchEdit->setTextMargins(4, 0, 2, 0);
+    searchEdit->setTextMargins(4, 0, 4, 0);
     searchEdit->setToolTip(tr("Filter files in the focused pane (Enter)"));
-    setupSearchClearButton();
+    searchEdit->setClearButtonEnabled(false);
     connect(searchEdit, &QLineEdit::returnPressed, this, &MainWindow::applyNameSearch);
     connect(searchEdit, &QLineEdit::textChanged, this, [this](const QString &text) {
         if (searchClearAct) {
-            searchClearAct->setVisible(!text.isEmpty());
+            searchClearAct->setEnabled(!text.isEmpty());
         }
         if (text.isEmpty()) {
             clearNameSearch();
@@ -515,6 +520,7 @@ MainWindow::MainWindow(const QString &forcedStartPath)
     tree->scrollTo(tree->currentIndex());
 
     createActions();
+    setupSearchClearButton();
     createToolBars();
     createMenus();
 
@@ -1721,15 +1727,12 @@ void MainWindow::applyLanguageFromSettings()
 
 void MainWindow::setupSearchClearButton()
 {
-    if (!searchEdit) {
-        return;
-    }
-    // Use a stroke-only X SVG instead of the style's filled backspace clear glyph.
-    searchEdit->setClearButtonEnabled(false);
     if (!searchClearAct) {
-        searchClearAct = searchEdit->addAction(BundledIcons::toolbarIcon(QStringLiteral("search-clear")),
-                                               QLineEdit::TrailingPosition);
+        searchClearAct = new QAction(tr("Clear search"), this);
         searchClearAct->setToolTip(tr("Clear search"));
+        searchClearAct->setStatusTip(tr("Clear search"));
+        searchClearAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("search-clear")));
+        searchClearAct->setEnabled(searchEdit && !searchEdit->text().isEmpty());
         connect(searchClearAct, &QAction::triggered, this, [this]() {
             clearNameSearch();
             if (searchEdit) {
@@ -1738,32 +1741,14 @@ void MainWindow::setupSearchClearButton()
         });
     } else {
         updateSearchClearButtonIcon();
+        searchClearAct->setEnabled(searchEdit && !searchEdit->text().isEmpty());
     }
-    searchClearAct->setVisible(!searchEdit->text().isEmpty());
-    QTimer::singleShot(0, this, &MainWindow::polishSearchClearButton);
 }
 
 void MainWindow::updateSearchClearButtonIcon()
 {
     if (searchClearAct) {
         searchClearAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("search-clear")));
-    }
-}
-
-void MainWindow::polishSearchClearButton()
-{
-    if (!searchEdit) {
-        return;
-    }
-    for (QToolButton *btn : searchEdit->findChildren<QToolButton *>()) {
-        btn->setAutoRaise(true);
-        btn->setCursor(Qt::PointingHandCursor);
-        btn->setFocusPolicy(Qt::NoFocus);
-        btn->setFixedSize(16, 16);
-        btn->setIconSize(QSize(14, 14));
-        btn->setStyleSheet(QStringLiteral(
-            "QToolButton {"
-            " border: none; background: transparent; margin: 0px; padding: 0px; }"));
     }
 }
 
@@ -1887,6 +1872,14 @@ void MainWindow::retranslateUi()
     if (removeSeparatorAct) {
         removeSeparatorAct->setText(tr("Remove separator"));
         removeSeparatorAct->setStatusTip(tr("Remove this separator line"));
+    }
+    if (renameBookmarkAct) {
+        renameBookmarkAct->setText(tr("Rename bookmark"));
+        renameBookmarkAct->setStatusTip(tr("Rename this bookmark"));
+    }
+    if (editBookmarkAct) {
+        editBookmarkAct->setText(tr("Edit icon"));
+        editBookmarkAct->setStatusTip(tr("Change bookmark icon"));
     }
     if (refreshAct) {
         refreshAct->setText(tr("Refresh"));
@@ -2019,7 +2012,10 @@ void MainWindow::retranslateUi()
         searchEdit->setToolTip(tr("Filter files in the focused pane (Enter)"));
     }
     if (searchClearAct) {
+        searchClearAct->setText(tr("Clear search"));
         searchClearAct->setToolTip(tr("Clear search"));
+        searchClearAct->setStatusTip(tr("Clear search"));
+        searchClearAct->setEnabled(searchEdit && !searchEdit->text().isEmpty());
     }
 }
 
@@ -2256,7 +2252,6 @@ void MainWindow::applyViewChromeStyles()
         searchEdit->setStyleSheet(searchQss);
         searchEdit->setFixedHeight(kPathBarHeight);
         updateSearchClearButtonIcon();
-        polishSearchClearButton();
     }
 
     if (customComplete) {
@@ -3333,6 +3328,67 @@ void MainWindow::openWithConfiguredApp()
   }
 }
 
+bool MainWindow::isWindowChromeDragArea(QObject *receiver, const QMouseEvent *me) const
+{
+#ifndef Q_OS_MAC
+    if (!receiver || !me) {
+        return false;
+    }
+    QWidget *w = qobject_cast<QWidget *>(receiver);
+    if (!w) {
+        return false;
+    }
+
+    // Interactive controls must keep their normal click behavior.
+    for (QWidget *p = w; p; p = p->parentWidget()) {
+        if (qobject_cast<QAbstractButton *>(p)
+            || qobject_cast<QComboBox *>(p)
+            || qobject_cast<QLineEdit *>(p)
+            || qobject_cast<QAbstractSpinBox *>(p)
+            || qobject_cast<QScrollBar *>(p)
+            || qobject_cast<QAbstractItemView *>(p)) {
+            return false;
+        }
+        if (menuToolBar && p == menuToolBar) {
+            break;
+        }
+        if (navToolBar && p == navToolBar) {
+            break;
+        }
+    }
+
+    if (appMenuBar && (w == appMenuBar || appMenuBar->isAncestorOf(w))) {
+        const QPoint mbPos = (w == appMenuBar)
+            ? me->pos()
+            : appMenuBar->mapFromGlobal(w->mapToGlobal(me->pos()));
+        return appMenuBar->actionAt(mbPos) == nullptr;
+    }
+
+    if (menuToolBar && (w == menuToolBar || menuToolBar->isAncestorOf(w))) {
+        return true;
+    }
+
+    // Empty gaps on the navigate/address toolbar (not buttons / path / search).
+    if (navToolBar && w == navToolBar) {
+        return true;
+    }
+#else
+    Q_UNUSED(receiver);
+    Q_UNUSED(me);
+#endif
+    return false;
+}
+
+bool MainWindow::tryStartWindowSystemMove()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    if (QWindow *wh = windowHandle()) {
+        return wh->startSystemMove();
+    }
+#endif
+    return false;
+}
+
 bool MainWindow::eventFilter(QObject *o, QEvent *e)
 {
     if (o == searchEdit && e->type() == QEvent::KeyPress) {
@@ -3346,8 +3402,8 @@ bool MainWindow::eventFilter(QObject *o, QEvent *e)
         }
     }
 
-    if (e->type() == QEvent::MouseButtonPress) {
-        QMouseEvent* me = static_cast<QMouseEvent*>(e);
+    if (e->type() == QEvent::MouseButtonPress || e->type() == QEvent::MouseButtonDblClick) {
+        QMouseEvent *me = static_cast<QMouseEvent *>(e);
         switch (me->button()) {
         case Qt::BackButton:
             goBackDir();
@@ -3355,6 +3411,23 @@ bool MainWindow::eventFilter(QObject *o, QEvent *e)
         case Qt::ForwardButton:
             goForwardDir();
             return true;
+        case Qt::LeftButton:
+#ifndef Q_OS_MAC
+            if (isWindowChromeDragArea(o, me)) {
+                if (e->type() == QEvent::MouseButtonDblClick) {
+                    if (isMaximized()) {
+                        showNormal();
+                    } else {
+                        showMaximized();
+                    }
+                    return true;
+                }
+                if (tryStartWindowSystemMove()) {
+                    return true;
+                }
+            }
+#endif
+            break;
         default:
             break;
         }
@@ -4692,7 +4765,7 @@ void MainWindow::clearNameSearch()
         searchEdit->blockSignals(false);
     }
     if (searchClearAct) {
-        searchClearAct->setVisible(false);
+        searchClearAct->setEnabled(false);
     }
 
     // Clear filter on the focused pane (and keep the other pane untouched in dual-pane).

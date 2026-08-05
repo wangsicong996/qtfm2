@@ -219,11 +219,11 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Add separator to bookmarks list</source>
-      <translation>添加分隔线 to bookmarks list</translation>
+      <translation>添加分隔线到书签列表</translation>
     </message>
     <message>
       <source>Add this folder to bookmarks</source>
-      <translation>添加 this folder to bookmarks</translation>
+      <translation>将此文件夹添加到书签</translation>
     </message>
     <message>
       <source>Address</source>
@@ -259,7 +259,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Change bookmark icon</source>
-      <translation>Change bookmark icon</translation>
+      <translation>修改书签图标</translation>
     </message>
     <message>
       <source>Close</source>
@@ -272,6 +272,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Close tab</source>
       <translation>关闭标签</translation>
+    </message>
+    <message>
+      <source>Clear search</source>
+      <translation>清除搜索</translation>
     </message>
     <message>
       <source>Computer</source>
@@ -343,7 +347,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Edit icon</source>
-      <translation>Edit icon</translation>
+      <translation>修改图标</translation>
     </message>
     <message>
       <source>Enter folder</source>
@@ -550,8 +554,20 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>移除书签</translation>
     </message>
     <message>
+      <source>Remove separator</source>
+      <translation>删除分隔线</translation>
+    </message>
+    <message>
       <source>Remove this bookmark</source>
-      <translation>移除 this bookmark</translation>
+      <translation>移除此书签</translation>
+    </message>
+    <message>
+      <source>Remove this separator line</source>
+      <translation>删除此分隔线</translation>
+    </message>
+    <message>
+      <source>Remove this separator line?</source>
+      <translation>删除此分隔线？</translation>
     </message>
     <message>
       <source>Rename</source>
@@ -559,15 +575,15 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Rename bookmark</source>
-      <translation>重命名 bookmark</translation>
+      <translation>重命名书签</translation>
     </message>
     <message>
       <source>Rename file</source>
-      <translation>重命名 file</translation>
+      <translation>重命名文件</translation>
     </message>
     <message>
       <source>Rename this bookmark</source>
-      <translation>重命名 this bookmark</translation>
+      <translation>重命名此书签</translation>
     </message>
     <message>
       <source>Run</source>
@@ -1000,7 +1016,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Custom Actions</source>
-      <translation>自定义action</translation>
+      <translation>自定义操作</translation>
     </message>
     <message>
       <source>Cut</source>
@@ -1297,6 +1313,18 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>外观</translation>
     </message>
     <message>
+      <source>General</source>
+      <translation>全局设置</translation>
+    </message>
+    <message>
+      <source>Custom Actions</source>
+      <translation>自定义操作</translation>
+    </message>
+    <message>
+      <source>Language</source>
+      <translation>界面语言</translation>
+    </message>
+    <message>
       <source>Application</source>
       <translation>应用程序</translation>
     </message>
@@ -1347,6 +1375,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Bookmarks list background</source>
       <translation>书签列表背景</translation>
+    </message>
+    <message>
+      <source>Cancel</source>
+      <translation>取消</translation>
     </message>
     <message>
       <source>Colors exported successfully.</source>
@@ -1647,6 +1679,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Settings</source>
       <translation>设置</translation>
+    </message>
+    <message>
+      <source>Save</source>
+      <translation>保存</translation>
     </message>
     <message>
       <source>Shortcut</source>

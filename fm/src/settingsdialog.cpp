@@ -183,11 +183,13 @@ void SettingsDialog::updateDialogButtonIcons()
     BundledIcons::setUiDarkMode(prev);
 
     if (QPushButton *saveBtn = dialogButtonBox->button(QDialogButtonBox::Save)) {
+        saveBtn->setText(tr("Save"));
         if (!saveIcon.isNull()) {
             saveBtn->setIcon(saveIcon);
         }
     }
     if (QPushButton *cancelBtn = dialogButtonBox->button(QDialogButtonBox::Cancel)) {
+        cancelBtn->setText(tr("Cancel"));
         if (!cancelIcon.isNull()) {
             cancelBtn->setIcon(cancelIcon);
         }
