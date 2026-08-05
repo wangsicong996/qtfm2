@@ -130,8 +130,9 @@ EXACT = {
     # Open with
     "Application name": "应用程序名称",
     "Extensions": "扩展名",
-    "Command (line 1)": "命令（第 1 行）",
-    "Command (line 2)": "命令（第 2 行）",
+    "Command (line 1)": "命令",
+    "Command (line 2)": "命令",
+    "Command": "命令",
     "Icon path": "图标路径",
     "Paste icon path": "粘贴图标路径",
     "Paste": "粘贴",
@@ -171,8 +172,33 @@ EXACT = {
     "No custom actions yet. Click “Add action module”.": "尚无自定义操作。点击「添加模块」。",
     "Each module is one custom context-menu action. "
     "Icon path overrides the bundled icon when set. "
-    "Use %f, %F, %n in commands.":
-        "每个模块对应一条自定义右键菜单操作。设置图标路径后将覆盖内置图标。命令中可使用 %f、%F、%n。",
+    "Use %f, %F, %n in commands. "
+    "Optional submenu groups matching titles together.":
+        "每个模块对应一条自定义右键菜单操作。设置图标路径后将覆盖内置图标。"
+        "命令中可使用 %f、%F、%n。可选填写子菜单名称，相同名称会归入同一子菜单。",
+    "Submenu": "子菜单",
+    "Submenu title (optional)": "子菜单名称（可选）",
+    "Submenu: leave empty to show the action in the "
+    "file context menu. Matching submenu titles are "
+    "grouped under one submenu.":
+        "子菜单：留空则直接显示在文件右键菜单中；填写后，相同名称的操作会归入同一子菜单。",
+    "Compress": "压缩",
+    "Use 'folder' to match all folders.<br>"
+    "Use a folder name to match a specific folder.<br>"
+    "Set text to 'Open' to override xdg default."
+    "<p>%f - selected files<br>"
+    "%F - selected files with full path<br>"
+    "%n - current filename</p>"
+    "<p>Submenu: leave empty to show the action in the "
+    "file context menu. Matching submenu titles are "
+    "grouped under one submenu.</p>":
+        "用 folder 匹配所有文件夹。<br>"
+        "用具体文件夹名匹配单个文件夹。<br>"
+        "将名称设为 Open 可覆盖 xdg 默认打开方式。"
+        "<p>%f - 所选文件名<br>"
+        "%F - 所选文件完整路径<br>"
+        "%n - 当前文件名</p>"
+        "<p>子菜单：留空则直接显示在文件右键菜单；填写后，相同名称归入同一子菜单。</p>",
     "System default": "跟随系统",
     "English": "English",
     "简体中文": "简体中文",

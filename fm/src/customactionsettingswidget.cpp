@@ -7,6 +7,7 @@
 #include <QClipboard>
 #include <QFrame>
 #include <QGuiApplication>
+#include <QHash>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -51,6 +52,25 @@ QIcon effectiveIcon(const CustomActionEntry &entry)
     return BundledIcons::iconByName(QStringLiteral("empty"));
 }
 
+void migrateLegacyTitle(CustomActionEntry *entry)
+{
+    if (!entry) {
+        return;
+    }
+    if (entry->submenu.isEmpty()) {
+        const QStringList children = entry->name.split(QStringLiteral(" / "));
+        if (children.count() > 1) {
+            entry->submenu = children.at(0).trimmed();
+            entry->name = children.at(1).trimmed();
+        }
+    }
+    if (entry->submenu.isEmpty()
+        && entry->name.startsWith(QStringLiteral("Compress to "))) {
+        entry->submenu = QStringLiteral("Compress");
+        entry->name = entry->name.mid(QStringLiteral("Compress to ").size()).trimmed();
+    }
+}
+
 CustomActionEntry parseStoredRow(const QStringList &temp)
 {
     CustomActionEntry entry;
@@ -65,6 +85,9 @@ CustomActionEntry parseStoredRow(const QStringList &temp)
     if (temp.size() >= 5) {
         entry.iconPath = temp.at(3);
         cmd = temp.at(4);
+        if (temp.size() >= 6) {
+            entry.submenu = temp.at(5).trimmed();
+        }
     } else {
         cmd = temp.at(3);
     }
@@ -74,13 +97,14 @@ CustomActionEntry parseStoredRow(const QStringList &temp)
     }
     entry.command = cmd;
     entry.monitorOutput = false;
+    migrateLegacyTitle(&entry);
     return entry;
 }
 
 QStringList serializeRow(const CustomActionEntry &entry)
 {
     return QStringList() << entry.fileType << entry.name << entry.bundledIconName
-                         << entry.iconPath << entry.command;
+                         << entry.iconPath << entry.command << entry.submenu;
 }
 
 } // namespace
@@ -103,7 +127,8 @@ CustomActionSettingsWidget::CustomActionSettingsWidget(QWidget *parent) : QWidge
 
     auto *hint = new QLabel(tr("Each module is one custom context-menu action. "
                                "Icon path overrides the bundled icon when set. "
-                               "Use %f, %F, %n in commands."));
+                               "Use %f, %F, %n in commands. "
+                               "Optional submenu groups matching titles together."));
     hint->setWordWrap(true);
     pageLayout->addWidget(hint);
 
@@ -141,11 +166,42 @@ void CustomActionSettingsWidget::loadFromSettings(QSettings *settings)
         actionEntries.append(parseStoredRow(settings->value(key).toStringList()));
     }
     settings->endGroup();
+    regroupBySubmenu();
     rebuildModules();
 }
 
-void CustomActionSettingsWidget::saveToSettings(QSettings *settings) const
+void CustomActionSettingsWidget::regroupBySubmenu()
 {
+    // Keep empty-submenu actions first (in original relative order), then group
+    // identical submenu titles together (stable within each group).
+    QVector<CustomActionEntry> empty;
+    QVector<QString> submenuOrder;
+    QHash<QString, QVector<CustomActionEntry>> groups;
+
+    for (const CustomActionEntry &entry : actionEntries) {
+        const QString key = entry.submenu.trimmed();
+        if (key.isEmpty()) {
+            empty.append(entry);
+            continue;
+        }
+        if (!groups.contains(key)) {
+            submenuOrder.append(key);
+        }
+        groups[key].append(entry);
+    }
+
+    QVector<CustomActionEntry> sorted = empty;
+    for (const QString &key : submenuOrder) {
+        sorted += groups.value(key);
+    }
+    actionEntries = sorted;
+}
+
+void CustomActionSettingsWidget::saveToSettings(QSettings *settings)
+{
+    regroupBySubmenu();
+    rebuildModules();
+
     settings->remove(QStringLiteral("customActions"));
     settings->beginGroup(QStringLiteral("customActions"));
     for (int i = 0; i < actionEntries.size(); ++i) {
@@ -160,14 +216,29 @@ void CustomActionSettingsWidget::setDefaults(const QVector<QStringList> &rows)
     actionEntries.clear();
     for (const QStringList &row : rows) {
         CustomActionEntry entry;
-        if (row.size() >= 4) {
+        if (row.size() >= 6) {
+            entry.fileType = row.at(0);
+            entry.name = row.at(1);
+            entry.bundledIconName = row.at(2);
+            entry.iconPath = row.at(3);
+            entry.command = row.at(4);
+            entry.submenu = row.at(5).trimmed();
+        } else if (row.size() >= 5) {
+            entry.fileType = row.at(0);
+            entry.name = row.at(1);
+            entry.bundledIconName = row.at(2);
+            entry.iconPath = row.at(3);
+            entry.command = row.at(4);
+        } else if (row.size() >= 4) {
             entry.fileType = row.at(0);
             entry.name = row.at(1);
             entry.bundledIconName = row.at(2);
             entry.command = row.at(3);
         }
+        migrateLegacyTitle(&entry);
         actionEntries.append(entry);
     }
+    regroupBySubmenu();
     rebuildModules();
     emit entriesChanged();
 }
@@ -195,7 +266,10 @@ void CustomActionSettingsWidget::showUsageInfo()
                             "Set text to 'Open' to override xdg default."
                             "<p>%f - selected files<br>"
                             "%F - selected files with full path<br>"
-                            "%n - current filename</p>");
+                            "%n - current filename</p>"
+                            "<p>Submenu: leave empty to show the action in the "
+                            "file context menu. Matching submenu titles are "
+                            "grouped under one submenu.</p>");
     QMessageBox::information(this, tr("Usage"), info);
 }
 
@@ -265,13 +339,21 @@ QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
     row3->addWidget(cmdEdit, 1);
     row3->addWidget(pasteCmdBtn);
 
+    // Row 4: submenu (left) + delete (right)
+    auto *row4 = new QHBoxLayout();
+    auto *submenuEdit = new QLineEdit(entry->submenu);
+    submenuEdit->setPlaceholderText(tr("Submenu title (optional)"));
+    submenuEdit->setMinimumWidth(0);
+    auto *delBtn = new QPushButton(tr("Delete module"));
+    SettingsUiStyles::styleDeleteButton(delBtn);
+    row4->addWidget(new QLabel(tr("Submenu")));
+    row4->addWidget(submenuEdit, 1);
+    row4->addWidget(delBtn, 0, Qt::AlignRight);
+
     mainLay->addLayout(row1);
     mainLay->addLayout(row2);
     mainLay->addLayout(row3);
-
-    auto *delBtn = new QPushButton(tr("Delete module"));
-    SettingsUiStyles::styleDeleteButton(delBtn);
-    mainLay->addWidget(delBtn, 0, Qt::AlignRight);
+    mainLay->addLayout(row4);
 
     connect(fileTypeEdit, &QLineEdit::textChanged, [entry](const QString &t) {
         entry->fileType = t;
@@ -279,6 +361,9 @@ QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
     connect(nameEdit, &QLineEdit::textChanged, [this, entry](const QString &t) {
         entry->name = t;
         emit entriesChanged();
+    });
+    connect(submenuEdit, &QLineEdit::textChanged, [entry](const QString &t) {
+        entry->submenu = t.trimmed();
     });
     connect(iconPathEdit, &QLineEdit::textChanged, [entry, iconBtn](const QString &t) {
         entry->iconPath = t;

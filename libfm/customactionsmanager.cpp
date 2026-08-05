@@ -47,6 +47,34 @@ QString commandFromStored(const QStringList &temp)
     return QString();
 }
 
+QString submenuFromStored(const QStringList &temp)
+{
+    if (temp.size() >= 6) {
+        return temp.at(5).trimmed();
+    }
+    return QString();
+}
+
+void resolveActionTitle(QString *actionText, QString *submenuTitle)
+{
+    if (!actionText || !submenuTitle) {
+        return;
+    }
+    if (submenuTitle->isEmpty()) {
+        const QStringList children = actionText->split(QStringLiteral(" / "));
+        if (children.count() > 1) {
+            *submenuTitle = children.at(0).trimmed();
+            *actionText = children.at(1).trimmed();
+        }
+    }
+    // Migrate legacy flat "Compress to xxx" into Compress submenu.
+    if (submenuTitle->isEmpty()
+        && actionText->startsWith(QStringLiteral("Compress to "))) {
+        *submenuTitle = QStringLiteral("Compress");
+        *actionText = actionText->mid(QStringLiteral("Compress to ").size()).trimmed();
+    }
+}
+
 } // namespace
 
 /**
@@ -117,12 +145,17 @@ void CustomActionsManager::readActions() {
     // temp.at(2) - Bundled icon name
     // temp.at(3) - Icon path (optional, v5+)
     // temp.at(4) - Command (optional | prefix); v4: command at(3)
+    // temp.at(5) - Submenu title (optional, v6+)
     QStringList temp(settingsPtr->value(keys.at(i)).toStringList());
     //qDebug() << "loaded custom action" << temp;
 
     // Create new action and read it
     const QString cmd = commandFromStored(temp);
-    QAction *act = new QAction(iconForCustomAction(temp), temp.at(1), this);
+    QString actionText = temp.value(1);
+    QString submenuTitle = submenuFromStored(temp);
+    resolveActionTitle(&actionText, &submenuTitle);
+
+    QAction *act = new QAction(iconForCustomAction(temp), actionText, this);
     mapper->setMapping(act, cmd);
     connect(act, SIGNAL(triggered()), mapper, SLOT(map()));
     actionListPtr->append(act);
@@ -130,17 +163,25 @@ void CustomActionsManager::readActions() {
     // Parse types which are connected with current action
     QStringList types = temp.at(0).split(",");
     foreach (QString type, types) {
-      QStringList children(temp.at(1).split(" / "));
-      if (children.count() > 1) {
+      type = type.trimmed();
+      if (type.isEmpty()) {
+        continue;
+      }
+      if (!submenuTitle.isEmpty()) {
         QMenu* parent = nullptr;
-        act->setText(children.at(1));
         foreach (QMenu *subMenu, menus->values(type)) {
-          if (subMenu->title() == children.at(0)) {
+          if (subMenu->property("qtfmSubmenuKey").toString() == submenuTitle
+              || subMenu->title() == submenuTitle) {
             parent = subMenu;
+            break;
           }
         }
         if (parent == nullptr) {
-          parent = new QMenu(children.at(0));
+          const QString title = (submenuTitle == QLatin1String("Compress"))
+              ? tr("Compress")
+              : submenuTitle;
+          parent = new QMenu(title);
+          parent->setProperty("qtfmSubmenuKey", submenuTitle);
           menus->insert(type, parent);
         }
         parent->addAction(act);

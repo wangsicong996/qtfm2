@@ -377,17 +377,19 @@ void IconViewDelegate::paint(QPainter *painter,
 
     painter->setRenderHint(QPainter::Antialiasing);
 
+    // Match Navigate toolbar chrome buttons (border-radius: 4px).
+    constexpr qreal kItemChromeRadius = 4.0;
     if (isSelected && !isEditing) {
         QPainterPath path;
         const QRect frame = itemHighlightRect(item, zoom, _cellGapH, _cellGapV, fm);
-        path.addRoundedRect(frame, 15, 15);
+        path.addRoundedRect(frame, kItemChromeRadius, kItemChromeRadius);
         painter->setOpacity(0.85);
         painter->fillPath(path, opt.palette.highlight());
         painter->setOpacity(1.0);
     } else if ((opt.state & QStyle::State_MouseOver) && !isEditing && !suppressHoverChrome) {
         QPainterPath path;
         const QRect frame = itemHighlightRect(item, zoom, _cellGapH, _cellGapV, fm);
-        path.addRoundedRect(frame, 15, 15);
+        path.addRoundedRect(frame, kItemChromeRadius, kItemChromeRadius);
         painter->setOpacity(0.38);
         painter->fillPath(path, opt.palette.highlight());
         painter->setOpacity(1.0);

@@ -2,7 +2,9 @@
 #include "openwithconfig.h"
 #include "settingsuistyles.h"
 
+#include <QApplication>
 #include <QClipboard>
+#include <QFont>
 #include <QFormLayout>
 #include <QFrame>
 #include <QGroupBox>
@@ -11,6 +13,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMimeData>
+#include <QPalette>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSizePolicy>
@@ -57,14 +60,23 @@ QFormLayout *makeFlexibleForm(QWidget *parent = nullptr)
 void OpenWithSettingsWidget::fillEntryForm(QFormLayout *form, OpenWithEntry *entry,
                                            const QStringList &suffixesHint)
 {
+    // One command field in the UI; fold legacy line-2 into line-1 when present.
+    if (!entry->commandLine2.trimmed().isEmpty()) {
+        const QString extra = entry->commandLine2.trimmed();
+        if (entry->commandLine1.trimmed().isEmpty()) {
+            entry->commandLine1 = extra;
+        } else {
+            entry->commandLine1 = entry->commandLine1.trimmed() + QLatin1Char(' ') + extra;
+        }
+        entry->commandLine2.clear();
+    }
+
     auto *nameEdit = new QLineEdit(entry->name);
-    auto *cmd1Edit = new QLineEdit(entry->commandLine1);
-    auto *cmd2Edit = new QLineEdit(entry->commandLine2);
+    auto *cmdEdit = new QLineEdit(entry->commandLine1);
     auto *iconEdit = new QLineEdit(entry->iconPath);
     auto *pasteBtn = new QPushButton(tr("Paste"));
     makeWidthFlexible(nameEdit);
-    makeWidthFlexible(cmd1Edit);
-    makeWidthFlexible(cmd2Edit);
+    makeWidthFlexible(cmdEdit);
     makeWidthFlexible(iconEdit);
 
     form->addRow(tr("Application name"), nameEdit);
@@ -75,8 +87,7 @@ void OpenWithSettingsWidget::fillEntryForm(QFormLayout *form, OpenWithEntry *ent
         extLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         form->addRow(tr("Extensions"), extLabel);
     }
-    form->addRow(tr("Command (line 1)"), cmd1Edit);
-    form->addRow(tr("Command (line 2)"), cmd2Edit);
+    form->addRow(tr("Command"), cmdEdit);
 
     auto *iconRowWidget = new QWidget();
     makeWidthFlexible(iconRowWidget);
@@ -89,11 +100,9 @@ void OpenWithSettingsWidget::fillEntryForm(QFormLayout *form, OpenWithEntry *ent
     connect(nameEdit, &QLineEdit::textChanged, [entry](const QString &t) {
         entry->name = t;
     });
-    connect(cmd1Edit, &QLineEdit::textChanged, [entry](const QString &t) {
+    connect(cmdEdit, &QLineEdit::textChanged, [entry](const QString &t) {
         entry->commandLine1 = t;
-    });
-    connect(cmd2Edit, &QLineEdit::textChanged, [entry](const QString &t) {
-        entry->commandLine2 = t;
+        entry->commandLine2.clear();
     });
     connect(iconEdit, &QLineEdit::textChanged, [entry](const QString &t) {
         entry->iconPath = t;
@@ -125,7 +134,8 @@ OpenWithSettingsWidget::OpenWithSettingsWidget(QWidget *parent) : QWidget(parent
     contentWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     auto *mainLayout = new QVBoxLayout(contentWidget);
     mainLayout->setSpacing(10);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
+    // Keep category cards clear of the vertical scrollbar.
+    mainLayout->setContentsMargins(0, 0, 10, 0);
 
     mainLayout->addWidget(buildSuffixSection());
 
@@ -197,6 +207,14 @@ QWidget *OpenWithSettingsWidget::buildCategorySection(const QString &categoryId)
                  : categoryId == QLatin1String("text") ? tr("Text and code")
                  : categoryId == QLatin1String("archive") ? tr("Archive")
                  : categoryId));
+    title->setObjectName(QStringLiteral("settingsCategoryTitle"));
+    {
+        QFont titleFont = title->font();
+        titleFont.setPointSize(titleFont.pointSize() + 3);
+        title->setFont(titleFont);
+        const QColor accent = QApplication::palette().color(QPalette::Highlight);
+        title->setStyleSheet(QStringLiteral("color: %1;").arg(accent.name()));
+    }
     title->setToolTip(OpenWithConfig::suffixesForCategory(categoryId).join(QStringLiteral(", ")));
     title->setWordWrap(true);
     title->setMinimumWidth(0);

@@ -1212,10 +1212,13 @@ void MainWindow::firstRunCustomActions(bool isFirstRun)
     if (!isFirstRun) { return; }
     settings->beginGroup("customActions");
     int childs = settings->childKeys().size();
-    if (childs>0) { return; }
+    if (childs > 0) {
+        settings->endGroup();
+        return;
+    }
 
     QVector<QStringList> defActions = Common::getDefaultActions();
-    for (int i=0;i<defActions.size();++i) {
+    for (int i = 0; i < defActions.size(); ++i) {
         settings->setValue(QString(i), defActions.at(i));
     }
 
@@ -2246,6 +2249,18 @@ void MainWindow::applyViewChromeStyles()
         "QToolBar#Navigate { border: none; background: transparent; }"
         "QMenuBar { background-color: %1; color: palette(windowText); }"
         "QMenuBar::item:selected { background: palette(highlight); color: palette(highlighted-text); }"
+        "QMenu {"
+        " background-color: %1; color: %5;"
+        " border: 1px solid %2; padding: 4px; }"
+        "QMenu::item {"
+        " padding: 4px 24px 4px 28px; border-radius: 4px; }"
+        "QMenu::item:selected {"
+        " background-color: %3; color: %4; }"
+        "QMenu::item:disabled {"
+        " color: %6; background: transparent; }"
+        "QMenu::icon { padding-left: 6px; }"
+        "QMenu::separator {"
+        " height: 1px; background: %2; margin: 4px 8px; }"
         "QStatusBar { background: %1; color: palette(windowText); }"
         "QDockWidget { background: %1; color: palette(windowText); }"
         "QDockWidget::title { background: %1; padding: 4px; }"
@@ -2256,7 +2271,10 @@ void MainWindow::applyViewChromeStyles()
         "QListView, QTreeView { background-color: palette(base);"
         " alternate-background-color: palette(alternateBase); color: palette(text); }"
         "QTabWidget::pane { border: none; background: palette(base); }"
-    ).arg(windowBg.name(), chromeLine.name());
+    ).arg(windowBg.name(), chromeLine.name(), highlight.name())
+     .arg(pal.color(QPalette::HighlightedText).name(),
+          pal.color(QPalette::WindowText).name(),
+          pal.color(QPalette::Disabled, QPalette::WindowText).name());
 #ifdef Q_OS_MAC
     shellQss += QStringLiteral(
         "QMainWindow::separator { height: 0px; width: 0px; margin: 0; padding: 0; border: none; }");
@@ -2378,12 +2396,12 @@ void MainWindow::applyViewChromeStyles()
 
     const int rowH = qMax(18, zoomDetail);
     const QString treeQss = QStringLiteral(
-        "QTreeView::item { height: %1px; }"
+        "QTreeView::item { height: %1px; border-radius: 4px; }"
         "QTreeView::item:hover { background-color: %2; }"
         "QTreeView::item:selected { background-color: %3; }"
         "QTreeView QLineEdit {"
         " background: palette(base); color: palette(text);"
-        " border: 1px solid %4; border-radius: 2px; padding: 1px 4px;"
+        " border: 1px solid %4; border-radius: 4px; padding: 1px 4px;"
         " selection-background-color: %3; selection-color: palette(highlighted-text);"
         "}"
     ).arg(rowH)

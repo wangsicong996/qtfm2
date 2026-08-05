@@ -15,6 +15,7 @@ struct CustomActionEntry {
     QString bundledIconName;
     QString iconPath;
     QString command;
+    QString submenu;
     bool monitorOutput = false;
 };
 
@@ -24,7 +25,7 @@ public:
     explicit CustomActionSettingsWidget(QWidget *parent = nullptr);
 
     void loadFromSettings(QSettings *settings);
-    void saveToSettings(QSettings *settings) const;
+    void saveToSettings(QSettings *settings);
     const QVector<CustomActionEntry> &entries() const { return actionEntries; }
 
     void setDefaults(const QVector<QStringList> &rows);
@@ -39,6 +40,7 @@ public slots:
 
 private:
     void rebuildModules();
+    void regroupBySubmenu();
     QFrame *buildModuleFrame(int index);
 
     QScrollArea *scrollArea;

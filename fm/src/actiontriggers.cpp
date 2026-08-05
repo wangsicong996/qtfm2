@@ -1214,10 +1214,10 @@ void MainWindow::showEditDialog() {
     }
 
     customActManager->readActions();
+  } else {
+    // Dialog cancelled — reload previous actions after freeActions() above.
+    customActManager->readActions();
   }
-
-  // Reads custom actions
-  customActManager->readActions();
   delete d;
 }
 //---------------------------------------------------------------------------

@@ -568,9 +568,20 @@ void applyMacLikePalette(QPalette &palette,
     setPaletteColorAllGroups(palette, QPalette::LinkVisited, link.darker(115));
     setPaletteColorAllGroups(palette, QPalette::ToolTipBase, toolTipBase);
     setPaletteColorAllGroups(palette, QPalette::ToolTipText, toolTipText);
-    palette.setColor(QPalette::Disabled, QPalette::Text, text.darker(150));
-    palette.setColor(QPalette::Disabled, QPalette::ButtonText, text.darker(150));
-    palette.setColor(QPalette::Disabled, QPalette::WindowText, text.darker(150));
+    // Disabled menu/text: light ≈ white darkened 20%; dark ≈ black lightened 20%.
+    // Avoid text.darker() which looks muddy and pairs badly with etched menu drawing.
+    const QColor disabledText = (text.lightness() > 128)
+        ? QColor(0x33, 0x33, 0x33)   // dark theme: ~20% of white from black
+        : QColor(0xCC, 0xCC, 0xCC);  // light theme: ~20% darker than white
+    palette.setColor(QPalette::Disabled, QPalette::Text, disabledText);
+    palette.setColor(QPalette::Disabled, QPalette::ButtonText, disabledText);
+    palette.setColor(QPalette::Disabled, QPalette::WindowText, disabledText);
+    // Kill etched/embossed disabled drawing (double offset text+icon in menus).
+    palette.setColor(QPalette::Disabled, QPalette::Light, window);
+    palette.setColor(QPalette::Disabled, QPalette::Midlight, window);
+    palette.setColor(QPalette::Disabled, QPalette::Dark, window);
+    palette.setColor(QPalette::Disabled, QPalette::Shadow, window);
+    palette.setColor(QPalette::Disabled, QPalette::Mid, mid);
 }
 
 } // namespace
@@ -624,18 +635,21 @@ QStringList Common::iconPaths(QString appPath)
 
 QVector<QStringList> Common::getDefaultActions()
 {
+    // Rows: fileType, name, bundledIcon, iconPath, command, submenu
+    // Empty submenu → top-level; same submenu title → one nested menu.
     QVector<QStringList> result;
-    result.append(QStringList()<< "tar.gz,tar.bz2,tar.xz,tar,tgz,tbz,tbz2,txz" << "Extract tar here ..." << "package-x-generic" << "tar xvf %F");
-    result.append(QStringList()<< "7z" << "Extract 7z here ..." << "package-x-generic" << "7za x %F");
-    result.append(QStringList()<< "rar" << "Extract rar here ..." << "package-x-generic" << "unrar x %F");
-    result.append(QStringList()<< "zip" << "Extract zip here ..." << "package-x-generic" << "unzip %F");
-    result.append(QStringList()<< "gz" << "Extract gz here ..." << "package-x-generic" << "gunzip --keep %F");
-    result.append(QStringList()<< "bz2" << "Extract bz2 here ..." << "package-x-generic" << "bunzip2 --keep %F");
-    result.append(QStringList()<< "xz" << "Extract xz here ..." << "package-x-generic" << "xz -d --keep %F");
-    result.append(QStringList()<< "*" << "Compress to tar.gz" << "package-x-generic" << "tar cvvzf %n.tar.gz %F");
-    result.append(QStringList()<< "*" << "Compress to tar.bz2" << "package-x-generic" << "tar cvvjf %n.tar.bz2 %F");
-    result.append(QStringList()<< "*" << "Compress to tar.xz" << "package-x-generic" << "tar cvvJf %n.tar.xz %F");
-    result.append(QStringList()<< "*" << "Compress to zip" << "package-x-generic" << "zip -r %n.zip %F");
+    result.append(QStringList()<< "tar.gz,tar.bz2,tar.xz,tar,tgz,tbz,tbz2,txz" << "Extract tar here ..." << "package-x-generic" << "" << "tar xvf %F" << "");
+    result.append(QStringList()<< "7z" << "Extract 7z here ..." << "package-x-generic" << "" << "7za x %F" << "");
+    result.append(QStringList()<< "rar" << "Extract rar here ..." << "package-x-generic" << "" << "unrar x %F" << "");
+    result.append(QStringList()<< "zip" << "Extract zip here ..." << "package-x-generic" << "" << "unzip %F" << "");
+    result.append(QStringList()<< "gz" << "Extract gz here ..." << "package-x-generic" << "" << "gunzip --keep %F" << "");
+    result.append(QStringList()<< "bz2" << "Extract bz2 here ..." << "package-x-generic" << "" << "bunzip2 --keep %F" << "");
+    result.append(QStringList()<< "xz" << "Extract xz here ..." << "package-x-generic" << "" << "xz -d --keep %F" << "");
+    const QString compress = QStringLiteral("Compress");
+    result.append(QStringList()<< "*" << "tar.gz" << "package-x-generic" << "" << "tar cvvzf %n.tar.gz %F" << compress);
+    result.append(QStringList()<< "*" << "tar.bz2" << "package-x-generic" << "" << "tar cvvjf %n.tar.bz2 %F" << compress);
+    result.append(QStringList()<< "*" << "tar.xz" << "package-x-generic" << "" << "tar cvvJf %n.tar.xz %F" << compress);
+    result.append(QStringList()<< "*" << "zip" << "package-x-generic" << "" << "zip -r %n.zip %F" << compress);
     return result;
 }
 
