@@ -4,6 +4,7 @@
         <file>icons/toolbar/back.svg</file>
         <file>icons/toolbar/bookmark.svg</file>
         <file>icons/toolbar/clear.svg</file>
+        <file>icons/toolbar/search-clear.svg</file>
         <file>icons/toolbar/copy.svg</file>
         <file>icons/toolbar/cut.svg</file>
         <file>icons/toolbar/delete.svg</file>
@@ -51,6 +52,7 @@
         <file>icons/toolbar/white/back.svg</file>
         <file>icons/toolbar/white/bookmark.svg</file>
         <file>icons/toolbar/white/clear.svg</file>
+        <file>icons/toolbar/white/search-clear.svg</file>
         <file>icons/toolbar/white/copy.svg</file>
         <file>icons/toolbar/white/cut.svg</file>
         <file>icons/toolbar/white/delete.svg</file>

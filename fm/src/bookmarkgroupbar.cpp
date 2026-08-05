@@ -21,6 +21,8 @@ BookmarkGroupBar::BookmarkGroupBar(QWidget *parent)
     , m_buttonGroup(new QButtonGroup(this))
 {
     setObjectName(QStringLiteral("bookmarkGroupBar"));
+    setAttribute(Qt::WA_StyledBackground, true);
+    setAutoFillBackground(true);
     m_buttonGroup->setExclusive(true);
 
     m_layout = new QVBoxLayout(this);
@@ -36,6 +38,9 @@ BookmarkGroupBar::BookmarkGroupBar(QWidget *parent)
     m_layout->addWidget(m_addButton, 0, Qt::AlignHCenter | Qt::AlignTop);
 
     m_tabsHost = new QWidget(this);
+    m_tabsHost->setObjectName(QStringLiteral("bookmarkGroupTabsHost"));
+    m_tabsHost->setAttribute(Qt::WA_TranslucentBackground, true);
+    m_tabsHost->setAutoFillBackground(false);
     m_tabsLayout = new QVBoxLayout(m_tabsHost);
     m_tabsLayout->setContentsMargins(0, 0, 0, 0);
     m_tabsLayout->setSpacing(4);
@@ -93,9 +98,12 @@ void BookmarkGroupBar::applyButtonSizes()
         pal.setColor(QPalette::Base, barBg);
         setPalette(pal);
         setAutoFillBackground(true);
+        setAttribute(Qt::WA_StyledBackground, true);
+        // Fill the whole left strip (below Places tabs). Buttons keep their own styles.
         setStyleSheet(QStringLiteral(
-            "QWidget#bookmarkGroupBar { background-color: %1; }")
-                          .arg(barBg.name()));
+            "QWidget#bookmarkGroupBar { background-color: %1; border: none; }"
+            "QWidget#bookmarkGroupTabsHost { background: transparent; border: none; }")
+                          .arg(barBg.name(QColor::HexRgb)));
     }
 
     if (m_addButton) {

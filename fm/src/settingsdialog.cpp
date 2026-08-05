@@ -699,9 +699,9 @@ QString SettingsDialog::uiColorLabel(UiColorId id)
     case UiColorId::FilePaneActive:
         return tr("File pane background (focused dual-pane)");
     case UiColorId::BookmarksList:
-        return tr("Bookmarks list background");
+        return tr("Bookmarks list background (right)");
     case UiColorId::BookmarkGroupBar:
-        return tr("Bookmark group bar background");
+        return tr("Bookmark group bar background (left)");
     case UiColorId::BookmarkGroupButton:
         return tr("Bookmark group button background");
     case UiColorId::SidebarTabSelected:

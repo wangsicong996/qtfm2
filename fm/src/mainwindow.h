@@ -176,6 +176,9 @@ public slots:
     void retranslateUi();
     void reloadUiColorCache();
     const UiColorSet &activeUiColorSet() const;
+    void setupSearchClearButton();
+    void polishSearchClearButton();
+    void updateSearchClearButtonIcon();
     void syncPathComboDecorations();
     void applyNameSearch();
     void clearNameSearch();
@@ -328,6 +331,8 @@ private:
     QString currentBookmarkGroupId;
     QComboBox *pathEdit;
     QLineEdit *searchEdit = nullptr;
+    QAction *searchClearAct = nullptr;
+    QString m_appliedUiLanguage;
 
     QString term;
     QFileInfo curIndex;

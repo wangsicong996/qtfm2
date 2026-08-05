@@ -9,22 +9,47 @@
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QLayout>
 #include <QLineEdit>
 #include <QMimeData>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSizePolicy>
 #include <QVBoxLayout>
 #include <QVector>
 
 namespace {
+
+void makeWidthFlexible(QWidget *w)
+{
+    if (!w) {
+        return;
+    }
+    w->setMinimumWidth(0);
+    QSizePolicy sp = w->sizePolicy();
+    sp.setHorizontalPolicy(QSizePolicy::Expanding);
+    w->setSizePolicy(sp);
+}
 
 QFrame *makeModuleFrame(QWidget *parent)
 {
     auto *frame = new QFrame(parent);
     frame->setObjectName(QStringLiteral("settingsModule"));
     frame->setFrameShape(QFrame::StyledPanel);
+    makeWidthFlexible(frame);
     return frame;
+}
+
+QFormLayout *makeFlexibleForm(QWidget *parent = nullptr)
+{
+    Q_UNUSED(parent)
+    auto *form = new QFormLayout();
+    form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+    form->setRowWrapPolicy(QFormLayout::WrapLongRows);
+    form->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    form->setFormAlignment(Qt::AlignLeft | Qt::AlignTop);
+    form->setHorizontalSpacing(10);
+    form->setVerticalSpacing(8);
+    return form;
 }
 
 } // namespace
@@ -36,20 +61,29 @@ void OpenWithSettingsWidget::fillEntryForm(QFormLayout *form, OpenWithEntry *ent
     auto *cmd1Edit = new QLineEdit(entry->commandLine1);
     auto *cmd2Edit = new QLineEdit(entry->commandLine2);
     auto *iconEdit = new QLineEdit(entry->iconPath);
-    auto *pasteBtn = new QPushButton(tr("Paste icon path"));
+    auto *pasteBtn = new QPushButton(tr("Paste"));
+    makeWidthFlexible(nameEdit);
+    makeWidthFlexible(cmd1Edit);
+    makeWidthFlexible(cmd2Edit);
+    makeWidthFlexible(iconEdit);
 
     form->addRow(tr("Application name"), nameEdit);
     if (!suffixesHint.isEmpty()) {
-        form->addRow(tr("Extensions"),
-                     new QLabel(suffixesHint.join(QStringLiteral(", "))));
+        auto *extLabel = new QLabel(suffixesHint.join(QStringLiteral(", ")));
+        extLabel->setWordWrap(true);
+        extLabel->setMinimumWidth(0);
+        extLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        form->addRow(tr("Extensions"), extLabel);
     }
     form->addRow(tr("Command (line 1)"), cmd1Edit);
     form->addRow(tr("Command (line 2)"), cmd2Edit);
-    auto *iconRow = new QHBoxLayout();
+
+    auto *iconRowWidget = new QWidget();
+    makeWidthFlexible(iconRowWidget);
+    auto *iconRow = new QHBoxLayout(iconRowWidget);
+    iconRow->setContentsMargins(0, 0, 0, 0);
     iconRow->addWidget(iconEdit, 1);
-    iconRow->addWidget(pasteBtn);
-    QWidget *iconRowWidget = new QWidget();
-    iconRowWidget->setLayout(iconRow);
+    iconRow->addWidget(pasteBtn, 0);
     form->addRow(tr("Icon path"), iconRowWidget);
 
     connect(nameEdit, &QLineEdit::textChanged, [entry](const QString &t) {
@@ -74,25 +108,41 @@ void OpenWithSettingsWidget::fillEntryForm(QFormLayout *form, OpenWithEntry *ent
 
 OpenWithSettingsWidget::OpenWithSettingsWidget(QWidget *parent) : QWidget(parent)
 {
+    setStyleSheet(SettingsUiStyles::moduleStyleSheet());
+    setMinimumWidth(0);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
     scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
-    auto *container = new QWidget(scrollArea);
-    auto *mainLayout = new QVBoxLayout(container);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    scrollArea->setMinimumWidth(0);
+    scrollArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    contentWidget = new QWidget(scrollArea);
+    contentWidget->setMinimumWidth(0);
+    contentWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    auto *mainLayout = new QVBoxLayout(contentWidget);
+    mainLayout->setSpacing(10);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
 
     mainLayout->addWidget(buildSuffixSection());
 
     auto *catLabel = new QLabel(tr("Unified categories (first module = double-click default)"));
     catLabel->setWordWrap(true);
+    catLabel->setMinimumWidth(0);
     mainLayout->addWidget(catLabel);
     mainLayout->addWidget(buildCategorySection(QStringLiteral("image")));
     mainLayout->addWidget(buildCategorySection(QStringLiteral("video")));
     mainLayout->addWidget(buildCategorySection(QStringLiteral("text")));
     mainLayout->addWidget(buildCategorySection(QStringLiteral("archive")));
-
     mainLayout->addStretch(1);
-    scrollArea->setWidget(container);
+
+    scrollArea->setWidget(contentWidget);
 
     auto *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
 #ifdef Q_OS_MAC
     auto *hint = new QLabel(tr("These handlers override system defaults when set. "
                                "Use %f or %F for the file path. "
@@ -105,35 +155,39 @@ OpenWithSettingsWidget::OpenWithSettingsWidget(QWidget *parent) : QWidget(parent
                                "Use %f or %F for file path in commands."));
 #endif
     hint->setWordWrap(true);
+    hint->setMinimumWidth(0);
     outer->addWidget(hint);
-    setStyleSheet(SettingsUiStyles::moduleStyleSheet());
     outer->addWidget(scrollArea, 1);
 }
 
 QWidget *OpenWithSettingsWidget::buildSuffixSection()
 {
-    auto *box = new QGroupBox(tr("Specific extensions"));
+    auto *box = new QGroupBox(tr("Specific extensions"), contentWidget);
+    makeWidthFlexible(box);
     auto *layout = new QVBoxLayout(box);
 
     auto *desc = new QLabel(tr("Each module applies to listed extensions (comma-separated), "
                                 "e.g. pdf or glb,gltf. Higher priority than category rules."));
     desc->setWordWrap(true);
+    desc->setMinimumWidth(0);
     layout->addWidget(desc);
 
     suffixModulesLayout = new QVBoxLayout();
+    suffixModulesLayout->setSpacing(10);
     layout->addLayout(suffixModulesLayout);
 
     auto *addBtn = new QPushButton(tr("Add extension module"));
     SettingsUiStyles::styleAddButton(addBtn);
     connect(addBtn, &QPushButton::clicked, this, &OpenWithSettingsWidget::addSuffixModule);
-    layout->addWidget(addBtn);
+    layout->addWidget(addBtn, 0, Qt::AlignLeft);
     return box;
 }
 
 QWidget *OpenWithSettingsWidget::buildCategorySection(const QString &categoryId)
 {
-    auto *outer = new QFrame(this);
+    auto *outer = new QFrame(contentWidget);
     outer->setObjectName(QStringLiteral("settingsCategoryBox"));
+    makeWidthFlexible(outer);
     auto *layout = new QVBoxLayout(outer);
 
     auto *title = new QLabel(
@@ -145,9 +199,11 @@ QWidget *OpenWithSettingsWidget::buildCategorySection(const QString &categoryId)
                  : categoryId));
     title->setToolTip(OpenWithConfig::suffixesForCategory(categoryId).join(QStringLiteral(", ")));
     title->setWordWrap(true);
+    title->setMinimumWidth(0);
     layout->addWidget(title);
 
     auto *modulesLayout = new QVBoxLayout();
+    modulesLayout->setSpacing(10);
     categoryLayouts.insert(categoryId, modulesLayout);
     layout->addLayout(modulesLayout);
 
@@ -157,7 +213,7 @@ QWidget *OpenWithSettingsWidget::buildCategorySection(const QString &categoryId)
         OpenWithConfig::categoryModules(categoryId).append(OpenWithEntry());
         loadFromConfig();
     });
-    layout->addWidget(addBtn);
+    layout->addWidget(addBtn, 0, Qt::AlignLeft);
     return outer;
 }
 
@@ -179,12 +235,15 @@ void OpenWithSettingsWidget::loadFromConfig()
         }
     }
 
+    QWidget *moduleParent = contentWidget ? contentWidget : this;
+
     for (int i = 0; i < OpenWithConfig::suffixModules().size(); ++i) {
         SuffixOpenModule *mod = &OpenWithConfig::suffixModules()[i];
-        auto *frame = makeModuleFrame(this);
+        auto *frame = makeModuleFrame(moduleParent);
         auto *vlay = new QVBoxLayout(frame);
-        auto *form = new QFormLayout();
+        auto *form = makeFlexibleForm();
         auto *suffixEdit = new QLineEdit(mod->suffixesText);
+        makeWidthFlexible(suffixEdit);
         form->addRow(tr("Extensions"), suffixEdit);
         connect(suffixEdit, &QLineEdit::textChanged, [mod](const QString &t) {
             mod->suffixesText = t;
@@ -209,12 +268,15 @@ void OpenWithSettingsWidget::loadFromConfig()
         }
         QVector<OpenWithEntry> &list = OpenWithConfig::categoryModules(cat);
         for (int i = 0; i < list.size(); ++i) {
-            auto *frame = makeModuleFrame(this);
+            auto *frame = makeModuleFrame(moduleParent);
             auto *vlay = new QVBoxLayout(frame);
             if (i == 0) {
-                vlay->addWidget(new QLabel(tr("Default for double-click (first module)")));
+                auto *defLabel = new QLabel(tr("Default for double-click (first module)"));
+                defLabel->setWordWrap(true);
+                defLabel->setMinimumWidth(0);
+                vlay->addWidget(defLabel);
             }
-            auto *form = new QFormLayout();
+            auto *form = makeFlexibleForm();
             fillEntryForm(form, &list[i], OpenWithConfig::suffixesForCategory(cat));
             vlay->addLayout(form);
             const int moduleIndex = i;

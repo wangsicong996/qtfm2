@@ -27,8 +27,9 @@ private:
     QWidget *buildCategorySection(const QString &categoryId);
     void fillEntryForm(QFormLayout *form, OpenWithEntry *entry, const QStringList &suffixesHint);
 
-    QScrollArea *scrollArea;
-    QVBoxLayout *suffixModulesLayout;
+    QScrollArea *scrollArea = nullptr;
+    QWidget *contentWidget = nullptr;
+    QVBoxLayout *suffixModulesLayout = nullptr;
     QHash<QString, QVBoxLayout *> categoryLayouts;
 };
 

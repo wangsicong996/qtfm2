@@ -90,6 +90,9 @@ EXACT = {
     "List column: Folder": "列表列：类型",
     " px": " 像素",
     "Language": "界面语言",
+    "System default": "跟随系统",
+    "Clear search": "清除搜索",
+    "Search…": "搜索…",
     "Custom colors": "自定义颜色",
     "Customize backgrounds for the file panes, bookmarks, sidebar tabs, and top toolbar. "
     "Light and dark themes each have their own color set. Leave “Use default” checked to "
@@ -103,8 +106,10 @@ EXACT = {
     "Default": "默认",
     "File pane background (inactive / single)": "文件栏背景（未聚焦 / 单栏）",
     "File pane background (focused dual-pane)": "文件栏背景（双栏聚焦）",
-    "Bookmarks list background": "书签列表背景",
-    "Bookmark group bar background": "书签分组栏背景",
+    "Bookmarks list background": "书签列表背景（右侧）",
+    "Bookmarks list background (right)": "书签列表背景（右侧）",
+    "Bookmark group bar background": "书签分组栏背景（左侧）",
+    "Bookmark group bar background (left)": "书签分组栏背景（左侧）",
     "Bookmark group button background": "书签分组按钮背景",
     "Sidebar tab selected (Bookmarks / Disks)": "侧栏标签选中（书签 / 磁盘）",
     "Sidebar tab unselected (Bookmarks / Disks)": "侧栏标签未选中（书签 / 磁盘）",
@@ -129,6 +134,7 @@ EXACT = {
     "Command (line 2)": "命令（第 2 行）",
     "Icon path": "图标路径",
     "Paste icon path": "粘贴图标路径",
+    "Paste": "粘贴",
     "Unified categories (first module = double-click default)":
         "统一分类（第一个模块为双击默认）",
     "These handlers override system defaults when set. "

@@ -15,6 +15,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSettings>
+#include <QSizePolicy>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -91,7 +92,12 @@ CustomActionSettingsWidget::CustomActionSettingsWidget(QWidget *parent) : QWidge
     scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    scrollArea->setMinimumWidth(0);
     auto *container = new QWidget(scrollArea);
+    container->setMinimumWidth(0);
+    container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     auto *pageLayout = new QVBoxLayout(container);
     pageLayout->setSpacing(10);
 
@@ -222,8 +228,10 @@ QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
     auto *row1 = new QHBoxLayout();
     auto *fileTypeEdit = new QLineEdit(entry->fileType);
     fileTypeEdit->setPlaceholderText(tr("File type(s), comma-separated"));
+    fileTypeEdit->setMinimumWidth(0);
     auto *nameEdit = new QLineEdit(entry->name);
     nameEdit->setPlaceholderText(tr("Action name"));
+    nameEdit->setMinimumWidth(0);
     auto *iconBtn = new QToolButton();
     iconBtn->setIcon(effectiveIcon(*entry));
     iconBtn->setIconSize(QSize(28, 28));
@@ -241,6 +249,7 @@ QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
     auto *row2 = new QHBoxLayout();
     auto *iconPathEdit = new QLineEdit(entry->iconPath);
     iconPathEdit->setPlaceholderText(tr("Paste icon file path (overrides bundled icon)"));
+    iconPathEdit->setMinimumWidth(0);
     auto *pasteIconBtn = new QPushButton(tr("Paste"));
     row2->addWidget(new QLabel(tr("Icon path")));
     row2->addWidget(iconPathEdit, 1);
@@ -250,6 +259,7 @@ QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
     auto *row3 = new QHBoxLayout();
     auto *cmdEdit = new QLineEdit(entry->command);
     cmdEdit->setPlaceholderText(tr("Shell command"));
+    cmdEdit->setMinimumWidth(0);
     auto *pasteCmdBtn = new QPushButton(tr("Paste"));
     row3->addWidget(new QLabel(tr("Command")));
     row3->addWidget(cmdEdit, 1);

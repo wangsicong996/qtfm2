@@ -58,9 +58,8 @@ void bookmarkmodel::addBookmark(QString name,
     if (path.isEmpty() && !isMedia) { //add separator
         QStandardItem *item = new QStandardItem(QString());
         item->setIcon(QIcon());
-        QFlags<Qt::ItemFlag> flags = item->flags();
-        flags ^= Qt::ItemIsEditable; //not editable
-        item->setFlags(flags);
+        // Separators are not selectable (no blue highlight); still enabled for context menu.
+        item->setFlags(Qt::ItemIsEnabled);
         item->setData(m_activeGroupId, BOOKMARK_GROUP);
         this->appendRow(item);
         return;

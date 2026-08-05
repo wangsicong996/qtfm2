@@ -31,6 +31,7 @@
 #include <QDateTime>
 #include <QApplication>
 #include <QStatusBar>
+#include <QToolButton>
 #include <QMenu>
 #include <QMenuBar>
 #ifndef NO_DBUS
@@ -476,16 +477,19 @@ MainWindow::MainWindow(const QString &forcedStartPath)
     searchEdit = new QLineEdit(this);
     searchEdit->setObjectName(QStringLiteral("fileSearchEdit"));
     searchEdit->setPlaceholderText(tr("Search…"));
-    searchEdit->setClearButtonEnabled(true);
     searchEdit->setFixedHeight(kPathBarHeight);
     searchEdit->setMinimumWidth(140);
     searchEdit->setMaximumWidth(kSearchBarWidth);
     searchEdit->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     searchEdit->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    searchEdit->setTextMargins(4, 0, 4, 0);
+    searchEdit->setTextMargins(4, 0, 2, 0);
     searchEdit->setToolTip(tr("Filter files in the focused pane (Enter)"));
+    setupSearchClearButton();
     connect(searchEdit, &QLineEdit::returnPressed, this, &MainWindow::applyNameSearch);
     connect(searchEdit, &QLineEdit::textChanged, this, [this](const QString &text) {
+        if (searchClearAct) {
+            searchClearAct->setVisible(!text.isEmpty());
+        }
         if (text.isEmpty()) {
             clearNameSearch();
         }
@@ -546,6 +550,8 @@ MainWindow::MainWindow(const QString &forcedStartPath)
 
     // Load settings before showing window
     loadSettings();
+    m_appliedUiLanguage = AppTranslator::normalizedLanguageCode(
+        settings->value(QStringLiteral("uiLanguage"), QStringLiteral("system")).toString());
 
     if (m_forceStartupDualPane) {
         applyStartupDualPaneLayout();
@@ -1703,19 +1709,61 @@ void MainWindow::applyLanguageFromSettings()
     if (!settings) {
         return;
     }
-    static QString s_appliedLang;
-    static bool s_haveApplied = false;
     const QString want = AppTranslator::normalizedLanguageCode(
         settings->value(QStringLiteral("uiLanguage"), QStringLiteral("system")).toString());
-    if (s_haveApplied && want == s_appliedLang) {
+    if (want == m_appliedUiLanguage) {
         return;
     }
-    const bool languageChanged = s_haveApplied && want != s_appliedLang;
     AppTranslator::installForApplication(qApp, want);
-    s_appliedLang = want;
-    s_haveApplied = true;
-    if (languageChanged) {
-        retranslateUi();
+    m_appliedUiLanguage = want;
+    retranslateUi();
+}
+
+void MainWindow::setupSearchClearButton()
+{
+    if (!searchEdit) {
+        return;
+    }
+    // Use a stroke-only X SVG instead of the style's filled backspace clear glyph.
+    searchEdit->setClearButtonEnabled(false);
+    if (!searchClearAct) {
+        searchClearAct = searchEdit->addAction(BundledIcons::toolbarIcon(QStringLiteral("search-clear")),
+                                               QLineEdit::TrailingPosition);
+        searchClearAct->setToolTip(tr("Clear search"));
+        connect(searchClearAct, &QAction::triggered, this, [this]() {
+            clearNameSearch();
+            if (searchEdit) {
+                searchEdit->setFocus(Qt::OtherFocusReason);
+            }
+        });
+    } else {
+        updateSearchClearButtonIcon();
+    }
+    searchClearAct->setVisible(!searchEdit->text().isEmpty());
+    QTimer::singleShot(0, this, &MainWindow::polishSearchClearButton);
+}
+
+void MainWindow::updateSearchClearButtonIcon()
+{
+    if (searchClearAct) {
+        searchClearAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("search-clear")));
+    }
+}
+
+void MainWindow::polishSearchClearButton()
+{
+    if (!searchEdit) {
+        return;
+    }
+    for (QToolButton *btn : searchEdit->findChildren<QToolButton *>()) {
+        btn->setAutoRaise(true);
+        btn->setCursor(Qt::PointingHandCursor);
+        btn->setFocusPolicy(Qt::NoFocus);
+        btn->setFixedSize(16, 16);
+        btn->setIconSize(QSize(14, 14));
+        btn->setStyleSheet(QStringLiteral(
+            "QToolButton {"
+            " border: none; background: transparent; margin: 0px; padding: 0px; }"));
     }
 }
 
@@ -1915,18 +1963,33 @@ void MainWindow::retranslateUi()
     }
     if (fileMenuPtr) {
         fileMenuPtr->setTitle(tr("File"));
+        if (fileMenuPtr->menuAction()) {
+            fileMenuPtr->menuAction()->setText(tr("File"));
+        }
     }
     if (editMenuPtr) {
         editMenuPtr->setTitle(tr("Edit"));
+        if (editMenuPtr->menuAction()) {
+            editMenuPtr->menuAction()->setText(tr("Edit"));
+        }
     }
     if (viewMenuPtr) {
         viewMenuPtr->setTitle(tr("View"));
+        if (viewMenuPtr->menuAction()) {
+            viewMenuPtr->menuAction()->setText(tr("View"));
+        }
     }
     if (helpMenuPtr) {
         helpMenuPtr->setTitle(tr("Help"));
+        if (helpMenuPtr->menuAction()) {
+            helpMenuPtr->menuAction()->setText(tr("Help"));
+        }
     }
     if (layoutMenuPtr) {
         layoutMenuPtr->setTitle(tr("Layout"));
+        if (layoutMenuPtr->menuAction()) {
+            layoutMenuPtr->menuAction()->setText(tr("Layout"));
+        }
     }
 
     if (dockTree) {
@@ -1954,6 +2017,9 @@ void MainWindow::retranslateUi()
     if (searchEdit) {
         searchEdit->setPlaceholderText(tr("Search…"));
         searchEdit->setToolTip(tr("Filter files in the focused pane (Enter)"));
+    }
+    if (searchClearAct) {
+        searchClearAct->setToolTip(tr("Clear search"));
     }
 }
 
@@ -2183,15 +2249,14 @@ void MainWindow::applyViewChromeStyles()
         const QString searchQss = QStringLiteral(
             "QLineEdit#fileSearchEdit {"
             " background: %1; border: 1px solid %2; border-radius: 4px;"
-            " padding: 0px 6px; }"
+            " padding: 0px 4px; }"
             "QLineEdit#fileSearchEdit:hover { border: 1px solid %2; }"
             "QLineEdit#fileSearchEdit:focus { border: 1px solid %3; }"
-            "QLineEdit#fileSearchEdit QToolButton {"
-            " margin: 0px 2px 0px 0px; padding: 0px; border: none;"
-            " background: transparent; }"
         ).arg(controlBg.name(), flatBorder.name(), selected.name());
         searchEdit->setStyleSheet(searchQss);
         searchEdit->setFixedHeight(kPathBarHeight);
+        updateSearchClearButtonIcon();
+        polishSearchClearButton();
     }
 
     if (customComplete) {
@@ -2233,14 +2298,14 @@ void MainWindow::applyViewChromeStyles()
         }
     }
 
-    // Bookmarks list / page background (explicit hex beats theme stylesheets).
+    // Bookmarks regions (below Places tabs): left = group bar, right = bookmark list.
     if (bookmarksList) {
-        const QString bg = contentBg.name(QColor::HexRgb);
+        const QString listBg = contentBg.name(QColor::HexRgb);
         bookmarksList->setStyleSheet(QStringLiteral(
             "QListView#bookmarksListView {"
             " background-color: %1; border: none; }"
             "QListView#bookmarksListView::viewport { background-color: %1; }"
-        ).arg(bg));
+        ).arg(listBg));
         QPalette bpal = bookmarksList->palette();
         bpal.setColor(QPalette::Base, contentBg);
         bpal.setColor(QPalette::Window, contentBg);
@@ -2250,15 +2315,20 @@ void MainWindow::applyViewChromeStyles()
             bookmarksList->viewport()->setAutoFillBackground(true);
         }
     }
+    if (bookmarkGroupBar) {
+        bookmarkGroupBar->setChromeColors(bookmarkGroupBarBg, bookmarkGroupBtnBg);
+    }
     if (bookmarkPage) {
+        // Container only — do not paint list color under the group strip.
+        bookmarkPage->setStyleSheet(QStringLiteral(
+            "QWidget#bookmarkPage { background-color: %1; border: none; }")
+                                        .arg(bookmarkGroupBarBg.name(QColor::HexRgb)));
         QPalette ppal = bookmarkPage->palette();
-        ppal.setColor(QPalette::Window, contentBg);
-        ppal.setColor(QPalette::Base, contentBg);
+        ppal.setColor(QPalette::Window, bookmarkGroupBarBg);
+        ppal.setColor(QPalette::Base, bookmarkGroupBarBg);
         bookmarkPage->setPalette(ppal);
         bookmarkPage->setAutoFillBackground(true);
-        bookmarkPage->setStyleSheet(
-            QStringLiteral("QWidget#bookmarkPage { background-color: %1; }")
-                .arg(contentBg.name(QColor::HexRgb)));
+        bookmarkPage->setAttribute(Qt::WA_StyledBackground, true);
     }
 #if defined(QTFM_HAVE_SIDEBAR_DISKS)
     if (disksList) {
@@ -2271,10 +2341,6 @@ void MainWindow::applyViewChromeStyles()
         ).arg(bg));
     }
 #endif
-
-    if (bookmarkGroupBar) {
-        bookmarkGroupBar->setChromeColors(bookmarkGroupBarBg, bookmarkGroupBtnBg);
-    }
 
     applyNavToolBarInsets();
     applyFilePaneChrome();
@@ -2854,6 +2920,16 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
     }
     popup->exec(event->globalPos());
     delete popup;
+    // Separators are not meant to stay highlighted after the menu closes.
+    if (bookmarksList->currentIndex().isValid()) {
+      const QModelIndex src = bookmarkListProxy->mapToSource(bookmarksList->currentIndex());
+      if (src.isValid()
+          && src.data(BOOKMARK_PATH).toString().isEmpty()
+          && src.data(Qt::DisplayRole).toString().isEmpty()) {
+        bookmarksList->clearSelection();
+        bookmarksList->setCurrentIndex(QModelIndex());
+      }
+    }
     return;
   }
 
@@ -4614,6 +4690,9 @@ void MainWindow::clearNameSearch()
         searchEdit->blockSignals(true);
         searchEdit->clear();
         searchEdit->blockSignals(false);
+    }
+    if (searchClearAct) {
+        searchClearAct->setVisible(false);
     }
 
     // Clear filter on the focused pane (and keep the other pane untouched in dual-pane).

@@ -81,13 +81,9 @@ void BookmarkItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
     const QString path = index.data(BOOKMARK_PATH).toString();
     if (name.isEmpty() && path.isEmpty()) {
         painter->save();
-        QStyleOptionViewItem opt(option);
-        initStyleOption(&opt, index);
-        QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
-        style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
-
-        const QRect rect = opt.rect;
-        QColor lineColor = opt.palette.text().color();
+        // Never paint selection/hover for separators — selecting them is meaningless.
+        const QRect rect = option.rect;
+        QColor lineColor = option.palette.text().color();
         lineColor.setAlpha(90);
         const int y = rect.center().y();
         const int margin = kHPad;

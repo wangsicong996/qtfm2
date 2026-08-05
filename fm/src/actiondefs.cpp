@@ -141,6 +141,8 @@ void MainWindow::applyBundledToolbarIcons()
 void MainWindow::refreshBundledUiIcons()
 {
   applyBundledToolbarIcons();
+  updateSearchClearButtonIcon();
+  polishSearchClearButton();
 }
 //---------------------------------------------------------------------------
 

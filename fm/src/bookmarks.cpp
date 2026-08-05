@@ -112,12 +112,21 @@ void MainWindow::removeSeparator()
         return;
     }
 
+    // Separators are not selectable — prefer current index from the context menu.
     QModelIndexList list = bookmarksList->selectionModel()->selectedIndexes();
+    if (list.isEmpty() && bookmarksList->currentIndex().isValid()) {
+        list << bookmarksList->currentIndex();
+    }
     while (!list.isEmpty()) {
         const QModelIndex src = bookmarkListProxy->mapToSource(list.first());
         modelBookmarks->removeRow(src.row());
         list = bookmarksList->selectionModel()->selectedIndexes();
+        if (list.isEmpty()) {
+            break;
+        }
     }
+    bookmarksList->clearSelection();
+    bookmarksList->setCurrentIndex(QModelIndex());
     handleBookmarksChanged();
 }
 
@@ -192,14 +201,17 @@ void MainWindow::bookmarkPressed(QModelIndex current)
 
 void MainWindow::bookmarkClicked(QModelIndex item)
 {
-    if (item.data(BOOKMARK_PATH).toString() == pathEdit->currentText()) { return; }
-
-    QString info(item.data(BOOKMARK_PATH).toString());
-    if (info.isEmpty()) { return; } //separator
+    const QString info(item.data(BOOKMARK_PATH).toString());
+    const bool isSeparator = item.data(Qt::DisplayRole).toString().isEmpty() && info.isEmpty();
+    if (isSeparator) {
+        // Separators must not keep a current/selected highlight.
+        bookmarksList->clearSelection();
+        bookmarksList->setCurrentIndex(QModelIndex());
+        return;
+    }
+    if (info == pathEdit->currentText()) { return; }
     if (info.contains("/.")) { modelList->setRootPath(info); } //hidden folders
 
-    tree->setCurrentIndex(modelTree->mapFromSource(modelList->index(item
-                                                                    .data(BOOKMARK_PATH)
-                                                                    .toString())));
+    tree->setCurrentIndex(modelTree->mapFromSource(modelList->index(info)));
     status->showMessage(Common::getDriveInfo(curIndex.filePath()));
 }
