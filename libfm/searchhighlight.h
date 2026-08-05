@@ -25,7 +25,8 @@ inline QString nameSearchNeedleFromView(const QStyleOptionViewItem &option)
     if (!view) {
         return QString();
     }
-    const auto *proxy = qobject_cast<const viewsSortProxyModel *>(view->model());
+    // viewsSortProxyModel has no Q_OBJECT — use dynamic_cast, not qobject_cast.
+    const auto *proxy = dynamic_cast<const viewsSortProxyModel *>(view->model());
     if (!proxy) {
         return QString();
     }
