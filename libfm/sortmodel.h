@@ -37,6 +37,11 @@ public:
     void clearSingleFileFilter();
     bool hasSingleFileFilter() const { return !m_singleFileCanonical.isEmpty(); }
 
+    /** Case-insensitive substring filter on file names (empty = no filter). */
+    void setNameSearchFilter(const QString &pattern);
+    void clearNameSearchFilter();
+    QString nameSearchFilter() const { return m_nameSearchFilter; }
+
     void setFoldersAlwaysFirstSetting(bool foldersFirst);
     bool foldersAlwaysFirstSetting() const { return m_foldersAlwaysFirstSetting; }
     void setFoldersAlwaysFirstIconSetting(bool foldersFirst);
@@ -54,6 +59,7 @@ protected:
 
 private:
     QString m_singleFileCanonical;
+    QString m_nameSearchFilter;
     bool m_foldersAlwaysFirstSetting = true;
     bool m_foldersAlwaysFirstIconSetting = true;
     bool m_iconViewSortContext = false;

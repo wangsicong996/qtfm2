@@ -1,5 +1,6 @@
 #include "iconview.h"
 #include "bundledicons.h"
+#include "searchhighlight.h"
 
 #include <QListView>
 #include <QPlainTextEdit>
@@ -422,5 +423,15 @@ void IconViewDelegate::paint(QPainter *painter,
         : (index.data(Qt::ForegroundRole).isValid()
                ? txtBrush.color()
                : opt.palette.text().color());
-    drawTwoLineFileName(painter, txtRect, index.data().toString(), opt.font, textColor);
+    const QString fileName = index.data().toString();
+    const QString needle = nameSearchNeedleFromView(opt);
+    if (!needle.isEmpty() && fileName.contains(needle, Qt::CaseInsensitive)) {
+        painter->save();
+        painter->setClipRect(txtRect);
+        // Reveal-shift match to the start of line 1 (hide left prefix), keep 2-line layout.
+        drawTwoLineSearchHighlightedName(painter, txtRect, fileName, needle, opt.font, textColor);
+        painter->restore();
+    } else {
+        drawTwoLineFileName(painter, txtRect, fileName, opt.font, textColor);
+    }
 }

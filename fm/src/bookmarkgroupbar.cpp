@@ -20,6 +20,7 @@ BookmarkGroupBar::BookmarkGroupBar(QWidget *parent)
     : QWidget(parent)
     , m_buttonGroup(new QButtonGroup(this))
 {
+    setObjectName(QStringLiteral("bookmarkGroupBar"));
     m_buttonGroup->setExclusive(true);
 
     m_layout = new QVBoxLayout(this);
@@ -57,6 +58,13 @@ void BookmarkGroupBar::refreshToolbarIcons()
     m_addButton->setIcon(addIcon);
 }
 
+void BookmarkGroupBar::setChromeColors(const QColor &barBackground, const QColor &buttonBackground)
+{
+    m_barBg = barBackground;
+    m_buttonBg = buttonBackground;
+    applyButtonSizes();
+}
+
 void BookmarkGroupBar::applyButtonSizes()
 {
     const QSize btnSize(m_tabButtonSize, m_tabButtonSize);
@@ -68,7 +76,8 @@ void BookmarkGroupBar::applyButtonSizes()
     const QColor border = palette().color(QPalette::Dark).lightness() < 128
                               ? palette().color(QPalette::Window)
                               : palette().color(QPalette::Mid);
-    const QColor flatBg = palette().color(QPalette::Base);
+    const QColor flatBg = m_buttonBg.isValid() ? m_buttonBg : palette().color(QPalette::Base);
+    const QColor barBg = m_barBg.isValid() ? m_barBg : palette().color(QPalette::Window);
     QColor hoverBg = palette().color(QPalette::Highlight);
     hoverBg.setAlpha(72);
     const QString btnStyle = QStringLiteral(
@@ -77,6 +86,17 @@ void BookmarkGroupBar::applyButtonSizes()
         "QToolButton:hover { background: %3; }"
         "QToolButton:checked { background: %2; border: 1px solid %1; }")
                              .arg(border.name(), flatBg.name(), hoverBg.name(QColor::HexArgb));
+
+    {
+        QPalette pal = palette();
+        pal.setColor(QPalette::Window, barBg);
+        pal.setColor(QPalette::Base, barBg);
+        setPalette(pal);
+        setAutoFillBackground(true);
+        setStyleSheet(QStringLiteral(
+            "QWidget#bookmarkGroupBar { background-color: %1; }")
+                          .arg(barBg.name()));
+    }
 
     if (m_addButton) {
         m_addButton->setIconSize(iconSize);

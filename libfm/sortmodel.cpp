@@ -30,6 +30,25 @@ void viewsSortProxyModel::clearSingleFileFilter()
     invalidateFilter();
 }
 
+void viewsSortProxyModel::setNameSearchFilter(const QString &pattern)
+{
+    const QString trimmed = pattern.trimmed();
+    if (m_nameSearchFilter == trimmed) {
+        return;
+    }
+    m_nameSearchFilter = trimmed;
+    invalidateFilter();
+}
+
+void viewsSortProxyModel::clearNameSearchFilter()
+{
+    if (m_nameSearchFilter.isEmpty()) {
+        return;
+    }
+    m_nameSearchFilter.clear();
+    invalidateFilter();
+}
+
 void viewsSortProxyModel::setFoldersAlwaysFirstSetting(bool foldersFirst)
 {
     m_foldersAlwaysFirstSetting = foldersFirst;
@@ -118,6 +137,11 @@ bool viewsSortProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sou
     if (!m_singleFileCanonical.isEmpty()) {
         return canonicalFilePathIfExists(fileModel->filePath(index0))
                == m_singleFileCanonical;
+    }
+
+    if (!m_nameSearchFilter.isEmpty()) {
+        return fileModel->fileInfo(index0).fileName()
+            .contains(m_nameSearchFilter, Qt::CaseInsensitive);
     }
 
     if (this->filterRegExp().isEmpty()) { return true; }

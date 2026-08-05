@@ -4,6 +4,7 @@
 #include "mimeutils.h"
 #include "openwithsettingswidget.h"
 #include "customactionsettingswidget.h"
+#include "uicolors.h"
 
 #include <QDialog>
 #include <QListWidget>
@@ -20,6 +21,8 @@
 #include <QButtonGroup>
 #include <QColor>
 #include <QPushButton>
+#include <QHash>
+#include <QTabWidget>
 
 /**
  * @class SettingsDialog
@@ -56,7 +59,9 @@ protected slots:
   void previewDarkTheme(bool dark);
   void updateDialogButtonIcons();
   void updateThumbGenModeUi();
-  void updateDualPaneColorButtons();
+  void updateUiColorButtons();
+  void exportUiColors();
+  void importUiColors();
 
 protected:
   bool eventFilter(QObject *watched, QEvent *event) override;
@@ -68,6 +73,11 @@ protected:
   QWidget* createMimeSettings();
   QWidget* createSystraySettings();
   QWidget* createAdvSettings();
+  QWidget *buildUiColorThemePage(bool dark);
+  static QString uiColorLabel(UiColorId id);
+  QColor uiColorFallback(UiColorId id, bool dark) const;
+  void pickUiColor(UiColorId id, bool dark);
+
   MimeUtils* mimeUtilsPtr;
   QSettings* settingsPtr;
   QList<QAction*> *actionListPtr;
@@ -124,12 +134,14 @@ protected:
   QCheckBox* checkAutoMount;
   QCheckBox* checkDVD;
   QCheckBox* checkWindowTitlePath;
-  QPushButton *btnDualPaneInactiveColor = nullptr;
-  QPushButton *btnDualPaneActiveColor = nullptr;
-  QCheckBox *checkDualPaneInactiveDefault = nullptr;
-  QCheckBox *checkDualPaneActiveDefault = nullptr;
-  QColor m_dualPaneInactiveColor;
-  QColor m_dualPaneActiveColor;
+
+  UiColorSet m_uiColorsLight;
+  UiColorSet m_uiColorsDark;
+  QHash<int, QCheckBox *> m_uiColorDefaultLight;
+  QHash<int, QCheckBox *> m_uiColorDefaultDark;
+  QHash<int, QPushButton *> m_uiColorBtnLight;
+  QHash<int, QPushButton *> m_uiColorBtnDark;
+
   QLineEdit* editCopyX;
   QLineEdit* editCopyTS;
   QDialogButtonBox *dialogButtonBox = nullptr;

@@ -154,6 +154,7 @@ add_executable(
     fm/src/actiondefs.cpp
     fm/src/actiontriggers.cpp
     fm/src/diagnosticlog.cpp
+    fm/src/uicolors.cpp
     share/${PROJECT_NAME}.qrc
     share/mimes.qrc
 )

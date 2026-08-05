@@ -38,6 +38,60 @@ void MainWindow::addBookmarkAction()
                                 "");
 }
 
+void MainWindow::favoriteCurrentPath()
+{
+    // Address bar / focused pane path (left wins via pathEdit when dual-pane).
+    QString path;
+    if (pathEdit && pathEdit->count() > 0) {
+        path = pathEdit->itemText(0);
+    }
+    if (path.isEmpty() && activeFilePane()) {
+        path = activeFilePane()->currentPath();
+    }
+    if (path.isEmpty()) {
+        path = curIndex.filePath();
+    }
+
+    const QFileInfo info(path);
+    if (!info.exists() || !info.isDir()) {
+        if (status) {
+            status->showMessage(tr("Current path is not a folder."), 3000);
+        }
+        return;
+    }
+
+    path = info.absoluteFilePath();
+    if (!currentBookmarkGroupId.isEmpty()) {
+        modelBookmarks->setActiveGroupId(currentBookmarkGroupId);
+    }
+
+    // Avoid duplicates in the active group.
+    for (int i = 0; i < modelBookmarks->rowCount(); ++i) {
+        QStandardItem *item = modelBookmarks->item(i);
+        if (!item) {
+            continue;
+        }
+        if (item->data(BOOKMARK_GROUP).toString() != modelBookmarks->activeGroupId()) {
+            continue;
+        }
+        if (item->data(BOOKMARK_PATH).toString() == path) {
+            if (status) {
+                status->showMessage(tr("Already in bookmarks: %1").arg(path), 3000);
+            }
+            return;
+        }
+    }
+
+    QString name = info.fileName();
+    if (name.isEmpty()) {
+        name = path;
+    }
+    modelBookmarks->addBookmark(name, path, QStringLiteral("0"), QString());
+    if (status) {
+        status->showMessage(tr("Bookmarked: %1").arg(path), 3000);
+    }
+}
+
 void MainWindow::addSeparatorAction()
 {
     modelBookmarks->addBookmark("",

@@ -1,4 +1,5 @@
 #include "iconlist.h"
+#include "searchhighlight.h"
 
 #include <QPainterPath>
 
@@ -45,5 +46,9 @@ void IconListDelegate::paint(QPainter *painter,
     }
 
     painter->drawPixmap(iconRect, icon.pixmap(iconsize.width(),iconsize.height()));
-    painter->drawText(txtRect, Qt::AlignLeft|Qt::AlignVCenter, index.data().toString());
+    const QString fileName = index.data().toString();
+    const QString needle = nameSearchNeedleFromView(option);
+    const QColor textColor = painter->pen().color();
+    drawTextWithSearchHighlight(painter, txtRect, fileName, needle, option.font, textColor,
+                                Qt::AlignLeft | Qt::AlignVCenter);
 }

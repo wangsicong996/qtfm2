@@ -37,6 +37,7 @@ class QTimer;
 #include <QStackedWidget>
 #include <QSortFilterProxyModel>
 #include <QComboBox>
+#include <QLineEdit>
 #include <QSignalMapper>
 #include <QToolBar>
 #include <QToolButton>
@@ -133,6 +134,7 @@ public slots:
     void setSortColumn(QAction *columnAct);
     void toggleThumbs();
     void addBookmarkAction();
+    void favoriteCurrentPath();
     void addSeparatorAction();
     void delBookmark();
     void removeSeparator();
@@ -168,6 +170,9 @@ public slots:
     void applyNavToolBarInsets();
     void applyWidgetPalettes();
     void syncPathComboDecorations();
+    void applyNameSearch();
+    void clearNameSearch();
+    void handleCloseTabRequest(int index);
     int addTab(QString path);
     void clearCutItems();
     void zoomInAction();
@@ -237,6 +242,10 @@ private slots:
     void updateGridForList(IconFileListView *listView);
     void navigateFilePane(FileBrowserPane *pane, const QString &path, bool syncTree);
     void applyStartupDualPaneLayout();
+    QString leftPreferredPath() const;
+    void captureWindowToTabSession(int index);
+    void restoreTabPaneSession(int index);
+    void updateTabChromeFromLeftPane();
     static QString resolveLaunchDirectory(const QString &raw, QString *singleFileTarget);
     void applyListRowHeight();
     void applyListColumnWidths();
@@ -311,11 +320,14 @@ private:
     QVector<BookmarkGroupInfo> bookmarkGroups;
     QString currentBookmarkGroupId;
     QComboBox *pathEdit;
+    QLineEdit *searchEdit = nullptr;
 
     QString term;
     QFileInfo curIndex;
     QModelIndex backIndex;
     QStringList m_navForward;
+    int m_previousTabIndex = -1;
+    bool m_blockTabSession = false;
 
     QSortFilterProxyModel *modelTree;
     viewsSortProxyModel *modelView;
@@ -355,6 +367,7 @@ private:
     QAction *hiddenAct;
     QAction *filterAct;
     QAction *addBookmarkAct;
+    QAction *favoriteAct = nullptr;
     QAction *addSeparatorAct;
     QAction *delBookmarkAct;
     QAction *removeSeparatorAct;

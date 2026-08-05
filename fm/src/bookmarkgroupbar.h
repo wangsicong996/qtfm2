@@ -25,6 +25,7 @@ public:
     /** Side length of group tab and “+” buttons (default 40 px). */
     void refreshToolbarIcons();
     void applyButtonSizes();
+    void setChromeColors(const QColor &barBackground, const QColor &buttonBackground);
     void setTabButtonSize(int size);
     int tabButtonSize() const { return m_tabButtonSize; }
     QString currentGroupId() const { return m_currentGroupId; }
@@ -52,6 +53,8 @@ private:
     QVBoxLayout *m_tabsLayout = nullptr;
     QToolButton *m_addButton = nullptr;
     QMap<QString, QToolButton *> m_tabButtons;
+    QColor m_barBg;
+    QColor m_buttonBg;
 };
 
 #endif

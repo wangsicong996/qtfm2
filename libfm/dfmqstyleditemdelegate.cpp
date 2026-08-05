@@ -1,9 +1,12 @@
 #include "dfmqstyleditemdelegate.h"
+#include "searchhighlight.h"
 
 #include <QAbstractItemModel>
 #include <QAbstractProxyModel>
+#include <QApplication>
 #include <QFontMetrics>
 #include <QPainter>
+#include <QStyle>
 
 DfmQStyledItemDelegate::DfmQStyledItemDelegate(QObject* parent) :
     QStyledItemDelegate(parent),
@@ -19,7 +22,31 @@ void DfmQStyledItemDelegate::paint(QPainter* painter,
                                     const QStyleOptionViewItem& option,
                                     const QModelIndex& index) const
 {
-    if (m_hasMinimizedNameColumnSelection && (index.column() == COLUMN_NAME)) {
+    const QString needle = nameSearchNeedleFromView(option);
+    const bool highlightName = !needle.isEmpty() && index.column() == COLUMN_NAME;
+
+    if (highlightName) {
+        QStyleOptionViewItem opt(option);
+        initStyleOption(&opt, index);
+        if (m_hasMinimizedNameColumnSelection) {
+            const QString filename = index.data(Qt::DisplayRole).toString();
+            opt.rect.setWidth(nameColumnWidth(filename, opt));
+        }
+
+        const QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
+        style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
+
+        const QString filename = index.data(Qt::DisplayRole).toString();
+        const bool selected = opt.state & QStyle::State_Selected;
+        const QColor fg = selected ? opt.palette.highlightedText().color()
+                                   : opt.palette.text().color();
+        QRect textRect = style->subElementRect(QStyle::SE_ItemViewItemText, &opt, opt.widget);
+        if (!textRect.isValid()) {
+            textRect = opt.rect.adjusted(4, 0, -4, 0);
+        }
+        drawTextWithSearchHighlight(painter, textRect, filename, needle, opt.font, fg,
+                                    Qt::AlignLeft | Qt::AlignVCenter);
+    } else if (m_hasMinimizedNameColumnSelection && (index.column() == COLUMN_NAME)) {
         QStyleOptionViewItem opt(option);
 
         QString filename = index.data(Qt::DisplayRole).toString();

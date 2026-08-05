@@ -5,6 +5,7 @@
 #include "iconfilelistview.h"
 #include "sortmodel.h"
 
+#include <QColor>
 #include <QItemSelectionModel>
 #include <QStackedWidget>
 #include <QStringList>
@@ -42,7 +43,10 @@ public:
 
     void setViewStackIndex(int index);
     void setRootIndex(const QModelIndex &proxyIndex);
+    /** Dual-pane focus tint — uses explicit stylesheet colors so themes cannot override. */
     void applyChromeTint(const QColor &background);
+    /** List/detail item chrome (hover/selection heights); merged with chrome tint. */
+    void setDetailItemStyleSheet(const QString &itemQss);
 
 signals:
     void paneActivated(int paneIndex);
@@ -51,6 +55,8 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    void applyChromeStyles();
+
     int m_paneIndex;
     QStackedWidget *m_stack = nullptr;
     IconFileListView *m_list = nullptr;
@@ -61,6 +67,8 @@ private:
     QString m_currentPath;
     QStringList m_pathHistory;
     QStringList m_forward;
+    QColor m_chromeBg;
+    QString m_detailItemQss;
 };
 
 #endif

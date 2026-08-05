@@ -12,6 +12,7 @@ FileBrowserPane::FileBrowserPane(int paneIndex, QWidget *parent)
     : QWidget(parent)
     , m_paneIndex(paneIndex)
 {
+    setObjectName(QStringLiteral("fileBrowserPane%1").arg(paneIndex));
     setAutoFillBackground(true);
     auto *lay = new QVBoxLayout(this);
     lay->setSpacing(0);
@@ -25,6 +26,7 @@ FileBrowserPane::FileBrowserPane(int paneIndex, QWidget *parent)
     iconLay->setSpacing(0);
     iconLay->setContentsMargins(0, 0, 0, 0);
     m_list = new IconFileListView(iconPage);
+    m_list->setObjectName(QStringLiteral("filePaneIconView%1").arg(paneIndex));
     iconLay->addWidget(m_list);
     m_stack->addWidget(iconPage);
 
@@ -33,6 +35,7 @@ FileBrowserPane::FileBrowserPane(int paneIndex, QWidget *parent)
     listLay->setSpacing(0);
     listLay->setContentsMargins(0, 0, 0, 0);
     m_detailTree = new DfmQTreeView(listPage);
+    m_detailTree->setObjectName(QStringLiteral("filePaneDetailView%1").arg(paneIndex));
     listLay->addWidget(m_detailTree);
     m_stack->addWidget(listPage);
 
@@ -88,25 +91,88 @@ void FileBrowserPane::setRootIndex(const QModelIndex &proxyIndex)
     m_detailTree->setRootIndex(proxyIndex);
 }
 
+void FileBrowserPane::setDetailItemStyleSheet(const QString &itemQss)
+{
+    m_detailItemQss = itemQss;
+    applyChromeStyles();
+}
+
 void FileBrowserPane::applyChromeTint(const QColor &background)
 {
+    m_chromeBg = background;
+    applyChromeStyles();
+}
+
+void FileBrowserPane::applyChromeStyles()
+{
+    const bool hasBg = m_chromeBg.isValid();
+    QColor alt = m_chromeBg;
+    if (hasBg) {
+        const int lum = (m_chromeBg.red() * 299 + m_chromeBg.green() * 587
+                         + m_chromeBg.blue() * 114) / 1000;
+        alt = (lum < 128) ? m_chromeBg.lighter(112) : m_chromeBg.darker(106);
+    }
+    const QString bg = hasBg ? m_chromeBg.name(QColor::HexRgb) : QString();
+    const QString altBg = hasBg ? alt.name(QColor::HexRgb) : QString();
+
+    const auto applyPal = [hasBg, this, &alt](QWidget *w) {
+        if (!w || !hasBg) {
+            return;
+        }
+        QPalette pal = w->palette();
+        pal.setColor(QPalette::Base, m_chromeBg);
+        pal.setColor(QPalette::Window, m_chromeBg);
+        pal.setColor(QPalette::AlternateBase, alt);
+        w->setPalette(pal);
+        w->setAutoFillBackground(true);
+    };
+
+    applyPal(this);
+    if (m_stack) {
+        applyPal(m_stack);
+        for (int i = 0; i < m_stack->count(); ++i) {
+            applyPal(m_stack->widget(i));
+        }
+    }
+
     if (m_list) {
-        QPalette pal = m_list->palette();
-        pal.setColor(QPalette::Base, background);
-        pal.setColor(QPalette::Window, background);
-        m_list->setPalette(pal);
-        m_list->viewport()->setPalette(pal);
-        m_list->setAutoFillBackground(true);
+        applyPal(m_list);
+        if (m_list->viewport()) {
+            applyPal(m_list->viewport());
+        }
+        // Explicit hex colors override MainWindow / system theme stylesheets.
+        if (hasBg) {
+            m_list->setStyleSheet(QStringLiteral(
+                "QListView {"
+                " background-color: %1;"
+                " alternate-background-color: %2;"
+                " border: none; }"
+                "QListView::viewport { background-color: %1; }"
+            ).arg(bg, altBg));
+        }
+        m_list->viewport()->update();
     }
+
     if (m_detailTree) {
-        QPalette pal = m_detailTree->palette();
-        pal.setColor(QPalette::Base, background);
-        pal.setColor(QPalette::Window, background);
-        m_detailTree->setPalette(pal);
-        m_detailTree->viewport()->setPalette(pal);
-        m_detailTree->setAutoFillBackground(true);
+        applyPal(m_detailTree);
+        if (m_detailTree->viewport()) {
+            applyPal(m_detailTree->viewport());
+        }
+        QString qss = m_detailItemQss;
+        if (hasBg) {
+            qss += QStringLiteral(
+                "\nQTreeView {"
+                " background-color: %1;"
+                " alternate-background-color: %2;"
+                " border: none; }"
+                "QTreeView::viewport { background-color: %1; }"
+            ).arg(bg, altBg);
+        }
+        m_detailTree->setStyleSheet(qss);
+        m_detailTree->viewport()->update();
     }
-    setAutoFillBackground(false);
+
+    update();
 }
 
 bool FileBrowserPane::eventFilter(QObject *watched, QEvent *event)

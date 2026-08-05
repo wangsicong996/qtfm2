@@ -121,6 +121,9 @@ void MainWindow::applyBundledToolbarIcons()
   if (dualPaneAct) {
     dualPaneAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("split-pane")));
   }
+  if (favoriteAct) {
+    favoriteAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("star-favorite")));
+  }
   if (aboutAct) {
     aboutAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("about-qtfm")));
   }
@@ -320,6 +323,13 @@ void MainWindow::createActions() {
   connect(addBookmarkAct, SIGNAL(triggered()), this, SLOT(addBookmarkAction()));
   addBookmarkAct->setIcon(actionIcons->at(12));
   actionList->append(addBookmarkAct);
+
+  favoriteAct = new QAction(tr("Favorite"), this);
+  favoriteAct->setStatusTip(tr("Bookmark the current path into the active bookmark group"));
+  favoriteAct->setToolTip(tr("Add current path to bookmarks"));
+  favoriteAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("star-favorite")));
+  connect(favoriteAct, &QAction::triggered, this, &MainWindow::favoriteCurrentPath);
+  actionList->append(favoriteAct);
 
   addSeparatorAct = new QAction(tr("Add separator"),this);
   addSeparatorAct->setStatusTip(tr("Add separator to bookmarks list"));
@@ -771,8 +781,10 @@ void MainWindow::createToolBars() {
   navToolBar->addAction(homeAct);
   navToolBar->addAction(iconAct);
   navToolBar->addAction(listViewAct);
+  navToolBar->addAction(favoriteAct);
 
   navToolBar->addWidget(pathEdit);
+  navToolBar->addWidget(searchEdit);
   navToolBar->addAction(newTabAct);
   navToolBar->addAction(terminalAct);
 

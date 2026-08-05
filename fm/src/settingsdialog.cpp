@@ -23,6 +23,12 @@
 #include "common.h"
 #include "bundledicons.h"
 #include "apptranslator.h"
+#include "uicolors.h"
+
+#include <QFileDialog>
+#include <QScrollArea>
+#include <QFrame>
+#include <QPalette>
 
 namespace {
 
@@ -272,52 +278,32 @@ QWidget *SettingsDialog::createAppearanceSettings()
     layoutTopModule->addRow(tr("Toolbar padding (all sides)"), spinTopModuleGap);
     layoutWidget->addWidget(grpTopModule);
 
-    QGroupBox *grpDualPane = new QGroupBox(tr("Dual pane"), widget);
-    QFormLayout *layoutDualPane = new QFormLayout(grpDualPane);
-    checkDualPaneInactiveDefault = new QCheckBox(tr("Use file view default"), grpDualPane);
-    btnDualPaneInactiveColor = new QPushButton(grpDualPane);
-    checkDualPaneActiveDefault = new QCheckBox(tr("Use automatic highlight (20% darker)"), grpDualPane);
-    btnDualPaneActiveColor = new QPushButton(grpDualPane);
-    auto *dualPaneHint = new QLabel(
-        tr("Background colors for the left and right file panes when dual pane is enabled. "
-           "The top toolbar and sidebar are not affected."),
-        grpDualPane);
-    dualPaneHint->setWordWrap(true);
-    layoutDualPane->addRow(dualPaneHint);
-    layoutDualPane->addRow(tr("Inactive pane"), checkDualPaneInactiveDefault);
-    layoutDualPane->addRow(QString(), btnDualPaneInactiveColor);
-    layoutDualPane->addRow(tr("Active pane"), checkDualPaneActiveDefault);
-    layoutDualPane->addRow(QString(), btnDualPaneActiveColor);
-    connect(checkDualPaneInactiveDefault, &QCheckBox::toggled, this, [this](bool) {
-        updateDualPaneColorButtons();
-    });
-    connect(checkDualPaneActiveDefault, &QCheckBox::toggled, this, [this](bool) {
-        updateDualPaneColorButtons();
-    });
-    connect(btnDualPaneInactiveColor, &QPushButton::clicked, this, [this]() {
-        const QColor start = m_dualPaneInactiveColor.isValid()
-                                 ? m_dualPaneInactiveColor
-                                 : palette().color(QPalette::Base);
-        const QColor picked = QColorDialog::getColor(start, this, tr("Inactive pane background"));
-        if (!picked.isValid()) {
-            return;
-        }
-        m_dualPaneInactiveColor = picked;
-        checkDualPaneInactiveDefault->setChecked(false);
-        updateDualPaneColorButtons();
-    });
-    connect(btnDualPaneActiveColor, &QPushButton::clicked, this, [this]() {
-        const QColor base = palette().color(QPalette::Base);
-        const QColor start = m_dualPaneActiveColor.isValid() ? m_dualPaneActiveColor : base.darker(120);
-        const QColor picked = QColorDialog::getColor(start, this, tr("Active pane background"));
-        if (!picked.isValid()) {
-            return;
-        }
-        m_dualPaneActiveColor = picked;
-        checkDualPaneActiveDefault->setChecked(false);
-        updateDualPaneColorButtons();
-    });
-    layoutWidget->addWidget(grpDualPane);
+    // Custom UI colors (separate light / dark sets)
+    QGroupBox *grpUiColors = new QGroupBox(tr("Custom colors"), widget);
+    auto *layoutUiColors = new QVBoxLayout(grpUiColors);
+    auto *uiColorsHint = new QLabel(
+        tr("Customize backgrounds for the file panes, bookmarks, sidebar tabs, and top toolbar. "
+           "Light and dark themes each have their own color set. Leave “Use default” checked to "
+           "follow the current theme palette."),
+        grpUiColors);
+    uiColorsHint->setWordWrap(true);
+    layoutUiColors->addWidget(uiColorsHint);
+
+    auto *colorTabs = new QTabWidget(grpUiColors);
+    colorTabs->addTab(buildUiColorThemePage(false), tr("Light theme"));
+    colorTabs->addTab(buildUiColorThemePage(true), tr("Dark theme"));
+    layoutUiColors->addWidget(colorTabs);
+
+    auto *colorBtnRow = new QHBoxLayout();
+    auto *btnExportColors = new QPushButton(tr("Export colors…"), grpUiColors);
+    auto *btnImportColors = new QPushButton(tr("Import colors…"), grpUiColors);
+    colorBtnRow->addWidget(btnExportColors);
+    colorBtnRow->addWidget(btnImportColors);
+    colorBtnRow->addStretch(1);
+    layoutUiColors->addLayout(colorBtnRow);
+    connect(btnExportColors, &QPushButton::clicked, this, &SettingsDialog::exportUiColors);
+    connect(btnImportColors, &QPushButton::clicked, this, &SettingsDialog::importUiColors);
+    layoutWidget->addWidget(grpUiColors);
 
     // Appearance
     QGroupBox* grpAppear = new QGroupBox(tr("Appearance"), widget);
@@ -379,12 +365,36 @@ QWidget *SettingsDialog::createAppearanceSettings()
     layoutAppear->addRow(tr("List column: Format"), spinListColFormat);
     layoutAppear->addRow(tr("List column: Folder"), spinListColFolder);
 
+    // Bare checkboxes (no label text) are shorter than spin rows — match spin height.
+    const int appearRowH = spinIconViewGapH->sizeHint().height();
+    QList<QCheckBox *> appearChecks;
+#if QT_VERSION >= 0x050000
+    appearChecks << checkDarkTheme;
+#endif
+    appearChecks << checkFileColor << checkWindowTitlePath
+                 << showHomeButton << showNewTabButton << showTerminalButton
+                 << checkFoldersAlwaysFirst << checkFoldersAlwaysFirstIcon;
+    for (QCheckBox *cb : appearChecks) {
+        if (!cb) {
+            continue;
+        }
+        cb->setMinimumHeight(appearRowH);
+        cb->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+    }
+    layoutAppear->setVerticalSpacing(qMax(6, layoutAppear->verticalSpacing()));
+    layoutAppear->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
     // Layout widget
     layoutWidget->addWidget(grpAppear);
     layoutWidget->addSpacerItem(new QSpacerItem(0, 0,
                                                 QSizePolicy::Fixed,
                                                 QSizePolicy::MinimumExpanding));
-    return widget;
+
+    auto *scroll = new QScrollArea();
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setWidget(widget);
+    return scroll;
 }
 //---------------------------------------------------------------------------
 
@@ -684,36 +694,193 @@ QWidget *SettingsDialog::createAdvSettings()
     return widget;
 }
 
-void SettingsDialog::updateDualPaneColorButtons()
+QString SettingsDialog::uiColorLabel(UiColorId id)
 {
-    const QColor base = palette().color(QPalette::Base);
-    const QColor activeDefault = base.darker(120);
+    switch (id) {
+    case UiColorId::FilePaneInactive:
+        return tr("File pane background (inactive / single)");
+    case UiColorId::FilePaneActive:
+        return tr("File pane background (focused dual-pane)");
+    case UiColorId::BookmarksList:
+        return tr("Bookmarks list background");
+    case UiColorId::BookmarkGroupBar:
+        return tr("Bookmark group bar background");
+    case UiColorId::BookmarkGroupButton:
+        return tr("Bookmark group button background");
+    case UiColorId::SidebarTabSelected:
+        return tr("Sidebar tab selected (Bookmarks / Disks)");
+    case UiColorId::SidebarTabUnselected:
+        return tr("Sidebar tab unselected (Bookmarks / Disks)");
+    case UiColorId::TopChrome:
+        return tr("Top chrome background (menu / toolbar / address / search)");
+    case UiColorId::TopChromeButton:
+        return tr("Top chrome button / control background");
+    default:
+        return QString();
+    }
+}
 
-    auto paintBtn = [](QPushButton *btn, const QColor &c, const QString &label) {
+QColor SettingsDialog::uiColorFallback(UiColorId id, bool dark) const
+{
+    const QPalette pal = dark ? Common::darkTheme() : Common::lightTheme();
+    switch (id) {
+    case UiColorId::FilePaneInactive:
+    case UiColorId::BookmarksList:
+        return pal.color(QPalette::Base);
+    case UiColorId::FilePaneActive: {
+        const QColor base = pal.color(QPalette::Base);
+        return (base.lightness() < 128) ? base.lighter(125) : base.darker(118);
+    }
+    case UiColorId::BookmarkGroupBar:
+    case UiColorId::SidebarTabUnselected:
+    case UiColorId::TopChrome:
+        return pal.color(QPalette::Window);
+    case UiColorId::BookmarkGroupButton:
+    case UiColorId::TopChromeButton:
+        return pal.color(QPalette::Button);
+    case UiColorId::SidebarTabSelected:
+        return pal.color(QPalette::Base);
+    default:
+        return pal.color(QPalette::Base);
+    }
+}
+
+QWidget *SettingsDialog::buildUiColorThemePage(bool dark)
+{
+    auto *page = new QWidget();
+    auto *form = new QFormLayout(page);
+    form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+
+    QHash<int, QCheckBox *> *defaults = dark ? &m_uiColorDefaultDark : &m_uiColorDefaultLight;
+    QHash<int, QPushButton *> *buttons = dark ? &m_uiColorBtnDark : &m_uiColorBtnLight;
+
+    for (int i = 0; i < int(UiColorId::Count); ++i) {
+        const auto id = UiColorId(i);
+        auto *row = new QWidget(page);
+        auto *rowLay = new QHBoxLayout(row);
+        rowLay->setContentsMargins(0, 0, 0, 0);
+        rowLay->setSpacing(8);
+
+        auto *useDefault = new QCheckBox(tr("Use default"), row);
+        auto *pickBtn = new QPushButton(row);
+        pickBtn->setMinimumHeight(28);
+        pickBtn->setMinimumWidth(140);
+        rowLay->addWidget(useDefault);
+        rowLay->addWidget(pickBtn, 1);
+
+        defaults->insert(i, useDefault);
+        buttons->insert(i, pickBtn);
+
+        connect(useDefault, &QCheckBox::toggled, this, [this, id, dark](bool checked) {
+            UiColorSet &set = dark ? m_uiColorsDark : m_uiColorsLight;
+            if (checked) {
+                set.set(id, QColor());
+            } else if (set.isDefault(id)) {
+                set.set(id, uiColorFallback(id, dark));
+            }
+            updateUiColorButtons();
+        });
+        connect(pickBtn, &QPushButton::clicked, this, [this, id, dark]() {
+            pickUiColor(id, dark);
+        });
+
+        form->addRow(uiColorLabel(id), row);
+    }
+    return page;
+}
+
+void SettingsDialog::pickUiColor(UiColorId id, bool dark)
+{
+    UiColorSet &set = dark ? m_uiColorsDark : m_uiColorsLight;
+    const QColor start = set.isDefault(id) ? uiColorFallback(id, dark) : set.get(id);
+    const QColor picked = QColorDialog::getColor(start, this, uiColorLabel(id));
+    if (!picked.isValid()) {
+        return;
+    }
+    set.set(id, picked);
+    QCheckBox *def = (dark ? m_uiColorDefaultDark : m_uiColorDefaultLight).value(int(id));
+    if (def) {
+        def->blockSignals(true);
+        def->setChecked(false);
+        def->blockSignals(false);
+    }
+    updateUiColorButtons();
+}
+
+void SettingsDialog::updateUiColorButtons()
+{
+    auto paint = [](QPushButton *btn, const QColor &c, const QString &text) {
         if (!btn) {
             return;
         }
-        btn->setStyleSheet(QStringLiteral("QPushButton { background-color: %1; min-height: 28px; }")
-                               .arg(c.name()));
-        btn->setText(label);
+        const QColor fg = (c.lightness() < 140) ? QColor(Qt::white) : QColor(Qt::black);
+        btn->setStyleSheet(QStringLiteral(
+            "QPushButton { background-color: %1; color: %2; min-height: 28px;"
+            " border: 1px solid palette(mid); border-radius: 4px; padding: 4px 8px; }")
+                               .arg(c.name(), fg.name()));
+        btn->setText(text);
     };
 
-    if (checkDualPaneInactiveDefault) {
-        const bool useDefault = checkDualPaneInactiveDefault->isChecked();
-        if (btnDualPaneInactiveColor) {
-            btnDualPaneInactiveColor->setEnabled(!useDefault);
+    for (int theme = 0; theme < 2; ++theme) {
+        const bool dark = theme == 1;
+        const UiColorSet &set = dark ? m_uiColorsDark : m_uiColorsLight;
+        const QHash<int, QCheckBox *> &defaults = dark ? m_uiColorDefaultDark : m_uiColorDefaultLight;
+        const QHash<int, QPushButton *> &buttons = dark ? m_uiColorBtnDark : m_uiColorBtnLight;
+
+        for (int i = 0; i < int(UiColorId::Count); ++i) {
+            const auto id = UiColorId(i);
+            QCheckBox *def = defaults.value(i);
+            QPushButton *btn = buttons.value(i);
+            const bool useDefault = set.isDefault(id);
+            if (def) {
+                def->blockSignals(true);
+                def->setChecked(useDefault);
+                def->blockSignals(false);
+            }
+            if (btn) {
+                btn->setEnabled(!useDefault);
+                const QColor shown = useDefault ? uiColorFallback(id, dark) : set.get(id);
+                paint(btn, shown, useDefault ? tr("Default") : shown.name(QColor::HexRgb));
+            }
         }
-        paintBtn(btnDualPaneInactiveColor, base,
-                 useDefault ? tr("Default (file view background)") : m_dualPaneInactiveColor.name());
     }
-    if (checkDualPaneActiveDefault) {
-        const bool useDefault = checkDualPaneActiveDefault->isChecked();
-        if (btnDualPaneActiveColor) {
-            btnDualPaneActiveColor->setEnabled(!useDefault);
-        }
-        paintBtn(btnDualPaneActiveColor, useDefault ? activeDefault : m_dualPaneActiveColor,
-                 useDefault ? tr("Default (20% darker than file view)") : m_dualPaneActiveColor.name());
+}
+
+void SettingsDialog::exportUiColors()
+{
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Export UI colors"), QStringLiteral("qtfm-ui-colors.json"),
+        tr("JSON files (*.json)"));
+    if (path.isEmpty()) {
+        return;
     }
+    QString err;
+    if (!UiColors::exportToJson(path, m_uiColorsLight, m_uiColorsDark, &err)) {
+        QMessageBox::warning(this, tr("Export failed"), err);
+        return;
+    }
+    QMessageBox::information(this, tr("Export"), tr("Colors exported successfully."));
+}
+
+void SettingsDialog::importUiColors()
+{
+    const QString path = QFileDialog::getOpenFileName(
+        this, tr("Import UI colors"), QString(), tr("JSON files (*.json)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    UiColorSet light;
+    UiColorSet dark;
+    QString err;
+    if (!UiColors::importFromJson(path, &light, &dark, &err)) {
+        QMessageBox::warning(this, tr("Import failed"), err);
+        return;
+    }
+    m_uiColorsLight = light;
+    m_uiColorsDark = dark;
+    updateUiColorButtons();
+    QMessageBox::information(this, tr("Import"),
+                             tr("Colors imported. Click Save to apply them."));
 }
 
 void SettingsDialog::updateThumbGenModeUi()
@@ -939,17 +1106,8 @@ void SettingsDialog::readSettings() {
   spinListColDate->setValue(settingsPtr->value("listColumnWidth3", 130).toInt());
   spinListColFormat->setValue(settingsPtr->value("listColumnWidth4", 120).toInt());
   spinListColFolder->setValue(settingsPtr->value("listColumnWidth5", 80).toInt());
-  const QString dualInactive = settingsPtr->value(QStringLiteral("dualPaneInactiveColor")).toString();
-  const QString dualActive = settingsPtr->value(QStringLiteral("dualPaneActiveColor")).toString();
-  if (checkDualPaneInactiveDefault) {
-      checkDualPaneInactiveDefault->setChecked(dualInactive.isEmpty());
-  }
-  if (checkDualPaneActiveDefault) {
-      checkDualPaneActiveDefault->setChecked(dualActive.isEmpty());
-  }
-  m_dualPaneInactiveColor = dualInactive.isEmpty() ? QColor() : QColor(dualInactive);
-  m_dualPaneActiveColor = dualActive.isEmpty() ? QColor() : QColor(dualActive);
-  updateDualPaneColorButtons();
+  UiColors::load(settingsPtr, &m_uiColorsLight, &m_uiColorsDark);
+  updateUiColorButtons();
   OpenWithConfig::load(settingsPtr);
   if (openWithSettingsWidget) {
       openWithSettingsWidget->loadFromConfig();
@@ -1242,14 +1400,7 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("listColumnWidth3", spinListColDate->value());
   settingsPtr->setValue("listColumnWidth4", spinListColFormat->value());
   settingsPtr->setValue("listColumnWidth5", spinListColFolder->value());
-  settingsPtr->setValue(QStringLiteral("dualPaneInactiveColor"),
-                        (checkDualPaneInactiveDefault && checkDualPaneInactiveDefault->isChecked())
-                            ? QString()
-                            : m_dualPaneInactiveColor.name(QColor::HexRgb));
-  settingsPtr->setValue(QStringLiteral("dualPaneActiveColor"),
-                        (checkDualPaneActiveDefault && checkDualPaneActiveDefault->isChecked())
-                            ? QString()
-                            : m_dualPaneActiveColor.name(QColor::HexRgb));
+  UiColors::save(settingsPtr, m_uiColorsLight, m_uiColorsDark);
   settingsPtr->setValue("windowTitlePath", checkWindowTitlePath->isChecked());
 
 #ifndef Q_OS_MAC

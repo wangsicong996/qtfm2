@@ -24,6 +24,22 @@
 
 #include <QtGui>
 #include <QTabBar>
+#include <QByteArray>
+#include <QStringList>
+
+/** Per-tab dual-pane / path snapshot (tabs are independent). */
+struct TabPaneSession {
+    bool dualPane = false;
+    int activePane = 0;
+    QByteArray splitterState;
+    QString leftPath;
+    QStringList leftHistory;
+    QStringList leftForward;
+    QString rightPath;
+    QStringList rightHistory;
+    QStringList rightForward;
+    QString searchFilter;
+};
 
 class tabBar : public QTabBar
 {
@@ -40,6 +56,10 @@ public:
     int getType(int index);
     void setType(int type);
 
+    TabPaneSession *sessionAt(int index);
+    void initSessionSingle(int index, const QString &path);
+    void removeSessionAt(int index);
+
 protected:
     void dragEnterEvent(QDragEnterEvent *event);
     void dragMoveEvent(QDragMoveEvent *event);
@@ -48,14 +68,18 @@ protected:
 signals:
         void dragDropTab(const QMimeData * data, QString newPath, QStringList cutList);
         void openInNewWindowRequested(int index);
+        void closeTabRequested(int index);
 
 public slots:
         void closeTab();
+        void onTabMoved(int from, int to);
+        void removeTabAt(int index);
 
 private:
         QHash<QString,QIcon> *folderIcons;
         QList<QStringList*> history;
         QList<int> viewType;
+        QList<TabPaneSession> paneSessions;
 
 };
 

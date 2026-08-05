@@ -29,6 +29,7 @@ tabBar::tabBar(QHash<QString,QIcon> * icons)
     folderIcons = icons;
     setAcceptDrops(1);
     setMovable(1);
+    connect(this, &QTabBar::tabMoved, this, &tabBar::onTabMoved);
 }
 
 //---------------------------------------------------------------------------
@@ -40,11 +41,7 @@ void tabBar::mousePressEvent(QMouseEvent * event)
         int tab = tabAt(event->pos());
         if(tab != -1)
         {
-            delete history.at(tab);
-            history.removeAt(tab);
-            viewType.removeAt(tab);
-            this->removeTab(tab);
-            if (this->count()==1) { this->hide(); }
+            emit closeTabRequested(tab);
         }
     }
     else
@@ -118,6 +115,11 @@ int tabBar::addNewTab(QString path, int type)
     history.append(new QStringList(path));
     viewType.append(type);
 
+    TabPaneSession session;
+    session.leftPath = file.filePath();
+    session.leftHistory = QStringList{file.filePath()};
+    paneSessions.append(session);
+
     QString filename = file.fileName();
     if (filename.isEmpty()) { filename = "/"; }
 
@@ -167,13 +169,70 @@ void tabBar::setType(int type)
 }
 
 //---------------------------------------------------------------------------
+TabPaneSession *tabBar::sessionAt(int index)
+{
+    if (index < 0 || index >= paneSessions.size()) {
+        return nullptr;
+    }
+    return &paneSessions[index];
+}
+
+//---------------------------------------------------------------------------
+void tabBar::initSessionSingle(int index, const QString &path)
+{
+    TabPaneSession *s = sessionAt(index);
+    if (!s) {
+        return;
+    }
+    *s = TabPaneSession();
+    s->leftPath = path;
+    s->leftHistory = QStringList{path};
+    s->dualPane = false;
+    s->activePane = 0;
+}
+
+//---------------------------------------------------------------------------
+void tabBar::removeSessionAt(int index)
+{
+    if (index < 0 || index >= paneSessions.size()) {
+        return;
+    }
+    paneSessions.removeAt(index);
+}
+
+//---------------------------------------------------------------------------
+void tabBar::onTabMoved(int from, int to)
+{
+    if (from < 0 || to < 0 || from >= history.size() || to >= history.size()) {
+        return;
+    }
+    history.move(from, to);
+    viewType.move(from, to);
+    if (from < paneSessions.size() && to < paneSessions.size()) {
+        paneSessions.move(from, to);
+    }
+}
+
+//---------------------------------------------------------------------------
+void tabBar::removeTabAt(int index)
+{
+    if (index < 0 || index >= count()) {
+        return;
+    }
+    delete history.at(index);
+    history.removeAt(index);
+    viewType.removeAt(index);
+    removeSessionAt(index);
+    removeTab(index);
+    if (count() == 1) {
+        hide();
+    }
+}
+
+//---------------------------------------------------------------------------
 void tabBar::closeTab()
 {
     if (currentIndex()>-1) {
-        delete history.at(currentIndex());
-        history.removeAt(currentIndex());
-        viewType.removeAt(this->currentIndex());
-        removeTab(this->currentIndex());
+        emit closeTabRequested(currentIndex());
     }
-    if (this->count()==1) { this->hide(); }
 }
