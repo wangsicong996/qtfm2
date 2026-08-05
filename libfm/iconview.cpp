@@ -15,9 +15,7 @@
 #include <QTextBlockFormat>
 #include <QTextCursor>
 #include <QTextDocument>
-#include <QTextLayout>
 #include <QTextOption>
-#include <QTextDocument>
 #include <QApplication>
 #include <QtMath>
 
@@ -119,21 +117,8 @@ bool fileNameUsesMultipleDisplayLines(const QString &text, const QFont &font, in
     if (text.isEmpty() || width <= 0) {
         return false;
     }
-    QTextLayout layout(text, font);
-    QTextOption opt;
-    opt.setAlignment(Qt::AlignLeft);
-    opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-    layout.setTextOption(opt);
-    layout.beginLayout();
-    QTextLine line1 = layout.createLine();
-    if (!line1.isValid()) {
-        layout.endLayout();
-        return false;
-    }
-    line1.setLineWidth(width);
-    const QTextLine line2 = layout.createLine();
-    layout.endLayout();
-    return line2.isValid();
+    const QFontMetrics fm(font);
+    return fm.horizontalAdvance(text) > width;
 }
 
 int renameEditorHeightForText(const QString &text, const QFont &font, int width,
@@ -159,59 +144,54 @@ int renameEditorHeightForText(const QString &text, const QFont &font, int width,
 void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &text,
                          const QFont &font, const QColor &color)
 {
-    if (text.isEmpty()) {
+    if (text.isEmpty() || rect.width() <= 0) {
         return;
     }
     QFontMetrics fm(font);
     const int lineHeight = fm.lineSpacing();
+    const int maxW = rect.width();
 
-    QTextLayout layout(text, font);
-    QTextOption opt;
-    opt.setAlignment(Qt::AlignLeft);
-    opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-    layout.setTextOption(opt);
-
-    layout.beginLayout();
-    QTextLine line1 = layout.createLine();
-    if (!line1.isValid()) {
-        layout.endLayout();
-        return;
+    // Pack by character width — do not wrap at '-' / '_' (QTextLayout word-wrap left
+    // half the first line empty for names like "qtfm-6.3.0-x86_64_….AppImage").
+    int line1Count = 0;
+    if (fm.horizontalAdvance(text) <= maxW) {
+        line1Count = text.size();
+    } else {
+        int lo = 0;
+        int hi = text.size();
+        while (lo < hi) {
+            const int mid = (lo + hi + 1) / 2;
+            if (fm.horizontalAdvance(text.left(mid)) <= maxW) {
+                lo = mid;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        line1Count = lo;
     }
-    line1.setLineWidth(rect.width());
-
-    QTextLine line2 = layout.createLine();
-    const bool multiLine = line2.isValid();
-    bool truncated = false;
-    if (multiLine) {
-        line2.setLineWidth(rect.width());
-        QTextLine line3 = layout.createLine();
-        truncated = line3.isValid();
+    if (line1Count <= 0) {
+        line1Count = 1;
     }
-    layout.endLayout();
 
     painter->setPen(color);
+    painter->setFont(font);
 
-    if (!multiLine) {
+    if (line1Count >= text.size()) {
         painter->drawText(rect, Qt::AlignHCenter | Qt::AlignTop | Qt::TextSingleLine,
-                          fm.elidedText(text, Qt::ElideMiddle, rect.width()));
+                          fm.elidedText(text, Qt::ElideMiddle, maxW));
         return;
     }
 
-    qreal y = rect.top();
-    line1.draw(painter, QPointF(rect.left(), y));
-    y += lineHeight;
+    const QString line1 = text.left(line1Count);
+    const QString rest = text.mid(line1Count);
+    const QString line2 = fm.elidedText(rest, Qt::ElideRight, maxW);
 
-    if (!line2.isValid()) {
-        return;
-    }
-    if (truncated) {
-        const QString rest = text.mid(line2.textStart());
-        painter->drawText(QRect(rect.left(), int(y), rect.width(), lineHeight),
-                          Qt::AlignLeft | Qt::AlignTop,
-                          fm.elidedText(rest, Qt::ElideRight, rect.width()));
-    } else {
-        line2.draw(painter, QPointF(rect.left(), y));
-    }
+    const int y1 = rect.top() + fm.ascent();
+    const int y2 = rect.top() + lineHeight + fm.ascent();
+    const int x1 = rect.left() + qMax(0, (maxW - fm.horizontalAdvance(line1)) / 2);
+    const int x2 = rect.left() + qMax(0, (maxW - fm.horizontalAdvance(line2)) / 2);
+    painter->drawText(x1, y1, line1);
+    painter->drawText(x2, y2, line2);
 }
 
 } // namespace

@@ -7,9 +7,6 @@
 #include <QFontMetrics>
 #include <QPainter>
 #include <QString>
-#include <QTextLayout>
-#include <QTextLine>
-#include <QTextOption>
 
 #include "sortmodel.h"
 
@@ -144,7 +141,7 @@ inline void drawTextWithSearchHighlight(QPainter *painter,
 
 /**
  * Icon-view two-line label: reveal-shift so the match starts on line 1,
- * then wrap like the normal two-line name layout, with blue highlight on the match.
+ * then pack by character width (no wrap-at-hyphen), with blue highlight on the match.
  */
 inline void drawTwoLineSearchHighlightedName(QPainter *painter,
                                              const QRect &rect,
@@ -153,46 +150,65 @@ inline void drawTwoLineSearchHighlightedName(QPainter *painter,
                                              const QFont &font,
                                              const QColor &fg)
 {
-    if (!painter || text.isEmpty()) {
+    if (!painter || text.isEmpty() || rect.width() <= 0) {
         return;
     }
 
     int matchLen = 0;
     const QString display = searchRevealDisplayName(text, needle, &matchLen);
     if (matchLen <= 0) {
-        // Fallback: plain two-line without highlight (caller usually handles this).
         painter->setPen(fg);
         painter->setFont(font);
         const QFontMetrics fm(font);
-        painter->drawText(rect, Qt::AlignHCenter | Qt::AlignTop | Qt::TextWordWrap, display);
+        // Character-packed two-line (same as normal icon labels).
+        const int maxW = rect.width();
+        int line1Count = display.size();
+        if (fm.horizontalAdvance(display) > maxW) {
+            int lo = 0;
+            int hi = display.size();
+            while (lo < hi) {
+                const int mid = (lo + hi + 1) / 2;
+                if (fm.horizontalAdvance(display.left(mid)) <= maxW) {
+                    lo = mid;
+                } else {
+                    hi = mid - 1;
+                }
+            }
+            line1Count = qMax(1, lo);
+        }
+        if (line1Count >= display.size()) {
+            painter->drawText(rect, Qt::AlignHCenter | Qt::AlignTop | Qt::TextSingleLine,
+                              fm.elidedText(display, Qt::ElideMiddle, maxW));
+            return;
+        }
+        const QString line1 = display.left(line1Count);
+        const QString line2 = fm.elidedText(display.mid(line1Count), Qt::ElideRight, maxW);
+        const int y1 = rect.top() + fm.ascent();
+        const int y2 = rect.top() + fm.lineSpacing() + fm.ascent();
+        painter->drawText(rect.left() + qMax(0, (maxW - fm.horizontalAdvance(line1)) / 2), y1, line1);
+        painter->drawText(rect.left() + qMax(0, (maxW - fm.horizontalAdvance(line2)) / 2), y2, line2);
         return;
     }
 
     painter->setFont(font);
     const QFontMetrics fm(font);
     const int lineHeight = fm.lineSpacing();
+    const int maxW = rect.width();
 
-    QTextLayout layout(display, font);
-    QTextOption opt;
-    opt.setAlignment(Qt::AlignLeft);
-    opt.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-    layout.setTextOption(opt);
-
-    layout.beginLayout();
-    QTextLine line1 = layout.createLine();
-    if (!line1.isValid()) {
-        layout.endLayout();
-        return;
+    int line1Count = display.size();
+    if (fm.horizontalAdvance(display) > maxW) {
+        int lo = 0;
+        int hi = display.size();
+        while (lo < hi) {
+            const int mid = (lo + hi + 1) / 2;
+            if (fm.horizontalAdvance(display.left(mid)) <= maxW) {
+                lo = mid;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        line1Count = qMax(1, lo);
     }
-    line1.setLineWidth(rect.width());
-
-    QTextLine line2 = layout.createLine();
-    bool truncated = false;
-    if (line2.isValid()) {
-        line2.setLineWidth(rect.width());
-        truncated = layout.createLine().isValid();
-    }
-    layout.endLayout();
 
     auto drawLineSegment = [&](qreal y, int start, int length, bool elideRest) {
         if (length <= 0 && !elideRest) {
@@ -200,20 +216,15 @@ inline void drawTwoLineSearchHighlightedName(QPainter *painter,
         }
         QString chunk = display.mid(start, length);
         if (elideRest) {
-            chunk = fm.elidedText(display.mid(start), Qt::ElideRight, rect.width());
+            chunk = fm.elidedText(display.mid(start), Qt::ElideRight, maxW);
         }
 
-        // Highlight overlap of [start, start+chunk.size()) with [0, matchLen).
         const int chunkStart = start;
         const int visibleLen = chunk.size();
         const int hlFrom = qMax(0, 0 - chunkStart);
         const int hlTo = qMin(visibleLen, matchLen - chunkStart);
 
-        int x = rect.left();
-        // Center the line content within the label width.
-        const int lineW = fm.horizontalAdvance(chunk);
-        x = rect.left() + qMax(0, (rect.width() - lineW) / 2);
-
+        int x = rect.left() + qMax(0, (maxW - fm.horizontalAdvance(chunk)) / 2);
         const int textY = int(y) + fm.ascent();
 
         if (hlTo > hlFrom) {
@@ -244,17 +255,13 @@ inline void drawTwoLineSearchHighlightedName(QPainter *painter,
     };
 
     qreal y = rect.top();
-    drawLineSegment(y, line1.textStart(), line1.textLength(), false);
-    y += lineHeight;
-
-    if (!line2.isValid()) {
+    if (line1Count >= display.size()) {
+        drawLineSegment(y, 0, display.size(), false);
         return;
     }
-    if (truncated) {
-        drawLineSegment(y, line2.textStart(), -1, true);
-    } else {
-        drawLineSegment(y, line2.textStart(), line2.textLength(), false);
-    }
+    drawLineSegment(y, 0, line1Count, false);
+    y += lineHeight;
+    drawLineSegment(y, line1Count, -1, true);
 }
 
 #endif // SEARCHHIGHLIGHT_H

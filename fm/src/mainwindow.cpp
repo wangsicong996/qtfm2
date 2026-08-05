@@ -71,6 +71,36 @@ constexpr int kPathBarHeight = 28;
 constexpr int kPathBarIconSize = kPathBarHeight - 10;
 constexpr int kSearchBarWidth = 200;
 constexpr int kTabHeight = 30;
+
+/** Keep address/search the same outer height as Navigate toolbar buttons. */
+void syncPathSearchHeightToChromeButtons(QToolBar *navToolBar, QComboBox *pathEdit,
+                                         QLineEdit *searchEdit, int fallbackHeight)
+{
+    int h = fallbackHeight;
+    if (navToolBar) {
+        for (QAction *act : navToolBar->actions()) {
+            if (!act || act->isSeparator()) {
+                continue;
+            }
+            if (QToolButton *btn = qobject_cast<QToolButton *>(navToolBar->widgetForAction(act))) {
+                const int bh = btn->sizeHint().height();
+                if (bh > 0) {
+                    h = bh;
+                }
+                break;
+            }
+        }
+    }
+    if (pathEdit) {
+        pathEdit->setFixedHeight(h);
+        if (QLineEdit *le = pathEdit->lineEdit()) {
+            le->setFixedHeight(qMax(1, h - 2));
+        }
+    }
+    if (searchEdit) {
+        searchEdit->setFixedHeight(h);
+    }
+}
 #ifdef Q_OS_MAC
 bool macClipboardHasImage()
 {
@@ -2266,12 +2296,12 @@ void MainWindow::applyViewChromeStyles()
         const QString pathComboQss = QStringLiteral(
             "QComboBox#pathAddressCombo {"
             " background: %1; border: 1px solid %2; border-radius: 4px;"
-            " padding: 2px %5px 2px 8px; min-height: %4px; max-height: %4px; }"
+            " padding: 0px %5px 0px 8px; min-height: %4px; max-height: %4px; }"
             "QComboBox#pathAddressCombo:hover { border: 1px solid %2; }"
             "QComboBox#pathAddressCombo QLineEdit {"
             " border: none; background: transparent; padding: 0; margin: 0; }"
             "QComboBox#pathAddressCombo::drop-down {"
-            " subcontrol-origin: padding; subcontrol-position: top right;"
+            " subcontrol-origin: padding; subcontrol-position: center right;"
             " width: %5px; border: none; border-left: 1px solid %2;"
             " border-top-right-radius: 4px; border-bottom-right-radius: 4px;"
             " background: transparent; }"
@@ -2286,21 +2316,22 @@ void MainWindow::applyViewChromeStyles()
         ).arg(controlBg.name(), flatBorder.name(), flatHover.name(QColor::HexArgb),
               pathBarH, dropW, comboArrowUrl);
         pathEdit->setStyleSheet(pathComboQss);
-        pathEdit->setFixedHeight(kPathBarHeight);
     }
 
     if (searchEdit) {
+        const QString searchH = QString::number(kPathBarHeight);
         const QString searchQss = QStringLiteral(
             "QLineEdit#fileSearchEdit {"
             " background: %1; border: 1px solid %2; border-radius: 4px;"
-            " padding: 0px 4px; }"
+            " padding: 0px 4px; min-height: %4px; max-height: %4px; }"
             "QLineEdit#fileSearchEdit:hover { border: 1px solid %2; }"
             "QLineEdit#fileSearchEdit:focus { border: 1px solid %3; }"
-        ).arg(controlBg.name(), flatBorder.name(), selected.name());
+        ).arg(controlBg.name(), flatBorder.name(), selected.name(), searchH);
         searchEdit->setStyleSheet(searchQss);
-        searchEdit->setFixedHeight(kPathBarHeight);
         updateSearchClearButtonIcon();
     }
+
+    syncPathSearchHeightToChromeButtons(navToolBar, pathEdit, searchEdit, kPathBarHeight);
 
     if (customComplete) {
         QAbstractItemView *pop = customComplete->popup();
