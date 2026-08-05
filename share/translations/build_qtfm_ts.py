@@ -130,12 +130,20 @@ EXACT = {
     # Open with
     "Application name": "应用程序名称",
     "Extensions": "扩展名",
+    "Paste icon path": "粘贴图标路径",
+    "Paste icon file path (overrides bundled icon)": "粘贴图标文件路径（将覆盖内置图标）",
+    "Paste": "粘贴",
+    "Shell command": "Shell 命令",
+    "Action name": "操作名称",
+    "File type(s), comma-separated": "文件类型（逗号分隔）",
+    "Choose bundled icon": "选择内置图标",
     "Command (line 1)": "命令",
     "Command (line 2)": "命令",
     "Command": "命令",
     "Icon path": "图标路径",
-    "Paste icon path": "粘贴图标路径",
-    "Paste": "粘贴",
+    "Properties": "属性",
+    "Submenu": "子菜单",
+    "Submenu title (optional)": "子菜单名称（可选）",
     "Unified categories (first module = double-click default)":
         "统一分类（第一个模块为双击默认）",
     "These handlers override system defaults when set. "

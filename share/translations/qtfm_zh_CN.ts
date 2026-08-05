@@ -50,7 +50,7 @@
     </message>
     <message>
       <source>Action name</source>
-      <translation>操作 name</translation>
+      <translation>操作名称</translation>
     </message>
     <message>
       <source>Add action module</source>
@@ -66,7 +66,7 @@
     </message>
     <message>
       <source>Choose bundled icon</source>
-      <translation>Choose bundled icon</translation>
+      <translation>选择内置图标</translation>
     </message>
     <message>
       <source>Command</source>
@@ -78,7 +78,11 @@
     </message>
     <message>
       <source>Each module is one custom context-menu action. Icon path overrides the bundled icon when set. Use %f, %F, %n in commands.</source>
-      <translation>每个模块对应一条自定义右键菜单操作。设置图标路径后将覆盖内置图标。命令中可使用 %f、%F、%n。</translation>
+      <translation>Each module is one custom context-menu action. 图标 path overrides the bundled icon when set. Use %f, %F, %n in commands.</translation>
+    </message>
+    <message>
+      <source>Each module is one custom context-menu action. Icon path overrides the bundled icon when set. Use %f, %F, %n in commands. Optional submenu groups matching titles together.</source>
+      <translation>每个模块对应一条自定义右键菜单操作。设置图标路径后将覆盖内置图标。命令中可使用 %f、%F、%n。可选填写子菜单名称，相同名称会归入同一子菜单。</translation>
     </message>
     <message>
       <source>File type</source>
@@ -86,7 +90,7 @@
     </message>
     <message>
       <source>File type(s), comma-separated</source>
-      <translation>文件类型(s), comma-separated</translation>
+      <translation>文件类型（逗号分隔）</translation>
     </message>
     <message>
       <source>Icon path</source>
@@ -110,15 +114,34 @@
     </message>
     <message>
       <source>Paste icon file path (overrides bundled icon)</source>
-      <translation>粘贴 icon file path (overrides bundled icon)</translation>
+      <translation>粘贴图标文件路径（将覆盖内置图标）</translation>
     </message>
     <message>
       <source>Shell command</source>
-      <translation>Shell command</translation>
+      <translation>Shell 命令</translation>
+    </message>
+    <message>
+      <source>Submenu</source>
+      <translation>子菜单</translation>
+    </message>
+    <message>
+      <source>Submenu title (optional)</source>
+      <translation>子菜单名称（可选）</translation>
     </message>
     <message>
       <source>Use 'folder' to match all folders.&lt;br&gt;</source>
       <translation>Use 'folder' to match all folders.&lt;br&gt;</translation>
+    </message>
+    <message>
+      <source>Use 'folder' to match all folders.&lt;br&gt;Use a folder name to match a specific folder.&lt;br&gt;Set text to 'Open' to override xdg default.&lt;p&gt;%f - selected files&lt;br&gt;%F - selected files with full path&lt;br&gt;%n - current filename&lt;/p&gt;&lt;p&gt;Submenu: leave empty to show the action in the file context menu. Matching submenu titles are grouped under one submenu.&lt;/p&gt;</source>
+      <translation>用 folder 匹配所有文件夹。&lt;br&gt;用具体文件夹名匹配单个文件夹。&lt;br&gt;将名称设为 Open 可覆盖 xdg 默认打开方式。&lt;p&gt;%f - 所选文件名&lt;br&gt;%F - 所选文件完整路径&lt;br&gt;%n - 当前文件名&lt;/p&gt;&lt;p&gt;子菜单：留空则直接显示在文件右键菜单；填写后，相同名称归入同一子菜单。&lt;/p&gt;</translation>
+    </message>
+  </context>
+  <context>
+    <name>CustomActionsManager</name>
+    <message>
+      <source>Compress</source>
+      <translation>压缩</translation>
     </message>
   </context>
   <context>
@@ -202,6 +225,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>关于 %1</translation>
     </message>
     <message>
+      <source>About Qt</source>
+      <translation>关于 Qt</translation>
+    </message>
+    <message>
       <source>About thumbnails</source>
       <translation>关于缩略图</translation>
     </message>
@@ -212,6 +239,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Add bookmark</source>
       <translation>添加书签</translation>
+    </message>
+    <message>
+      <source>Add current path to bookmarks</source>
+      <translation>将当前路径添加到书签</translation>
     </message>
     <message>
       <source>Add separator</source>
@@ -262,6 +293,18 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>修改书签图标</translation>
     </message>
     <message>
+      <source>Clear cache</source>
+      <translation>清除缓存</translation>
+    </message>
+    <message>
+      <source>Clear icon and thumbnail caches</source>
+      <translation>清除图标与缩略图缓存</translation>
+    </message>
+    <message>
+      <source>Clear search</source>
+      <translation>清除搜索</translation>
+    </message>
+    <message>
       <source>Close</source>
       <translation>关闭</translation>
     </message>
@@ -274,16 +317,16 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>关闭标签</translation>
     </message>
     <message>
-      <source>Clear search</source>
-      <translation>清除搜索</translation>
-    </message>
-    <message>
       <source>Computer</source>
       <translation>计算机</translation>
     </message>
     <message>
       <source>Confirm all delete operations?</source>
       <translation>Confirm all delete operations?</translation>
+    </message>
+    <message>
+      <source>Copy</source>
+      <translation>复制</translation>
     </message>
     <message>
       <source>Copy the current file</source>
@@ -304,6 +347,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Create a new text (.txt) file</source>
       <translation>创建新的文本（.txt）文件</translation>
+    </message>
+    <message>
+      <source>Cut</source>
+      <translation>剪切</translation>
     </message>
     <message>
       <source>Date</source>
@@ -358,12 +405,20 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>Failed</translation>
     </message>
     <message>
+      <source>Favorite</source>
+      <translation>收藏</translation>
+    </message>
+    <message>
       <source>File</source>
       <translation>文件</translation>
     </message>
     <message>
       <source>Filter current directory</source>
       <translation>过滤当前目录</translation>
+    </message>
+    <message>
+      <source>Filter files in the focused pane (Enter)</source>
+      <translation>在当前文件栏中过滤文件（回车）</translation>
     </message>
     <message>
       <source>Filter...</source>
@@ -442,6 +497,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>锁定布局</translation>
     </message>
     <message>
+      <source>Lock or unlock toolbars and docks</source>
+      <translation>锁定或解锁工具栏与停靠面板</translation>
+    </message>
+    <message>
       <source>Menu</source>
       <translation>菜单</translation>
     </message>
@@ -456,6 +515,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Move selected to trash</source>
       <translation>将所选项目移到回收站</translation>
+    </message>
+    <message>
+      <source>Move the current file</source>
+      <translation>剪切当前文件</translation>
     </message>
     <message>
       <source>Move to Trash</source>
@@ -498,6 +561,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>打开</translation>
     </message>
     <message>
+      <source>Open a new window</source>
+      <translation>打开新窗口</translation>
+    </message>
+    <message>
       <source>Open in new tab</source>
       <translation>在新标签中打开</translation>
     </message>
@@ -536,6 +603,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Places</source>
       <translation>位置</translation>
+    </message>
+    <message>
+      <source>Properties</source>
+      <translation>属性</translation>
     </message>
     <message>
       <source>Quit</source>
@@ -620,6 +691,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Settings...</source>
       <translation>设置…</translation>
+    </message>
+    <message>
+      <source>Show left and right file panes with independent navigation</source>
+      <translation>显示左右文件栏，各自独立导航</translation>
     </message>
     <message>
       <source>Show thumbs</source>
@@ -733,55 +808,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <source>在 QtFM 中配置默认打开与「Open with」</source>
       <translation>在 QtFM 中配置默认打开与「Open with」</translation>
     </message>
-      <message>
-      <source>Cut</source>
-      <translation>剪切</translation>
-    </message>
-    <message>
-      <source>Copy</source>
-      <translation>复制</translation>
-    </message>
-    <message>
-      <source>Clear cache</source>
-      <translation>清除缓存</translation>
-    </message>
-    <message>
-      <source>Move the current file</source>
-      <translation>剪切当前文件</translation>
-    </message>
-    <message>
-      <source>About Qt</source>
-      <translation>关于 Qt</translation>
-    </message>
-    <message>
-      <source>Show left and right file panes with independent navigation</source>
-      <translation>显示左右文件栏，各自独立导航</translation>
-    </message>
-    <message>
-      <source>Add current path to bookmarks</source>
-      <translation>将当前路径添加到书签</translation>
-    </message>
-    <message>
-      <source>Favorite</source>
-      <translation>收藏</translation>
-    </message>
-    <message>
-      <source>Filter files in the focused pane (Enter)</source>
-      <translation>在当前文件栏中过滤文件（回车）</translation>
-    </message>
-    <message>
-      <source>Open a new window</source>
-      <translation>打开新窗口</translation>
-    </message>
-    <message>
-      <source>Lock or unlock toolbars and docks</source>
-      <translation>锁定或解锁工具栏与停靠面板</translation>
-    </message>
-    <message>
-      <source>Clear icon and thumbnail caches</source>
-      <translation>清除图标与缩略图缓存</translation>
-    </message>
-</context>
+  </context>
   <context>
     <name>MimeUtils</name>
     <message>
@@ -842,12 +869,16 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>分类：%1</translation>
     </message>
     <message>
+      <source>Command</source>
+      <translation>命令</translation>
+    </message>
+    <message>
       <source>Command (line 1)</source>
-      <translation>命令（第 1 行）</translation>
+      <translation>命令</translation>
     </message>
     <message>
       <source>Command (line 2)</source>
-      <translation>命令（第 2 行）</translation>
+      <translation>命令</translation>
     </message>
     <message>
       <source>Default for double-click (first module)</source>
@@ -872,6 +903,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Image</source>
       <translation>图片</translation>
+    </message>
+    <message>
+      <source>Paste</source>
+      <translation>粘贴</translation>
     </message>
     <message>
       <source>Paste icon path</source>
@@ -1361,18 +1396,6 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>外观</translation>
     </message>
     <message>
-      <source>General</source>
-      <translation>全局设置</translation>
-    </message>
-    <message>
-      <source>Custom Actions</source>
-      <translation>自定义操作</translation>
-    </message>
-    <message>
-      <source>Language</source>
-      <translation>界面语言</translation>
-    </message>
-    <message>
       <source>Application</source>
       <translation>应用程序</translation>
     </message>
@@ -1459,6 +1482,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Copy</source>
       <translation>复制</translation>
+    </message>
+    <message>
+      <source>Custom Actions</source>
+      <translation>自定义操作</translation>
     </message>
     <message>
       <source>Custom Copy of ...</source>
@@ -1573,6 +1600,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>列表中文件夹始终在前</translation>
     </message>
     <message>
+      <source>General</source>
+      <translation>全局设置</translation>
+    </message>
+    <message>
       <source>Generate thumbnails for all eligible files</source>
       <translation>为所有符合条件的文件生成缩略图</translation>
     </message>
@@ -1611,6 +1642,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>JSON files (*.json)</source>
       <translation>JSON 文件 (*.json)</translation>
+    </message>
+    <message>
+      <source>Language</source>
+      <translation>界面语言</translation>
     </message>
     <message>
       <source>Light theme</source>
@@ -1709,6 +1744,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>移除</translation>
     </message>
     <message>
+      <source>Save</source>
+      <translation>保存</translation>
+    </message>
+    <message>
       <source>Set a custom file name for 'Copy of ...'
 
 </source>
@@ -1727,10 +1766,6 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Settings</source>
       <translation>设置</translation>
-    </message>
-    <message>
-      <source>Save</source>
-      <translation>保存</translation>
     </message>
     <message>
       <source>Shortcut</source>

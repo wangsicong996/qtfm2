@@ -69,6 +69,10 @@
   },
   {
     "context": "CustomActionSettingsWidget",
+    "source": "Each module is one custom context-menu action. Icon path overrides the bundled icon when set. Use %f, %F, %n in commands. Optional submenu groups matching titles together."
+  },
+  {
+    "context": "CustomActionSettingsWidget",
     "source": "File type"
   },
   {
@@ -105,7 +109,23 @@
   },
   {
     "context": "CustomActionSettingsWidget",
+    "source": "Submenu"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Submenu title (optional)"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
     "source": "Use 'folder' to match all folders.<br>"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Use 'folder' to match all folders.<br>Use a folder name to match a specific folder.<br>Set text to 'Open' to override xdg default.<p>%f - selected files<br>%F - selected files with full path<br>%n - current filename</p><p>Submenu: leave empty to show the action in the file context menu. Matching submenu titles are grouped under one submenu.</p>"
+  },
+  {
+    "context": "CustomActionsManager",
+    "source": "Compress"
   },
   {
     "context": "DiagnosticLog",
@@ -173,6 +193,10 @@
   },
   {
     "context": "MainWindow",
+    "source": "About Qt"
+  },
+  {
+    "context": "MainWindow",
     "source": "About thumbnails"
   },
   {
@@ -185,27 +209,15 @@
   },
   {
     "context": "MainWindow",
+    "source": "Add current path to bookmarks"
+  },
+  {
+    "context": "MainWindow",
     "source": "Add separator"
   },
   {
     "context": "MainWindow",
     "source": "Add separator to bookmarks list"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Remove separator"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Remove this separator line"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Remove this separator line?"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Clear search"
   },
   {
     "context": "MainWindow",
@@ -249,6 +261,18 @@
   },
   {
     "context": "MainWindow",
+    "source": "Clear cache"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Clear icon and thumbnail caches"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Clear search"
+  },
+  {
+    "context": "MainWindow",
     "source": "Close"
   },
   {
@@ -269,6 +293,10 @@
   },
   {
     "context": "MainWindow",
+    "source": "Copy"
+  },
+  {
+    "context": "MainWindow",
     "source": "Copy the current file"
   },
   {
@@ -286,6 +314,10 @@
   {
     "context": "MainWindow",
     "source": "Create a new text (.txt) file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Cut"
   },
   {
     "context": "MainWindow",
@@ -341,11 +373,19 @@
   },
   {
     "context": "MainWindow",
+    "source": "Favorite"
+  },
+  {
+    "context": "MainWindow",
     "source": "File"
   },
   {
     "context": "MainWindow",
     "source": "Filter current directory"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Filter files in the focused pane (Enter)"
   },
   {
     "context": "MainWindow",
@@ -425,6 +465,10 @@
   },
   {
     "context": "MainWindow",
+    "source": "Lock or unlock toolbars and docks"
+  },
+  {
+    "context": "MainWindow",
     "source": "Menu"
   },
   {
@@ -438,6 +482,10 @@
   {
     "context": "MainWindow",
     "source": "Move selected to trash"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Move the current file"
   },
   {
     "context": "MainWindow",
@@ -481,6 +529,10 @@
   },
   {
     "context": "MainWindow",
+    "source": "Open a new window"
+  },
+  {
+    "context": "MainWindow",
     "source": "Open in new tab"
   },
   {
@@ -521,6 +573,10 @@
   },
   {
     "context": "MainWindow",
+    "source": "Properties"
+  },
+  {
+    "context": "MainWindow",
     "source": "Quit"
   },
   {
@@ -537,7 +593,19 @@
   },
   {
     "context": "MainWindow",
+    "source": "Remove separator"
+  },
+  {
+    "context": "MainWindow",
     "source": "Remove this bookmark"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Remove this separator line"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Remove this separator line?"
   },
   {
     "context": "MainWindow",
@@ -590,6 +658,10 @@
   {
     "context": "MainWindow",
     "source": "Settings..."
+  },
+  {
+    "context": "MainWindow",
+    "source": "Show left and right file panes with independent navigation"
   },
   {
     "context": "MainWindow",
@@ -753,6 +825,10 @@
   },
   {
     "context": "OpenWithSettingsWidget",
+    "source": "Command"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
     "source": "Command (line 1)"
   },
   {
@@ -782,6 +858,10 @@
   {
     "context": "OpenWithSettingsWidget",
     "source": "Image"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Paste"
   },
   {
     "context": "OpenWithSettingsWidget",
@@ -1233,18 +1313,6 @@
   },
   {
     "context": "SettingsDialog",
-    "source": "General"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Custom Actions"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Language"
-  },
-  {
-    "context": "SettingsDialog",
     "source": "Application"
   },
   {
@@ -1281,14 +1349,6 @@
   },
   {
     "context": "SettingsDialog",
-    "source": "Cancel"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Save"
-  },
-  {
-    "context": "SettingsDialog",
     "source": "Bookmark group bar background"
   },
   {
@@ -1302,6 +1362,10 @@
   {
     "context": "SettingsDialog",
     "source": "Bookmarks list background"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Cancel"
   },
   {
     "context": "SettingsDialog",
@@ -1334,6 +1398,10 @@
   {
     "context": "SettingsDialog",
     "source": "Copy"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Custom Actions"
   },
   {
     "context": "SettingsDialog",
@@ -1449,6 +1517,10 @@
   },
   {
     "context": "SettingsDialog",
+    "source": "General"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Generate thumbnails for all eligible files"
   },
   {
@@ -1486,6 +1558,10 @@
   {
     "context": "SettingsDialog",
     "source": "JSON files (*.json)"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Language"
   },
   {
     "context": "SettingsDialog",
@@ -1582,6 +1658,10 @@
   {
     "context": "SettingsDialog",
     "source": "Remove"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Save"
   },
   {
     "context": "SettingsDialog",
@@ -1750,53 +1830,5 @@
   {
     "context": "uDisks2",
     "source": "Storage"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Cut"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Copy"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Clear cache"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Move the current file"
-  },
-  {
-    "context": "MainWindow",
-    "source": "About Qt"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Show left and right file panes with independent navigation"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Add current path to bookmarks"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Favorite"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Filter files in the focused pane (Enter)"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Open a new window"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Lock or unlock toolbars and docks"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Clear icon and thumbnail caches"
   }
 ]

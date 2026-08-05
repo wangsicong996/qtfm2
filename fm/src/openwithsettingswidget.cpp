@@ -135,7 +135,7 @@ OpenWithSettingsWidget::OpenWithSettingsWidget(QWidget *parent) : QWidget(parent
     auto *mainLayout = new QVBoxLayout(contentWidget);
     mainLayout->setSpacing(10);
     // Keep category cards clear of the vertical scrollbar.
-    mainLayout->setContentsMargins(0, 0, 10, 0);
+    mainLayout->setContentsMargins(0, 0, 7, 0);
 
     mainLayout->addWidget(buildSuffixSection());
 
@@ -210,7 +210,7 @@ QWidget *OpenWithSettingsWidget::buildCategorySection(const QString &categoryId)
     title->setObjectName(QStringLiteral("settingsCategoryTitle"));
     {
         QFont titleFont = title->font();
-        titleFont.setPointSize(titleFont.pointSize() + 3);
+        titleFont.setPointSize(titleFont.pointSize() + 1);
         title->setFont(titleFont);
         const QColor accent = QApplication::palette().color(QPalette::Highlight);
         title->setStyleSheet(QStringLiteral("color: %1;").arg(accent.name()));
