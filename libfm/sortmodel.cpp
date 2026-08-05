@@ -30,23 +30,39 @@ void viewsSortProxyModel::clearSingleFileFilter()
     invalidateFilter();
 }
 
-void viewsSortProxyModel::setNameSearchFilter(const QString &pattern)
+void viewsSortProxyModel::setNameSearchFilter(const QString &pattern, const QString &anchorPath)
 {
     const QString trimmed = pattern.trimmed();
-    if (m_nameSearchFilter == trimmed) {
+    const QString anchor = QDir::cleanPath(anchorPath);
+    if (m_nameSearchFilter == trimmed && m_nameSearchAnchorPath == anchor) {
         return;
     }
     m_nameSearchFilter = trimmed;
+    m_nameSearchAnchorPath = trimmed.isEmpty() ? QString() : anchor;
     invalidateFilter();
 }
 
 void viewsSortProxyModel::clearNameSearchFilter()
 {
-    if (m_nameSearchFilter.isEmpty()) {
+    if (m_nameSearchFilter.isEmpty() && m_nameSearchAnchorPath.isEmpty()) {
         return;
     }
     m_nameSearchFilter.clear();
+    m_nameSearchAnchorPath.clear();
     invalidateFilter();
+}
+
+static bool pathIsAncestorOfOrEqual(const QString &candidate, const QString &descendant)
+{
+    const QString c = QDir::cleanPath(candidate);
+    const QString d = QDir::cleanPath(descendant);
+    if (d.isEmpty()) {
+        return false;
+    }
+    if (c.isEmpty() || c == QLatin1String("/")) {
+        return true;
+    }
+    return d == c || d.startsWith(c + QLatin1Char('/'));
 }
 
 void viewsSortProxyModel::setFoldersAlwaysFirstSetting(bool foldersFirst)
@@ -140,8 +156,19 @@ bool viewsSortProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sou
     }
 
     if (!m_nameSearchFilter.isEmpty()) {
-        return fileModel->fileInfo(index0).fileName()
-            .contains(m_nameSearchFilter, Qt::CaseInsensitive);
+        const QString name = fileModel->fileInfo(index0).fileName();
+        if (name.contains(m_nameSearchFilter, Qt::CaseInsensitive)) {
+            return true;
+        }
+        // Keep the current folder and its ancestors so setRootIndex stays valid.
+        // Without this, mapFromSource(root) fails and the view goes blank / falls to "/".
+        if (fileModel->isDir(index0) && !m_nameSearchAnchorPath.isEmpty()) {
+            const QString path = fileModel->filePath(index0);
+            if (pathIsAncestorOfOrEqual(path, m_nameSearchAnchorPath)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     if (this->filterRegExp().isEmpty()) { return true; }

@@ -4,7 +4,6 @@
 #include "common.h"
 #include "icondlg.h"
 
-#include <QCheckBox>
 #include <QClipboard>
 #include <QFrame>
 #include <QGuiApplication>
@@ -69,21 +68,18 @@ CustomActionEntry parseStoredRow(const QStringList &temp)
         cmd = temp.at(3);
     }
     if (!cmd.isEmpty() && cmd.at(0) == QLatin1Char('|')) {
+        // Legacy “capture output” prefix — ignored; always strip on load.
         cmd.remove(0, 1);
-        entry.monitorOutput = true;
     }
     entry.command = cmd;
+    entry.monitorOutput = false;
     return entry;
 }
 
 QStringList serializeRow(const CustomActionEntry &entry)
 {
-    QString cmd = entry.command;
-    if (entry.monitorOutput && !cmd.isEmpty()) {
-        cmd.prepend(QLatin1Char('|'));
-    }
     return QStringList() << entry.fileType << entry.name << entry.bundledIconName
-                         << entry.iconPath << cmd;
+                         << entry.iconPath << entry.command;
 }
 
 } // namespace
@@ -101,12 +97,12 @@ CustomActionSettingsWidget::CustomActionSettingsWidget(QWidget *parent) : QWidge
 
     auto *hint = new QLabel(tr("Each module is one custom context-menu action. "
                                "Icon path overrides the bundled icon when set. "
-                               "Use %f, %F, %n in commands. Enable capture output to show stdout/stderr."));
+                               "Use %f, %F, %n in commands."));
     hint->setWordWrap(true);
     pageLayout->addWidget(hint);
 
     auto *toolbar = new QHBoxLayout();
-    auto *addBtn = new QPushButton(tr("Add action module"));
+    auto *addBtn = new QPushButton(tr("Add module"));
     SettingsUiStyles::styleAddButton(addBtn);
     connect(addBtn, &QPushButton::clicked, this, &CustomActionSettingsWidget::addActionModule);
 
@@ -193,8 +189,7 @@ void CustomActionSettingsWidget::showUsageInfo()
                             "Set text to 'Open' to override xdg default."
                             "<p>%f - selected files<br>"
                             "%F - selected files with full path<br>"
-                            "%n - current filename</p>"
-                            "<p>Enable <b>Capture output</b> to monitor stdout and stderr.</p>");
+                            "%n - current filename</p>");
     QMessageBox::information(this, tr("Usage"), info);
 }
 
@@ -207,7 +202,7 @@ void CustomActionSettingsWidget::rebuildModules()
         delete item;
     }
     if (actionEntries.isEmpty()) {
-        auto *emptyLabel = new QLabel(tr("No custom actions yet. Click “Add action module”."));
+        auto *emptyLabel = new QLabel(tr("No custom actions yet. Click “Add module”."));
         emptyLabel->setWordWrap(true);
         modulesLayout->addWidget(emptyLabel);
     } else {
@@ -251,17 +246,14 @@ QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
     row2->addWidget(iconPathEdit, 1);
     row2->addWidget(pasteIconBtn);
 
-    // Row 3: command + paste + capture output
+    // Row 3: command + paste
     auto *row3 = new QHBoxLayout();
     auto *cmdEdit = new QLineEdit(entry->command);
     cmdEdit->setPlaceholderText(tr("Shell command"));
     auto *pasteCmdBtn = new QPushButton(tr("Paste"));
-    auto *monitorCheck = new QCheckBox(tr("Capture output"));
-    monitorCheck->setChecked(entry->monitorOutput);
     row3->addWidget(new QLabel(tr("Command")));
     row3->addWidget(cmdEdit, 1);
     row3->addWidget(pasteCmdBtn);
-    row3->addWidget(monitorCheck);
 
     mainLay->addLayout(row1);
     mainLay->addLayout(row2);
@@ -284,9 +276,6 @@ QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
     });
     connect(cmdEdit, &QLineEdit::textChanged, [entry](const QString &t) {
         entry->command = t;
-    });
-    connect(monitorCheck, &QCheckBox::toggled, [entry](bool on) {
-        entry->monitorOutput = on;
     });
     connect(pasteIconBtn, &QPushButton::clicked, [iconPathEdit]() {
         pasteClipboardInto(iconPathEdit);

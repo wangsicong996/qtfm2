@@ -27,7 +27,8 @@ HEADERS += \
     src/pathcombodelegate.h \
     src/diagnosticlog.h \
     src/filebrowserpane.h \
-    src/uicolors.h
+    src/uicolors.h \
+    src/toggleswitch.h
 
 SOURCES += \
     src/main.cpp \
@@ -46,7 +47,8 @@ SOURCES += \
     src/pathcombodelegate.cpp \
     src/diagnosticlog.cpp \
     src/filebrowserpane.cpp \
-    src/uicolors.cpp
+    src/uicolors.cpp \
+    src/toggleswitch.cpp
 
 RESOURCES += $${top_srcdir}/share/$${TARGET}.qrc \
               $${top_srcdir}/share/mimes.qrc \

@@ -37,10 +37,13 @@ public:
     void clearSingleFileFilter();
     bool hasSingleFileFilter() const { return !m_singleFileCanonical.isEmpty(); }
 
-    /** Case-insensitive substring filter on file names (empty = no filter). */
-    void setNameSearchFilter(const QString &pattern);
+    /** Case-insensitive substring filter on file names (empty = no filter).
+     *  @param anchorPath current folder path — its ancestors stay visible so
+     *         mapFromSource(root) remains valid while filtering. */
+    void setNameSearchFilter(const QString &pattern, const QString &anchorPath = QString());
     void clearNameSearchFilter();
     QString nameSearchFilter() const { return m_nameSearchFilter; }
+    QString nameSearchAnchorPath() const { return m_nameSearchAnchorPath; }
 
     void setFoldersAlwaysFirstSetting(bool foldersFirst);
     bool foldersAlwaysFirstSetting() const { return m_foldersAlwaysFirstSetting; }
@@ -60,6 +63,7 @@ protected:
 private:
     QString m_singleFileCanonical;
     QString m_nameSearchFilter;
+    QString m_nameSearchAnchorPath;
     bool m_foldersAlwaysFirstSetting = true;
     bool m_foldersAlwaysFirstIconSetting = true;
     bool m_iconViewSortContext = false;

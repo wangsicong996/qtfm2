@@ -3,10 +3,13 @@
 
 #include <QHash>
 #include <QString>
+#include <QStringList>
 #include <QWidget>
 
+class QFormLayout;
 class QVBoxLayout;
 class QScrollArea;
+struct OpenWithEntry;
 
 class OpenWithSettingsWidget : public QWidget {
     Q_OBJECT
@@ -22,6 +25,7 @@ private slots:
 private:
     QWidget *buildSuffixSection();
     QWidget *buildCategorySection(const QString &categoryId);
+    void fillEntryForm(QFormLayout *form, OpenWithEntry *entry, const QStringList &suffixesHint);
 
     QScrollArea *scrollArea;
     QVBoxLayout *suffixModulesLayout;

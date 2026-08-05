@@ -54,6 +54,7 @@
 #include "sidebaritemdelegate.h"
 #include "pathcombodelegate.h"
 #include "uicolors.h"
+#include "apptranslator.h"
 
 #include <QLayout>
 
@@ -480,7 +481,9 @@ MainWindow::MainWindow(const QString &forcedStartPath)
     searchEdit->setMinimumWidth(140);
     searchEdit->setMaximumWidth(kSearchBarWidth);
     searchEdit->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    searchEdit->setToolTip(tr("Filter files in the current folder (Enter)"));
+    searchEdit->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    searchEdit->setTextMargins(4, 0, 4, 0);
+    searchEdit->setToolTip(tr("Filter files in the focused pane (Enter)"));
     connect(searchEdit, &QLineEdit::returnPressed, this, &MainWindow::applyNameSearch);
     connect(searchEdit, &QLineEdit::textChanged, this, [this](const QString &text) {
         if (text.isEmpty()) {
@@ -938,6 +941,9 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   copyXof = settings->value("copyXof", COPY_X_OF).toString();
   copyXofTS = settings->value("copyXofTS", COPY_X_TS).toString();
 
+  reloadUiColorCache();
+  applySingleClickMode();
+
 #if QT_VERSION >= 0x050000
   applyThemeFromSettings();
 #endif
@@ -949,8 +955,6 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   if (dualPaneAct) {
       dualPaneAct->setChecked(m_dualPaneEnabled);
   }
-
-  applyFilePaneChrome();
 
   modelList->setMode(thumbsAct->isChecked());
   if (thumbsAct->isChecked()) {
@@ -1211,17 +1215,13 @@ void MainWindow::treeSelectionChanged(QModelIndex current, QModelIndex previous)
     QFileInfo name = modelList->fileInfo(modelTree->mapToSource(current));
     if (!name.exists() || name.isFile()) { return; }
 
+    // Clear name search when navigating.
     if (skipNextSingleFileClear) {
         skipNextSingleFileClear = false;
     } else {
         modelView->clearSingleFileFilter();
         pendingSingleFileTarget.clear();
-        // Clear name search when navigating the pane that owns the search UI (left / single).
-        if (!m_dualPaneEnabled || m_activePaneIndex == 0) {
-            clearNameSearch();
-        } else if (modelView) {
-            modelView->clearNameSearchFilter();
-        }
+        clearNameSearch();
     }
 
     curIndex = name;
@@ -1540,18 +1540,42 @@ void MainWindow::tabsOnTop()
     applyViewChromeStyles();
 }
 
+void MainWindow::reloadUiColorCache()
+{
+    if (!settings) {
+        m_uiColorsLight = UiColorSet();
+        m_uiColorsDark = UiColorSet();
+        m_uiColorsCached = false;
+        return;
+    }
+    UiColors::load(settings, &m_uiColorsLight, &m_uiColorsDark);
+    m_uiColorsCached = true;
+}
+
+const UiColorSet &MainWindow::activeUiColorSet() const
+{
+    const bool darkUi = settings && settings->value(QStringLiteral("darkTheme")).toBool();
+    return darkUi ? m_uiColorsDark : m_uiColorsLight;
+}
+
 void MainWindow::applyThemeFromSettings()
 {
 #if QT_VERSION >= 0x050000
     if (!settings) {
         return;
     }
+    const bool wasEnabled = updatesEnabled();
+    setUpdatesEnabled(false);
+
     const bool darkUi = settings->value(QStringLiteral("darkTheme")).toBool();
     BundledIcons::setUiDarkMode(darkUi);
     qApp->setPalette(darkUi ? Common::darkTheme() : Common::lightTheme());
 #ifdef Q_OS_MAC
     MacFileAccess::setApplicationAppearance(darkUi);
 #endif
+    if (!m_uiColorsCached) {
+        reloadUiColorCache();
+    }
     refreshBundledUiIcons();
     applyWidgetPalettes();
     applyViewChromeStyles();
@@ -1562,13 +1586,375 @@ void MainWindow::applyThemeFromSettings()
     if (modelList) {
         modelList->refreshForegroundRoles();
     }
-    if (list && list->viewport()) {
-        list->viewport()->update();
+    for (int pi = 0; pi < 2; ++pi) {
+        if (!m_filePane[pi]) {
+            continue;
+        }
+        if (m_filePane[pi]->listView() && m_filePane[pi]->listView()->viewport()) {
+            m_filePane[pi]->listView()->viewport()->update();
+        }
+        if (m_filePane[pi]->detailTree() && m_filePane[pi]->detailTree()->viewport()) {
+            m_filePane[pi]->detailTree()->viewport()->update();
+        }
     }
-    if (detailTree && detailTree->viewport()) {
-        detailTree->viewport()->update();
-    }
+
+    setUpdatesEnabled(wasEnabled);
 #endif
+}
+
+void MainWindow::applySettingsFromDialog()
+{
+    if (!settings) {
+        return;
+    }
+
+    const bool wasEnabled = updatesEnabled();
+    setUpdatesEnabled(false);
+
+    // Lightweight apply path — avoids reloading bookmarks / full loadSettings.
+    const int legacyV = settings->value("topModuleGapV", 5).toInt();
+    const int legacyH = settings->value("topModuleGapH", 8).toInt();
+    const int topGap = settings->value("topModuleGap", qMax(legacyV, legacyH)).toInt();
+    topModuleGapV = topGap;
+    topModuleGapH = topGap;
+    applyNavToolBarInsets();
+
+    zoom = settings->value("zoom", 48).toInt();
+    zoomDetail = settings->value("zoomDetail", 32).toInt();
+    bookmarkGroupTabSize = settings->value("bookmarkGroupTabSize", 40).toInt();
+    const int legacyGap = settings->value("iconViewGap", 4).toInt();
+    iconViewGapH = settings->value("iconViewGapH", legacyGap).toInt();
+    iconViewGapV = settings->value("iconViewGapV", legacyGap).toInt();
+    if (ivdelegate) {
+        ivdelegate->setCellGaps(iconViewGapH, iconViewGapV);
+    }
+    updateGrid();
+    if (detailTree) {
+        detailTree->setIconSize(QSize(zoomDetail, zoomDetail));
+    }
+    for (int pi = 0; pi < 2; ++pi) {
+        if (m_filePane[pi] && m_filePane[pi]->detailTree()) {
+            const int h = qMax(18, zoomDetail);
+            const int iconSz = qMax(16, h - 4);
+            m_filePane[pi]->detailTree()->setIconSize(QSize(iconSz, iconSz));
+            m_filePane[pi]->detailTree()->setIndentation(0);
+        }
+    }
+    if (bookmarkGroupBar) {
+        bookmarkGroupBar->setTabButtonSize(bookmarkGroupTabSize);
+    }
+    applyListColumnWidths();
+
+    if (modelView) {
+        modelView->setFoldersAlwaysFirstSetting(
+            settings->value("foldersAlwaysFirst", true).toBool());
+        modelView->setFoldersAlwaysFirstIconSetting(
+            settings->value("foldersAlwaysFirstIcon", true).toBool());
+    }
+    applySortToAllFilePanes();
+
+    term = settings->value("term", "xterm").toString();
+    if (homeAct) {
+        homeAct->setVisible(settings->value("home_button", true).toBool());
+    }
+    if (newTabAct) {
+        newTabAct->setVisible(settings->value("newtab_button", false).toBool());
+    }
+    if (terminalAct) {
+        terminalAct->setVisible(settings->value("terminal_button", true).toBool());
+    }
+
+    pathHistory = settings->value("pathHistory", true).toBool();
+    showPathInWindowTitle = settings->value("windowTitlePath", true).toBool();
+    if (!showPathInWindowTitle) {
+        setWindowTitle(APP_NAME);
+    } else if (!curIndex.filePath().isEmpty()) {
+        const QString folderPart = curIndex.fileName().isEmpty()
+                                       ? curIndex.absolutePath()
+                                       : curIndex.fileName();
+        setWindowTitle(QStringLiteral("%1 — %2").arg(QLatin1String(APP_NAME), folderPart));
+    }
+
+    copyXof = settings->value("copyXof", COPY_X_OF).toString();
+    copyXofTS = settings->value("copyXofTS", COPY_X_TS).toString();
+
+    reloadUiColorCache();
+    applySingleClickMode();
+#if QT_VERSION >= 0x050000
+    applyThemeFromSettings();
+#endif
+    applyModuleTogglesFromSettings();
+    applyLanguageFromSettings();
+
+    ThumbDiag::setLoggingEnabled(settings->value(QStringLiteral("logThumbnailDiag"), true).toBool());
+    OpenWithConfig::load(settings);
+
+    if (modelList) {
+        modelList->setMode(thumbsAct && thumbsAct->isChecked());
+        // fileColor / theme foreground only — skip full icon cache wipe when possible
+        modelList->refreshForegroundRoles();
+    }
+
+    setUpdatesEnabled(wasEnabled);
+}
+
+void MainWindow::applyLanguageFromSettings()
+{
+    if (!settings) {
+        return;
+    }
+    static QString s_appliedLang;
+    static bool s_haveApplied = false;
+    const QString want = AppTranslator::normalizedLanguageCode(
+        settings->value(QStringLiteral("uiLanguage"), QStringLiteral("system")).toString());
+    if (s_haveApplied && want == s_appliedLang) {
+        return;
+    }
+    const bool languageChanged = s_haveApplied && want != s_appliedLang;
+    AppTranslator::installForApplication(qApp, want);
+    s_appliedLang = want;
+    s_haveApplied = true;
+    if (languageChanged) {
+        retranslateUi();
+    }
+}
+
+void MainWindow::retranslateUi()
+{
+    // Actions / menus
+    if (newDirAct) {
+        newDirAct->setText(tr("New folder"));
+        newDirAct->setStatusTip(tr("Create a new folder"));
+    }
+    if (newFileAct) {
+        newFileAct->setText(tr("New file"));
+        newFileAct->setStatusTip(tr("Create a new file"));
+    }
+    if (newMdFileAct) {
+        newMdFileAct->setText(tr("New Markdown file"));
+        newMdFileAct->setStatusTip(tr("Create a new Markdown (.md) file"));
+    }
+    if (newTxtFileAct) {
+        newTxtFileAct->setText(tr("New text file"));
+        newTxtFileAct->setStatusTip(tr("Create a new text (.txt) file"));
+    }
+    if (newWinAct) {
+        newWinAct->setText(tr("New window"));
+    }
+    if (openTabAct) {
+        openTabAct->setText(tr("New tab"));
+        openTabAct->setStatusTip(tr("Middle-click things to open tab"));
+    }
+    if (openInTabAct) {
+        openInTabAct->setText(tr("Open in new tab"));
+    }
+    if (openInNewWindowAct) {
+        openInNewWindowAct->setText(tr("Open in new window"));
+    }
+    if (closeTabAct) {
+        closeTabAct->setText(tr("Close tab"));
+        closeTabAct->setStatusTip(tr("Middle-click tabs to close"));
+    }
+    if (tabsOnTopAct) {
+        tabsOnTopAct->setText(tr("Tabs on top"));
+        tabsOnTopAct->setStatusTip(tr("Tabs on top"));
+    }
+    if (cutAct) {
+        cutAct->setText(tr("Cut"));
+        cutAct->setStatusTip(tr("Move the current file"));
+    }
+    if (copyAct) {
+        copyAct->setText(tr("Copy"));
+        copyAct->setStatusTip(tr("Copy the current file"));
+    }
+    if (pasteAct) {
+        pasteAct->setText(tr("Paste"));
+        pasteAct->setStatusTip(tr("Paste the file here"));
+    }
+    if (upAct) {
+        upAct->setText(tr("Up"));
+        upAct->setStatusTip(tr("Go up one directory"));
+    }
+    if (dualPaneAct) {
+        dualPaneAct->setText(tr("Dual pane"));
+        dualPaneAct->setStatusTip(tr("Show left and right file panes with independent navigation"));
+    }
+    if (backAct) {
+        backAct->setText(tr("Back"));
+        backAct->setStatusTip(tr("Go back one directory"));
+    }
+    if (homeAct) {
+        homeAct->setText(tr("Home"));
+        homeAct->setStatusTip(tr("Go to home directory"));
+    }
+    if (newTabAct) {
+        newTabAct->setText(tr("New tab"));
+        newTabAct->setStatusTip(tr("Open new tab"));
+    }
+    if (listViewAct) {
+        listViewAct->setText(tr("List view"));
+        listViewAct->setStatusTip(tr("List view with columns (no icons)"));
+    }
+    if (iconAct) {
+        iconAct->setText(tr("Icon view"));
+        iconAct->setStatusTip(tr("Icon view"));
+    }
+    if (sortNameAct) {
+        sortNameAct->setText(tr("Name"));
+        sortNameAct->setStatusTip(tr("Sort icons by name"));
+    }
+    if (sortDateAct) {
+        sortDateAct->setText(tr("Date"));
+        sortDateAct->setStatusTip(tr("Sort icons by date"));
+    }
+    if (sortSizeAct) {
+        sortSizeAct->setText(tr("Size"));
+        sortSizeAct->setStatusTip(tr("Sort icons by size"));
+    }
+    if (sortAscAct) {
+        sortAscAct->setText(tr("Ascending"));
+        sortAscAct->setStatusTip(tr("Sort icons in ascending order"));
+    }
+    if (hiddenAct) {
+        hiddenAct->setText(tr("Hidden files"));
+        hiddenAct->setStatusTip(tr("Toggle hidden files"));
+    }
+    if (addBookmarkAct) {
+        addBookmarkAct->setText(tr("Add bookmark"));
+        addBookmarkAct->setStatusTip(tr("Add this folder to bookmarks"));
+    }
+    if (favoriteAct) {
+        favoriteAct->setText(tr("Favorite"));
+        favoriteAct->setStatusTip(tr("Bookmark the current path into the active bookmark group"));
+        favoriteAct->setToolTip(tr("Add current path to bookmarks"));
+    }
+    if (addSeparatorAct) {
+        addSeparatorAct->setText(tr("Add separator"));
+        addSeparatorAct->setStatusTip(tr("Add separator to bookmarks list"));
+    }
+    if (delBookmarkAct) {
+        delBookmarkAct->setText(tr("Remove bookmark"));
+        delBookmarkAct->setStatusTip(tr("Remove this bookmark"));
+    }
+    if (removeSeparatorAct) {
+        removeSeparatorAct->setText(tr("Remove separator"));
+        removeSeparatorAct->setStatusTip(tr("Remove this separator line"));
+    }
+    if (refreshAct) {
+        refreshAct->setText(tr("Refresh"));
+    }
+    if (zoomInAct) {
+        zoomInAct->setText(tr("Zoom in"));
+    }
+    if (zoomOutAct) {
+        zoomOutAct->setText(tr("Zoom out"));
+    }
+    if (settingsAct) {
+        settingsAct->setText(tr("Settings..."));
+        settingsAct->setStatusTip(tr("Edit custom actions"));
+    }
+    if (renameAct) {
+        renameAct->setText(tr("Rename"));
+        renameAct->setStatusTip(tr("Rename file"));
+    }
+    if (deleteAct) {
+        deleteAct->setText(tr("Delete"));
+        deleteAct->setStatusTip(tr("Delete selected"));
+    }
+    if (trashAct) {
+        trashAct->setText(tr("Move to Trash"));
+        trashAct->setStatusTip(tr("Move selected to trash"));
+    }
+    if (terminalAct) {
+        terminalAct->setText(tr("Terminal"));
+        terminalAct->setStatusTip(tr("Open virtual terminal"));
+    }
+    if (openAct) {
+        openAct->setText(tr("Open"));
+        openAct->setStatusTip(tr("Open the file"));
+    }
+    if (thumbsAct) {
+        thumbsAct->setText(tr("Show thumbs"));
+        thumbsAct->setStatusTip(tr("View thumbnails for image files"));
+    }
+    if (lockLayoutAct) {
+        lockLayoutAct->setText(tr("Lock layout"));
+    }
+    if (clearCacheAct) {
+        clearCacheAct->setText(tr("Clear cache"));
+    }
+    if (aboutAct) {
+        aboutAct->setText(tr("About %1").arg(APP_NAME));
+    }
+    if (aboutQtAct) {
+        aboutQtAct->setText(tr("About Qt"));
+    }
+    if (viewDiagnosticLogAct) {
+        viewDiagnosticLogAct->setText(tr("View diagnostic log…"));
+        viewDiagnosticLogAct->setStatusTip(tr("Open warnings and errors saved from previous sessions"));
+    }
+    if (thumbnailHelpAct) {
+        thumbnailHelpAct->setText(tr("About thumbnails…"));
+        thumbnailHelpAct->setStatusTip(tr("How to enable and configure file thumbnails"));
+    }
+    if (dualPaneHelpAct) {
+        dualPaneHelpAct->setText(tr("Dual-pane usage…"));
+        dualPaneHelpAct->setStatusTip(tr("Toolbar dual pane and command-line examples"));
+    }
+    if (exitAct) {
+        exitAct->setText(tr("Quit"));
+        exitAct->setStatusTip(tr("Quit %1").arg(APP_NAME));
+    }
+    if (closeAct) {
+        closeAct->setText(tr("Close"));
+        closeAct->setStatusTip(tr("Close %1").arg(APP_NAME));
+    }
+
+    if (sortMenu) {
+        sortMenu->setTitle(tr("Sort By"));
+    }
+    if (fileMenuPtr) {
+        fileMenuPtr->setTitle(tr("File"));
+    }
+    if (editMenuPtr) {
+        editMenuPtr->setTitle(tr("Edit"));
+    }
+    if (viewMenuPtr) {
+        viewMenuPtr->setTitle(tr("View"));
+    }
+    if (helpMenuPtr) {
+        helpMenuPtr->setTitle(tr("Help"));
+    }
+    if (layoutMenuPtr) {
+        layoutMenuPtr->setTitle(tr("Layout"));
+    }
+
+    if (dockTree) {
+        dockTree->setWindowTitle(tr("Tree"));
+    }
+    if (dockBookmarks) {
+        dockBookmarks->setWindowTitle(tr("Places"));
+    }
+    if (sidebarTabs) {
+        if (bookmarkPage) {
+            const int bi = sidebarTabs->indexOf(bookmarkPage);
+            if (bi >= 0) {
+                sidebarTabs->setTabText(bi, tr("Bookmarks"));
+            }
+        }
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
+        if (disksList) {
+            const int di = sidebarTabs->indexOf(disksList);
+            if (di >= 0) {
+                sidebarTabs->setTabText(di, tr("Disks"));
+            }
+        }
+#endif
+    }
+    if (searchEdit) {
+        searchEdit->setPlaceholderText(tr("Search…"));
+        searchEdit->setToolTip(tr("Filter files in the focused pane (Enter)"));
+    }
 }
 
 void MainWindow::applyWidgetPalettes()
@@ -1633,13 +2019,10 @@ void MainWindow::applyViewChromeStyles()
         ? QStringLiteral(":/icons/toolbar/white/chevron-down.svg")
         : QStringLiteral(":/icons/toolbar/chevron-down.svg");
 
-    UiColorSet uiColors;
-    if (settings) {
-        UiColorSet light;
-        UiColorSet dark;
-        UiColors::load(settings, &light, &dark);
-        uiColors = darkUi ? dark : light;
+    if (!m_uiColorsCached) {
+        reloadUiColorCache();
     }
+    const UiColorSet &uiColors = activeUiColorSet();
 
     QColor highlight = pal.highlight().color();
     QColor hover = highlight;
@@ -1797,15 +2180,16 @@ void MainWindow::applyViewChromeStyles()
     }
 
     if (searchEdit) {
-        const QString pathBarH = QString::number(kPathBarHeight);
         const QString searchQss = QStringLiteral(
             "QLineEdit#fileSearchEdit {"
             " background: %1; border: 1px solid %2; border-radius: 4px;"
-            " padding: 2px 8px; min-height: %3px; max-height: %3px; }"
+            " padding: 0px 6px; }"
             "QLineEdit#fileSearchEdit:hover { border: 1px solid %2; }"
-            "QLineEdit#fileSearchEdit:focus { border: 1px solid %4; }"
-        ).arg(controlBg.name(), flatBorder.name(), pathBarH,
-              selected.name());
+            "QLineEdit#fileSearchEdit:focus { border: 1px solid %3; }"
+            "QLineEdit#fileSearchEdit QToolButton {"
+            " margin: 0px 2px 0px 0px; padding: 0px; border: none;"
+            " background: transparent; }"
+        ).arg(controlBg.name(), flatBorder.name(), selected.name());
         searchEdit->setStyleSheet(searchQss);
         searchEdit->setFixedHeight(kPathBarHeight);
     }
@@ -3621,27 +4005,46 @@ void MainWindow::wireFilePane(FileBrowserPane *pane)
     connect(dt, &QTreeView::activated, this, &MainWindow::listDoubleClicked);
     connect(lv, &QListView::pressed, this, &MainWindow::listItemPressed);
     connect(dt, &QTreeView::pressed, this, &MainWindow::listItemPressed);
-    const int singleClick = settings->value(QStringLiteral("singleClick")).toInt();
-    if (singleClick == 1) {
-        connect(lv, &QListView::clicked, this, &MainWindow::listItemClicked);
-        connect(dt, &QTreeView::clicked, this, &MainWindow::listItemClicked);
-    } else if (singleClick == 2) {
-        connect(lv, &QListView::clicked, this, &MainWindow::listDoubleClicked);
-        connect(dt, &QTreeView::clicked, this, &MainWindow::listDoubleClicked);
+}
+
+void MainWindow::applySingleClickMode()
+{
+    if (!settings) {
+        return;
+    }
+    m_singleClickMode = settings->value(QStringLiteral("singleClick"), 0).toInt();
+
+    for (int pi = 0; pi < 2; ++pi) {
+        if (!m_filePane[pi]) {
+            continue;
+        }
+        IconFileListView *lv = m_filePane[pi]->listView();
+        DfmQTreeView *dt = m_filePane[pi]->detailTree();
+        if (!lv || !dt) {
+            continue;
+        }
+        disconnect(lv, &QListView::clicked, this, &MainWindow::listItemClicked);
+        disconnect(dt, &QTreeView::clicked, this, &MainWindow::listItemClicked);
+        disconnect(lv, &QListView::clicked, this, &MainWindow::listDoubleClicked);
+        disconnect(dt, &QTreeView::clicked, this, &MainWindow::listDoubleClicked);
+
+        if (m_singleClickMode == 1) {
+            connect(lv, &QListView::clicked, this, &MainWindow::listItemClicked);
+            connect(dt, &QTreeView::clicked, this, &MainWindow::listItemClicked);
+        } else if (m_singleClickMode == 2) {
+            connect(lv, &QListView::clicked, this, &MainWindow::listDoubleClicked);
+            connect(dt, &QTreeView::clicked, this, &MainWindow::listDoubleClicked);
+        }
     }
 }
 
 void MainWindow::applyFilePaneChrome()
 {
     const QColor base = qApp->palette().color(QPalette::Base);
-    const bool darkUi = settings && settings->value(QStringLiteral("darkTheme")).toBool();
-    UiColorSet uiColors;
-    if (settings) {
-        UiColorSet light;
-        UiColorSet dark;
-        UiColors::load(settings, &light, &dark);
-        uiColors = darkUi ? dark : light;
+    if (!m_uiColorsCached) {
+        reloadUiColorCache();
     }
+    const UiColorSet &uiColors = activeUiColorSet();
 
     const QColor inactiveDefault = base;
     const QColor activeDefault = (base.lightness() < 128) ? base.lighter(125) : base.darker(118);
@@ -3784,6 +4187,16 @@ void MainWindow::setActivePaneIndex(int paneIndex)
     listSelectionModel = pane->selectionModel();
 
     loadPathBarFromPane(pane);
+
+    // Search box follows the focused pane's filter.
+    if (searchEdit) {
+        const QString filter = modelView ? modelView->nameSearchFilter() : QString();
+        if (searchEdit->text() != filter) {
+            searchEdit->blockSignals(true);
+            searchEdit->setText(filter);
+            searchEdit->blockSignals(false);
+        }
+    }
 
     const QString path = pane->currentPath();
     if (!path.isEmpty() && QFileInfo(path).isDir()) {
@@ -3958,8 +4371,11 @@ void MainWindow::captureWindowToTabSession(int index)
         session->rightForward = m_filePane[1]->forwardStack();
     }
 
-    if (searchEdit) {
-        session->searchFilter = searchEdit->text();
+    if (m_filePane[0] && m_filePane[0]->proxyModel()) {
+        session->leftSearchFilter = m_filePane[0]->proxyModel()->nameSearchFilter();
+    }
+    if (m_filePane[1] && m_filePane[1]->proxyModel()) {
+        session->rightSearchFilter = m_filePane[1]->proxyModel()->nameSearchFilter();
     }
 
     // Keep legacy tab history / tabData aligned with the left pane.
@@ -4120,31 +4536,34 @@ void MainWindow::restoreTabPaneSession(int index)
         setWindowTitle(QStringLiteral("%1 — %2").arg(QLatin1String(APP_NAME), folderPart));
     }
 
-    // Restore search on left pane only when the filter text actually changes.
-    const QString wantFilter = session->searchFilter;
-    const QString curFilter = searchEdit ? searchEdit->text() : QString();
-    if (searchEdit && curFilter != wantFilter) {
+    // Restore per-pane search filters (focused pane's text goes into the search box).
+    const QString leftFilter = session->leftSearchFilter;
+    const QString rightFilter = session->rightSearchFilter;
+    const QString wantFilter = (wantActive == 1) ? rightFilter : leftFilter;
+    if (searchEdit && searchEdit->text() != wantFilter) {
         searchEdit->blockSignals(true);
         searchEdit->setText(wantFilter);
         searchEdit->blockSignals(false);
     }
-    if (m_filePane[0]->proxyModel()
-        && m_filePane[0]->proxyModel()->nameSearchFilter() != wantFilter) {
-        m_filePane[0]->proxyModel()->setNameSearchFilter(wantFilter);
+    if (m_filePane[0] && m_filePane[0]->proxyModel()) {
+        m_filePane[0]->proxyModel()->setNameSearchFilter(leftFilter, session->leftPath);
     }
-    if (m_filePane[1] && m_filePane[1]->proxyModel()
-        && !m_filePane[1]->proxyModel()->nameSearchFilter().isEmpty()) {
-        m_filePane[1]->proxyModel()->clearNameSearchFilter();
+    if (m_filePane[1] && m_filePane[1]->proxyModel()) {
+        if (m_dualPaneEnabled) {
+            m_filePane[1]->proxyModel()->setNameSearchFilter(rightFilter, session->rightPath);
+        } else {
+            m_filePane[1]->proxyModel()->clearNameSearchFilter();
+        }
     }
 
     if (activeChanged || m_dualPaneEnabled != oldDual) {
         applyFilePaneChrome();
     }
-    if (leftChanged || rightChanged || m_dualPaneEnabled != oldDual) {
-        syncAllFilePaneRootIndices();
-        if (currentView == 1) {
-            updateGrid();
-        }
+    // Always re-bind roots after search filters — filtered proxies invalidate mapFromSource.
+    syncAllFilePaneRootIndices();
+    if (currentView == 1 && (leftChanged || rightChanged || m_dualPaneEnabled != oldDual
+                             || !leftFilter.isEmpty() || !rightFilter.isEmpty())) {
+        updateGrid();
     }
 
     updateTabChromeFromLeftPane();
@@ -4153,32 +4572,38 @@ void MainWindow::restoreTabPaneSession(int index)
 
 void MainWindow::applyNameSearch()
 {
-    if (!searchEdit || !m_filePane[0]) {
+    if (!searchEdit) {
         return;
     }
+    FileBrowserPane *pane = activeFilePane();
+    if (!pane || !pane->proxyModel()) {
+        return;
+    }
+
     const QString text = searchEdit->text().trimmed();
-
-    // Dual-pane: search results always show on the left.
-    if (m_dualPaneEnabled && m_activePaneIndex != 0) {
-        setActivePaneIndex(0);
+    QString anchor = pane->currentPath();
+    if (anchor.isEmpty() && pathEdit && pathEdit->count() > 0) {
+        anchor = pathEdit->itemText(0);
     }
 
-    if (m_filePane[0]->proxyModel()) {
-        m_filePane[0]->proxyModel()->setNameSearchFilter(text);
-        if (m_filePane[0]->listView() && m_filePane[0]->listView()->viewport()) {
-            m_filePane[0]->listView()->viewport()->update();
-        }
-        if (m_filePane[0]->detailTree() && m_filePane[0]->detailTree()->viewport()) {
-            m_filePane[0]->detailTree()->viewport()->update();
-        }
+    pane->proxyModel()->setNameSearchFilter(text, anchor);
+    // Re-bind root after filtering so the view does not fall back to "/".
+    syncFilePaneRootIndex(pane);
+
+    if (pane->listView() && pane->listView()->viewport()) {
+        pane->listView()->viewport()->update();
     }
-    if (m_filePane[1] && m_filePane[1]->proxyModel()) {
-        m_filePane[1]->proxyModel()->clearNameSearchFilter();
+    if (pane->detailTree() && pane->detailTree()->viewport()) {
+        pane->detailTree()->viewport()->update();
     }
 
     if (tabs && tabs->count() > 0) {
         if (TabPaneSession *s = tabs->sessionAt(tabs->currentIndex())) {
-            s->searchFilter = text;
+            if (pane->paneIndex() == 1) {
+                s->rightSearchFilter = text;
+            } else {
+                s->leftSearchFilter = text;
+            }
         }
     }
 }
@@ -4190,20 +4615,27 @@ void MainWindow::clearNameSearch()
         searchEdit->clear();
         searchEdit->blockSignals(false);
     }
-    for (int i = 0; i < 2; ++i) {
-        if (m_filePane[i] && m_filePane[i]->proxyModel()) {
-            m_filePane[i]->proxyModel()->clearNameSearchFilter();
-            if (m_filePane[i]->listView() && m_filePane[i]->listView()->viewport()) {
-                m_filePane[i]->listView()->viewport()->update();
-            }
-            if (m_filePane[i]->detailTree() && m_filePane[i]->detailTree()->viewport()) {
-                m_filePane[i]->detailTree()->viewport()->update();
-            }
+
+    // Clear filter on the focused pane (and keep the other pane untouched in dual-pane).
+    FileBrowserPane *pane = activeFilePane();
+    if (pane && pane->proxyModel()) {
+        pane->proxyModel()->clearNameSearchFilter();
+        syncFilePaneRootIndex(pane);
+        if (pane->listView() && pane->listView()->viewport()) {
+            pane->listView()->viewport()->update();
+        }
+        if (pane->detailTree() && pane->detailTree()->viewport()) {
+            pane->detailTree()->viewport()->update();
         }
     }
+
     if (tabs && tabs->count() > 0) {
         if (TabPaneSession *s = tabs->sessionAt(tabs->currentIndex())) {
-            s->searchFilter.clear();
+            if (pane && pane->paneIndex() == 1) {
+                s->rightSearchFilter.clear();
+            } else {
+                s->leftSearchFilter.clear();
+            }
         }
     }
 }

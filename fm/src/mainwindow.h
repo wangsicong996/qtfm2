@@ -48,6 +48,7 @@ class QTimer;
 #include <QVector>
 
 #include "mymodel.h"
+#include "uicolors.h"
 #include "bookmarkmodel.h"
 #include "disksmodel.h"
 #include "propertiesdlg.h"
@@ -169,6 +170,12 @@ public slots:
     void applyViewChromeStyles();
     void applyNavToolBarInsets();
     void applyWidgetPalettes();
+    void applySettingsFromDialog();
+    void applySingleClickMode();
+    void applyLanguageFromSettings();
+    void retranslateUi();
+    void reloadUiColorCache();
+    const UiColorSet &activeUiColorSet() const;
     void syncPathComboDecorations();
     void applyNameSearch();
     void clearNameSearch();
@@ -379,6 +386,16 @@ private:
     QAction *listViewAct;
     QActionGroup *viewModeActGrp;
     QMenu *sortMenu = nullptr;
+    QMenu *fileMenuPtr = nullptr;
+    QMenu *editMenuPtr = nullptr;
+    QMenu *viewMenuPtr = nullptr;
+    QMenu *helpMenuPtr = nullptr;
+    QMenu *layoutMenuPtr = nullptr;
+
+    UiColorSet m_uiColorsLight;
+    UiColorSet m_uiColorsDark;
+    bool m_uiColorsCached = false;
+    int m_singleClickMode = 0;
     QActionGroup *sortByActGrp;
     QAction *sortNameAct;
     QAction *sortDateAct;

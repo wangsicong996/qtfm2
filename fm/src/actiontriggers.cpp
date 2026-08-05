@@ -1187,28 +1187,28 @@ void MainWindow::showEditDialog() {
   // save settings
   writeSettings();
 
+  const bool oldFileColor = settings->value(QStringLiteral("fileColor")).toBool();
+  const int oldThumbMode = settings->value(QStringLiteral("thumbnailGenerationMode"), 0).toInt();
+
   // Creates settings dialog
   SettingsDialog *d = new SettingsDialog(actionList, settings, mimeUtils, this);
-    if (d->exec()) {
+  if (d->exec()) {
+    applySettingsFromDialog();
 
-    ThumbDiag::setLoggingEnabled(settings->value(QStringLiteral("logThumbnailDiag"), true).toBool());
+    const bool fileColorChanged =
+        oldFileColor != settings->value(QStringLiteral("fileColor")).toBool();
+    const bool thumbModeChanged =
+        oldThumbMode != settings->value(QStringLiteral("thumbnailGenerationMode"), 0).toInt();
 
-    // Reload settings
-    loadSettings(false /* don't reload window state/geo */,
-                 false /* don't reload hidden state */,
-                 false /* don't reload tabs state */,
-                 false /* don't reload thumb state */);
-
-    applyModuleTogglesFromSettings();
-    applySortToAllFilePanes();
-    applyFilePaneChrome();
-    if (thumbsAct->isChecked()) {
-        dirLoaded(true);
+    // Only rebuild file icons when coloring / thumbnail policy actually changes.
+    if (fileColorChanged || thumbModeChanged) {
+        modelList->clearIconCache();
+        modelList->refreshItems();
+        if (thumbsAct->isChecked()) {
+            dirLoaded(true);
+        }
     }
 
-    modelList->clearIconCache();
-    modelList->refreshItems();
-    OpenWithConfig::load(settings);
     customActManager->readActions();
   }
 

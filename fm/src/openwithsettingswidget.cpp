@@ -12,7 +12,6 @@
 #include <QLayout>
 #include <QLineEdit>
 #include <QMimeData>
-#include <QObject>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QVBoxLayout>
@@ -28,49 +27,50 @@ QFrame *makeModuleFrame(QWidget *parent)
     return frame;
 }
 
-void fillEntryForm(QFormLayout *form, OpenWithEntry *entry, const QStringList &suffixesHint)
+} // namespace
+
+void OpenWithSettingsWidget::fillEntryForm(QFormLayout *form, OpenWithEntry *entry,
+                                           const QStringList &suffixesHint)
 {
     auto *nameEdit = new QLineEdit(entry->name);
     auto *cmd1Edit = new QLineEdit(entry->commandLine1);
     auto *cmd2Edit = new QLineEdit(entry->commandLine2);
     auto *iconEdit = new QLineEdit(entry->iconPath);
-    auto *pasteBtn = new QPushButton(QObject::tr("Paste icon path"));
+    auto *pasteBtn = new QPushButton(tr("Paste icon path"));
 
-    form->addRow(QObject::tr("Application name"), nameEdit);
+    form->addRow(tr("Application name"), nameEdit);
     if (!suffixesHint.isEmpty()) {
-        form->addRow(QObject::tr("Extensions"),
+        form->addRow(tr("Extensions"),
                      new QLabel(suffixesHint.join(QStringLiteral(", "))));
     }
-    form->addRow(QObject::tr("Command (line 1)"), cmd1Edit);
-    form->addRow(QObject::tr("Command (line 2)"), cmd2Edit);
+    form->addRow(tr("Command (line 1)"), cmd1Edit);
+    form->addRow(tr("Command (line 2)"), cmd2Edit);
     auto *iconRow = new QHBoxLayout();
     iconRow->addWidget(iconEdit, 1);
     iconRow->addWidget(pasteBtn);
     QWidget *iconRowWidget = new QWidget();
     iconRowWidget->setLayout(iconRow);
-    form->addRow(QObject::tr("Icon path"), iconRowWidget);
+    form->addRow(tr("Icon path"), iconRowWidget);
 
-    QObject::connect(nameEdit, &QLineEdit::textChanged, [entry](const QString &t) {
+    connect(nameEdit, &QLineEdit::textChanged, [entry](const QString &t) {
         entry->name = t;
     });
-    QObject::connect(cmd1Edit, &QLineEdit::textChanged, [entry](const QString &t) {
+    connect(cmd1Edit, &QLineEdit::textChanged, [entry](const QString &t) {
         entry->commandLine1 = t;
     });
-    QObject::connect(cmd2Edit, &QLineEdit::textChanged, [entry](const QString &t) {
+    connect(cmd2Edit, &QLineEdit::textChanged, [entry](const QString &t) {
         entry->commandLine2 = t;
     });
-    QObject::connect(iconEdit, &QLineEdit::textChanged, [entry](const QString &t) {
+    connect(iconEdit, &QLineEdit::textChanged, [entry](const QString &t) {
         entry->iconPath = t;
     });
-    QObject::connect(pasteBtn, &QPushButton::clicked, [iconEdit]() {
+    connect(pasteBtn, &QPushButton::clicked, [iconEdit]() {
         const QMimeData *mime = QGuiApplication::clipboard()->mimeData();
         if (mime && mime->hasText()) {
             iconEdit->setText(mime->text().trimmed());
         }
     });
 }
-
-} // namespace
 
 OpenWithSettingsWidget::OpenWithSettingsWidget(QWidget *parent) : QWidget(parent)
 {

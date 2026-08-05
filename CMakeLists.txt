@@ -148,6 +148,7 @@ add_executable(
     fm/src/bookmarks.cpp
     fm/src/tabbar.cpp
     fm/src/settingsdialog.cpp
+    fm/src/toggleswitch.cpp
     fm/src/openwithsettingswidget.cpp
     fm/src/customactionsettingswidget.cpp
     fm/src/settingsuistyles.cpp

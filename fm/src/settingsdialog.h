@@ -5,6 +5,7 @@
 #include "openwithsettingswidget.h"
 #include "customactionsettingswidget.h"
 #include "uicolors.h"
+#include "toggleswitch.h"
 
 #include <QDialog>
 #include <QListWidget>
@@ -84,7 +85,7 @@ protected:
   QListWidget* selector;
   QStackedWidget* stack;
   QComboBox* comboUiLanguage = nullptr;
-  QCheckBox* checkDelete;
+  ToggleSwitch* checkDelete;
   QComboBox* comboDAD;
   QComboBox* comboDADctl;
   QComboBox* comboDADshift;
@@ -92,17 +93,17 @@ protected:
   QLineEdit* editTerm;
   QComboBox* cmbDefaultMimeApps;
   QComboBox* comboSingleClick;
-  QCheckBox* showTerminalButton;
-  QCheckBox* showHomeButton;
-  QCheckBox* showNewTabButton;
+  ToggleSwitch* showTerminalButton;
+  ToggleSwitch* showHomeButton;
+  ToggleSwitch* showNewTabButton;
   QSpinBox* spinIconViewGapH;
   QSpinBox* spinIconViewGapV;
     QSpinBox* spinTopModuleGap = nullptr;
   QSpinBox* spinIconViewSize;
   QSpinBox* spinListRowHeight;
   QSpinBox* spinBookmarkGroupTabSize;
-  QCheckBox* checkFoldersAlwaysFirst;
-  QCheckBox* checkFoldersAlwaysFirstIcon;
+  ToggleSwitch* checkFoldersAlwaysFirst;
+  ToggleSwitch* checkFoldersAlwaysFirstIcon;
   QSpinBox* spinListColName;
   QSpinBox* spinListColSize;
   QSpinBox* spinListColDate;
@@ -110,12 +111,12 @@ protected:
   QSpinBox* spinListColFolder;
   OpenWithSettingsWidget *openWithSettingsWidget = nullptr;
   CustomActionSettingsWidget *customActionsSettingsWidget = nullptr;
-  QCheckBox* checkDarkTheme;
-  QCheckBox* checkFileColor;
-  QCheckBox* checkPathHistory;
-  QCheckBox* checkOutput;
-    QCheckBox* checkEnableDiskSidebar = nullptr;
-    QCheckBox* checkLogThumbnailDiag = nullptr;
+  ToggleSwitch* checkDarkTheme = nullptr;
+  ToggleSwitch* checkFileColor;
+  ToggleSwitch* checkPathHistory;
+  ToggleSwitch* checkOutput;
+    ToggleSwitch* checkEnableDiskSidebar = nullptr;
+    ToggleSwitch* checkLogThumbnailDiag = nullptr;
     QGroupBox *grpThumbnails = nullptr;
     QRadioButton *radioThumbGenAll = nullptr;
     QRadioButton *radioThumbGenOff = nullptr;
@@ -129,11 +130,11 @@ protected:
   QGroupBox* grpAssoc;
   QTreeWidget* mimesWidget;
   QListWidget* listAssoc;
-  QCheckBox* checkTrayNotify;
-  QCheckBox* checkAudioCD;
-  QCheckBox* checkAutoMount;
-  QCheckBox* checkDVD;
-  QCheckBox* checkWindowTitlePath;
+  ToggleSwitch* checkTrayNotify = nullptr;
+  ToggleSwitch* checkAudioCD = nullptr;
+  ToggleSwitch* checkAutoMount = nullptr;
+  ToggleSwitch* checkDVD = nullptr;
+  ToggleSwitch* checkWindowTitlePath;
 
   UiColorSet m_uiColorsLight;
   UiColorSet m_uiColorsDark;

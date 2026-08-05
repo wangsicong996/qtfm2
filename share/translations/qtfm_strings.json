@@ -45,6 +45,10 @@
   },
   {
     "context": "CustomActionSettingsWidget",
+    "source": "Add module"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
     "source": "Capture output"
   },
   {
@@ -58,6 +62,10 @@
   {
     "context": "CustomActionSettingsWidget",
     "source": "Delete module"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Each module is one custom context-menu action. Icon path overrides the bundled icon when set. Use %f, %F, %n in commands."
   },
   {
     "context": "CustomActionSettingsWidget",
@@ -81,6 +89,10 @@
   },
   {
     "context": "CustomActionSettingsWidget",
+    "source": "No custom actions yet. Click “Add module”."
+  },
+  {
+    "context": "CustomActionSettingsWidget",
     "source": "Paste"
   },
   {
@@ -96,8 +108,60 @@
     "source": "Use 'folder' to match all folders.<br>"
   },
   {
+    "context": "DiagnosticLog",
+    "source": "(Log file is empty or not created yet.)"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "(No thumbnail debug lines yet.)\n\nEnable “Log thumbnail commands” in Settings → Advanced, open a folder with images/videos, enable View → Show thumbs, then Refresh."
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "(No warnings or errors in the log file yet.)\n\nSwitch to “Full log” to see all messages, or reproduce the problem and refresh."
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Copied"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Copy to clipboard"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Diagnostic log"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Full log"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Log file: %1"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Logs are saved to disk continuously. If QtFM stopped responding, quit and restart, then open this window again to read messages from the previous session."
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Refresh"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Thumbnail debug ([Thumb])"
+  },
+  {
+    "context": "DiagnosticLog",
+    "source": "Warnings and errors"
+  },
+  {
     "context": "FileUtils",
     "source": "Filetype:"
+  },
+  {
+    "context": "MainWindow",
+    "source": "<p><b>In the window</b></p><ul><li>Click the <b>Dual pane</b> button on the toolbar (rectangle with a vertical line), or use <b>View → Dual pane</b>.</li><li>Click the left or right pane to make it active; the path bar follows the active pane.</li><li>Back, forward, up, and mouse side buttons apply to the active pane only.</li></ul><p><b>Start with two folders from the command line</b></p><p>Pass two paths: left pane first, right pane second. QtFM opens in dual-pane mode automatically.</p><p><b>Linux (AppImage)</b></p><pre>./qtfm-6.3.0-x86_64.AppImage /path/to/left /path/to/right</pre><p><b>Linux (installed or extracted AppDir)</b></p><pre>./usr/bin/qtfm /home/user/Downloads /home/user/Documents</pre><p><b>macOS</b></p><pre>open -na qtfm.app --args /path/to/left /path/to/right</pre><p>Use your actual .app name if it differs (e.g. QtFM.app). <code>--args</code> is required so both paths reach the application.</p><p>A single path argument opens one folder as before (dual pane off unless you enable it in the UI).</p>"
   },
   {
     "context": "MainWindow",
@@ -106,6 +170,14 @@
   {
     "context": "MainWindow",
     "source": "About %1"
+  },
+  {
+    "context": "MainWindow",
+    "source": "About thumbnails"
+  },
+  {
+    "context": "MainWindow",
+    "source": "About thumbnails…"
   },
   {
     "context": "MainWindow",
@@ -221,6 +293,18 @@
   },
   {
     "context": "MainWindow",
+    "source": "Dual pane"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Dual-pane usage"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Dual-pane usage…"
+  },
+  {
+    "context": "MainWindow",
     "source": "Edit"
   },
   {
@@ -293,11 +377,19 @@
   },
   {
     "context": "MainWindow",
+    "source": "How to enable and configure file thumbnails"
+  },
+  {
+    "context": "MainWindow",
     "source": "Icon view"
   },
   {
     "context": "MainWindow",
     "source": "Layout"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Left and right file panes"
   },
   {
     "context": "MainWindow",
@@ -393,6 +485,10 @@
   },
   {
     "context": "MainWindow",
+    "source": "Open warnings and errors saved from previous sessions"
+  },
+  {
+    "context": "MainWindow",
     "source": "Open with"
   },
   {
@@ -485,6 +581,10 @@
   },
   {
     "context": "MainWindow",
+    "source": "Showing thumbnails in the file list"
+  },
+  {
+    "context": "MainWindow",
     "source": "Size"
   },
   {
@@ -537,6 +637,10 @@
   },
   {
     "context": "MainWindow",
+    "source": "Toolbar dual pane and command-line examples"
+  },
+  {
+    "context": "MainWindow",
     "source": "Tree"
   },
   {
@@ -550,6 +654,10 @@
   {
     "context": "MainWindow",
     "source": "View"
+  },
+  {
+    "context": "MainWindow",
+    "source": "View diagnostic log…"
   },
   {
     "context": "MainWindow",
@@ -609,7 +717,15 @@
   },
   {
     "context": "OpenWithSettingsWidget",
+    "source": "Add application module"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
     "source": "Add extension module"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Application name"
   },
   {
     "context": "OpenWithSettingsWidget",
@@ -621,11 +737,31 @@
   },
   {
     "context": "OpenWithSettingsWidget",
+    "source": "Command (line 1)"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Command (line 2)"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Default for double-click (first module)"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
     "source": "Delete module"
   },
   {
     "context": "OpenWithSettingsWidget",
-    "source": "Each module applies to listed extensions (comma-separated), "
+    "source": "Each module applies to listed extensions (comma-separated), e.g. pdf or glb,gltf. Higher priority than category rules."
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Extensions"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Icon path"
   },
   {
     "context": "OpenWithSettingsWidget",
@@ -645,15 +781,19 @@
   },
   {
     "context": "OpenWithSettingsWidget",
-    "source": "These handlers override system defaults when set. "
+    "source": "These handlers override system defaults when set. Use %f or %F for the file path. On macOS, command-line tools installed with Homebrew (e.g. mpv %f, /opt/homebrew/bin/mpv %f) are often more reliable than open -a for apps that are not a .app bundle. For real .app bundles use /Applications/App.app %f or open -a \"Exact App Name\" %f ."
   },
   {
     "context": "OpenWithSettingsWidget",
-    "source": "These handlers override the \"Mime Types\" tab. "
+    "source": "These handlers override the \"Mime Types\" tab. Use %f or %F for file path in commands."
   },
   {
     "context": "OpenWithSettingsWidget",
     "source": "Unified categories (first module = double-click default)"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Video"
   },
   {
     "context": "ProcessDialog",
@@ -921,22 +1061,6 @@
   },
   {
     "context": "QObject",
-    "source": "Application name"
-  },
-  {
-    "context": "QObject",
-    "source": "Command (line 1)"
-  },
-  {
-    "context": "QObject",
-    "source": "Command (line 2)"
-  },
-  {
-    "context": "QObject",
-    "source": "Extensions"
-  },
-  {
-    "context": "QObject",
     "source": "Failed D-Bus connection."
   },
   {
@@ -954,14 +1078,6 @@
   {
     "context": "QObject",
     "source": "Folder"
-  },
-  {
-    "context": "QObject",
-    "source": "Icon path"
-  },
-  {
-    "context": "QObject",
-    "source": "Paste icon path"
   },
   {
     "context": "QObject",
@@ -1129,11 +1245,35 @@
   },
   {
     "context": "SettingsDialog",
+    "source": "Beginning of file"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Behaviour"
   },
   {
     "context": "SettingsDialog",
+    "source": "Bookmark group bar background"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Bookmark group button background"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Bookmark group tab size"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Bookmarks list background"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Colors exported successfully."
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Colors imported. Click Save to apply them."
   },
   {
     "context": "SettingsDialog",
@@ -1169,6 +1309,22 @@
   },
   {
     "context": "SettingsDialog",
+    "source": "Custom colors"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Customize backgrounds for the file panes, bookmarks, sidebar tabs, and top toolbar. Light and dark themes each have their own color set. Leave “Use default” checked to follow the current theme palette."
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Dark theme"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Default"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Default mime applications"
   },
   {
@@ -1178,6 +1334,10 @@
   {
     "context": "SettingsDialog",
     "source": "Directories only"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Do not generate thumbnails"
   },
   {
     "context": "SettingsDialog",
@@ -1205,6 +1365,10 @@
   },
   {
     "context": "SettingsDialog",
+    "source": "Enable disk sidebar"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Enable path history"
   },
   {
@@ -1213,11 +1377,31 @@
   },
   {
     "context": "SettingsDialog",
-    "source": "Filter ..."
+    "source": "Export"
   },
   {
     "context": "SettingsDialog",
-    "source": "Folders always first (list)"
+    "source": "Export UI colors"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Export colors…"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Export failed"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "File pane background (focused dual-pane)"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "File pane background (inactive / single)"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Filter ..."
   },
   {
     "context": "SettingsDialog",
@@ -1225,7 +1409,15 @@
   },
   {
     "context": "SettingsDialog",
-    "source": "Toolbar padding (all sides)"
+    "source": "Folders always first (list)"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Generate thumbnails for all eligible files"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Icon view horizontal gap"
   },
   {
     "context": "SettingsDialog",
@@ -1234,6 +1426,34 @@
   {
     "context": "SettingsDialog",
     "source": "Icon view spacing"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Icon view vertical gap"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Import"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Import UI colors"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Import colors…"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Import failed"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "JSON files (*.json)"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Light theme"
   },
   {
     "context": "SettingsDialog",
@@ -1265,6 +1485,14 @@
   },
   {
     "context": "SettingsDialog",
+    "source": "Log thumbnail commands to diagnostic log"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Middle of file"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Mime"
   },
   {
@@ -1274,6 +1502,10 @@
   {
     "context": "SettingsDialog",
     "source": "Mime types"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Module testing (stability)"
   },
   {
     "context": "SettingsDialog",
@@ -1293,11 +1525,23 @@
   },
   {
     "context": "SettingsDialog",
+    "source": "Number of newest files:"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Only generate thumbnails for the newest files by date modified"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Open with"
   },
   {
     "context": "SettingsDialog",
     "source": "Options"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Padding around the toolbar row (settings, navigation, path field, terminal, etc.)."
   },
   {
     "context": "SettingsDialog",
@@ -1337,6 +1581,10 @@
   },
   {
     "context": "SettingsDialog",
+    "source": "Show dialog with action's output"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Show dialog with action's output:"
   },
   {
@@ -1349,6 +1597,14 @@
   },
   {
     "context": "SettingsDialog",
+    "source": "Sidebar tab selected (Bookmarks / Disks)"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Sidebar tab unselected (Bookmarks / Disks)"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "System Tray"
   },
   {
@@ -1357,11 +1613,47 @@
   },
   {
     "context": "SettingsDialog",
+    "source": "Thumbnails"
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Timestamp"
   },
   {
     "context": "SettingsDialog",
+    "source": "To see thumbnails in the file list, enable <b>View → Show thumbs</b>. The options below control background generation only."
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Toolbar padding (all sides)"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Top chrome background (menu / toolbar / address / search)"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Top chrome button / control background"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Top navigation bar"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Turn off the disk sidebar to see whether freezes or high CPU come from disk refresh. Takes effect when you save settings."
+  },
+  {
+    "context": "SettingsDialog",
     "source": "Use \"Dark Mode\""
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Use default"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Video thumbnail frame position:"
   },
   {
     "context": "SettingsDialog",
@@ -1410,154 +1702,6 @@
   {
     "context": "tabBar",
     "source": "Open in new window"
-  },
-  {
-    "context": "MainWindow",
-    "source": "View diagnostic log…"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Module testing (stability)"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Turn off the disk sidebar to see whether freezes or high CPU come from disk refresh. Takes effect when you save settings."
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Enable disk sidebar"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Log thumbnail commands to diagnostic log"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Thumbnails"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "To see thumbnails in the file list, enable <b>View → Show thumbs</b>. The options below control background generation only."
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Generate thumbnails for all eligible files"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Do not generate thumbnails"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Only generate thumbnails for the newest files by date modified"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Number of newest files:"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Video thumbnail frame position:"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Beginning of file"
-  },
-  {
-    "context": "SettingsDialog",
-    "source": "Middle of file"
-  },
-  {
-    "context": "MainWindow",
-    "source": "About thumbnails…"
-  },
-  {
-    "context": "MainWindow",
-    "source": "How to enable and configure file thumbnails"
-  },
-  {
-    "context": "MainWindow",
-    "source": "About thumbnails"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Showing thumbnails in the file list"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Dual-pane usage…"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Toolbar dual pane and command-line examples"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Dual-pane usage"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Left and right file panes"
-  },
-  {
-    "context": "MainWindow",
-    "source": "<p><b>In the window</b></p><ul><li>Click the <b>Dual pane</b> button on the toolbar (rectangle with a vertical line), or use <b>View → Dual pane</b>.</li><li>Click the left or right pane to make it active; the path bar follows the active pane.</li><li>Back, forward, up, and mouse side buttons apply to the active pane only.</li></ul><p><b>Start with two folders from the command line</b></p><p>Pass two paths: left pane first, right pane second. QtFM opens in dual-pane mode automatically.</p><p><b>Linux (AppImage)</b></p><pre>./qtfm-6.3.0-x86_64.AppImage /path/to/left /path/to/right</pre><p><b>Linux (installed or extracted AppDir)</b></p><pre>./usr/bin/qtfm /home/user/Downloads /home/user/Documents</pre><p><b>macOS</b></p><pre>open -na qtfm.app --args /path/to/left /path/to/right</pre><p>Use your actual .app name if it differs (e.g. QtFM.app). <code>--args</code> is required so both paths reach the application.</p><p>A single path argument opens one folder as before (dual pane off unless you enable it in the UI).</p>"
-  },
-  {
-    "context": "MainWindow",
-    "source": "Dual pane"
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "Thumbnail debug ([Thumb])"
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "(No thumbnail debug lines yet.)\n\nEnable “Log thumbnail commands” in Settings → Advanced, open a folder with images/videos, enable View → Show thumbs, then Refresh."
-  },
-  {
-    "context": "MainWindow",
-    "source": "Open warnings and errors saved from previous sessions"
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "Diagnostic log"
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "Logs are saved to disk continuously. If QtFM stopped responding, quit and restart, then open this window again to read messages from the previous session."
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "Log file: %1"
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "Warnings and errors"
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "Full log"
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "Refresh"
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "Copy to clipboard"
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "Copied"
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "(No warnings or errors in the log file yet.)\n\nSwitch to “Full log” to see all messages, or reproduce the problem and refresh."
-  },
-  {
-    "context": "DiagnosticLog",
-    "source": "(Log file is empty or not created yet.)"
   },
   {
     "context": "uDisks2",

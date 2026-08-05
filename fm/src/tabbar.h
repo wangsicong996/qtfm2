@@ -38,7 +38,8 @@ struct TabPaneSession {
     QString rightPath;
     QStringList rightHistory;
     QStringList rightForward;
-    QString searchFilter;
+    QString leftSearchFilter;
+    QString rightSearchFilter;
 };
 
 class tabBar : public QTabBar

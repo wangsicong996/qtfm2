@@ -54,11 +54,15 @@
     </message>
     <message>
       <source>Add action module</source>
-      <translation>添加 action module</translation>
+      <translation>添加模块</translation>
+    </message>
+    <message>
+      <source>Add module</source>
+      <translation>添加模块</translation>
     </message>
     <message>
       <source>Capture output</source>
-      <translation>捕获 output</translation>
+      <translation>捕获输出</translation>
     </message>
     <message>
       <source>Choose bundled icon</source>
@@ -70,7 +74,11 @@
     </message>
     <message>
       <source>Delete module</source>
-      <translation>删除 module</translation>
+      <translation>删除模块</translation>
+    </message>
+    <message>
+      <source>Each module is one custom context-menu action. Icon path overrides the bundled icon when set. Use %f, %F, %n in commands.</source>
+      <translation>每个模块对应一条自定义右键菜单操作。设置图标路径后将覆盖内置图标。命令中可使用 %f、%F、%n。</translation>
     </message>
     <message>
       <source>File type</source>
@@ -82,7 +90,7 @@
     </message>
     <message>
       <source>Icon path</source>
-      <translation>图标 path</translation>
+      <translation>图标路径</translation>
     </message>
     <message>
       <source>Icon…</source>
@@ -90,7 +98,11 @@
     </message>
     <message>
       <source>No custom actions yet. Click “Add action module”.</source>
-      <translation>否 自定义操作s yet. Click “添加 action module”.</translation>
+      <translation>尚无自定义操作。点击「添加模块」。</translation>
+    </message>
+    <message>
+      <source>No custom actions yet. Click “Add module”.</source>
+      <translation>尚无自定义操作。点击「添加模块」。</translation>
     </message>
     <message>
       <source>Paste</source>
@@ -728,70 +740,102 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <name>OpenWithConfig</name>
     <message>
       <source>Add application module</source>
-      <translation>添加 application module</translation>
+      <translation>添加应用程序模块</translation>
     </message>
     <message>
       <source>Default for double-click (first module)</source>
-      <translation>默认 for double-click (first module)</translation>
+      <translation>双击默认（第一个模块）</translation>
     </message>
     <message>
       <source>Delete module</source>
-      <translation>删除 module</translation>
+      <translation>删除模块</translation>
     </message>
     <message>
       <source>Extensions</source>
-      <translation>Extensions</translation>
+      <translation>扩展名</translation>
     </message>
   </context>
   <context>
     <name>OpenWithSettingsWidget</name>
     <message>
+      <source>Add application module</source>
+      <translation>添加应用程序模块</translation>
+    </message>
+    <message>
       <source>Add extension module</source>
-      <translation>添加 extension module</translation>
+      <translation>添加扩展名模块</translation>
+    </message>
+    <message>
+      <source>Application name</source>
+      <translation>应用程序名称</translation>
     </message>
     <message>
       <source>Archive</source>
-      <translation>Archive</translation>
+      <translation>压缩包</translation>
     </message>
     <message>
       <source>Category: %1</source>
-      <translation>Category: %1</translation>
+      <translation>分类：%1</translation>
+    </message>
+    <message>
+      <source>Command (line 1)</source>
+      <translation>命令（第 1 行）</translation>
+    </message>
+    <message>
+      <source>Command (line 2)</source>
+      <translation>命令（第 2 行）</translation>
+    </message>
+    <message>
+      <source>Default for double-click (first module)</source>
+      <translation>双击默认（第一个模块）</translation>
     </message>
     <message>
       <source>Delete module</source>
-      <translation>删除 module</translation>
+      <translation>删除模块</translation>
     </message>
     <message>
-      <source>Each module applies to listed extensions (comma-separated), </source>
-      <translation>Each module applies to listed extensions (comma-separated), </translation>
+      <source>Each module applies to listed extensions (comma-separated), e.g. pdf or glb,gltf. Higher priority than category rules.</source>
+      <translation>每个模块作用于列出的扩展名（逗号分隔），例如 pdf 或 glb,gltf。优先级高于分类规则。</translation>
+    </message>
+    <message>
+      <source>Extensions</source>
+      <translation>扩展名</translation>
+    </message>
+    <message>
+      <source>Icon path</source>
+      <translation>图标路径</translation>
     </message>
     <message>
       <source>Image</source>
-      <translation>Image</translation>
+      <translation>图片</translation>
     </message>
     <message>
       <source>Paste icon path</source>
-      <translation>粘贴 icon path</translation>
+      <translation>粘贴图标路径</translation>
     </message>
     <message>
       <source>Specific extensions</source>
-      <translation>Specific extensions</translation>
+      <translation>特定扩展名</translation>
     </message>
     <message>
       <source>Text and code</source>
-      <translation>Text and code</translation>
+      <translation>文本与代码</translation>
     </message>
     <message>
-      <source>These handlers override system defaults when set. </source>
-      <translation>These handlers override system defaults when set. </translation>
+      <source>These handlers override system defaults when set. Use %f or %F for the file path. On macOS, command-line tools installed with Homebrew (e.g. mpv %f, /opt/homebrew/bin/mpv %f) are often more reliable than open -a for apps that are not a .app bundle. For real .app bundles use /Applications/App.app %f or open -a "Exact App Name" %f .</source>
+      <translation>设置后这些处理程序会覆盖系统默认关联。命令中请使用 %f 或 %F 表示文件路径。在 macOS 上，用 Homebrew 安装的命令行工具（如 mpv %f、/opt/homebrew/bin/mpv %f）通常比 open -a 更可靠（当应用不是 .app 包时）。真正的 .app 可用 /Applications/App.app %f 或 open -a "Exact App Name" %f 。</translation>
     </message>
     <message>
-      <source>These handlers override the "Mime Types" tab. </source>
-      <translation>These handlers override the "MIME 类型" tab. </translation>
+      <source>These handlers override the "Mime Types" tab. Use %f or %F for file path in commands.</source>
+      <translation>这些处理程序会覆盖「MIME 类型」页的设置。命令中请使用 %f 或 %F 表示文件路径。</translation>
     </message>
     <message>
       <source>Unified categories (first module = double-click default)</source>
-      <translation>Unified categories (first module = double-click default)</translation>
+      <translation>统一分类（第一个模块为双击默认）</translation>
+    </message>
+    <message>
+      <source>Video</source>
+      <translation>视频</translation>
     </message>
   </context>
   <context>
@@ -956,7 +1000,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>Custom Actions</source>
-      <translation>自定义操作</translation>
+      <translation>自定义action</translation>
     </message>
     <message>
       <source>Cut</source>
@@ -968,7 +1012,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     </message>
     <message>
       <source>General</source>
-      <translation>常规</translation>
+      <translation>全局设置</translation>
     </message>
     <message>
       <source>Hide</source>
@@ -1088,22 +1132,6 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
   <context>
     <name>QObject</name>
     <message>
-      <source>Application name</source>
-      <translation>应用程序 name</translation>
-    </message>
-    <message>
-      <source>Command (line 1)</source>
-      <translation>命令 (line 1)</translation>
-    </message>
-    <message>
-      <source>Command (line 2)</source>
-      <translation>命令 (line 2)</translation>
-    </message>
-    <message>
-      <source>Extensions</source>
-      <translation>Extensions</translation>
-    </message>
-    <message>
       <source>Failed D-Bus connection.</source>
       <translation>Failed D-Bus connection.</translation>
     </message>
@@ -1122,14 +1150,6 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Folder</source>
       <translation>文件夹</translation>
-    </message>
-    <message>
-      <source>Icon path</source>
-      <translation>图标 path</translation>
-    </message>
-    <message>
-      <source>Paste icon path</source>
-      <translation>粘贴 icon path</translation>
     </message>
     <message>
       <source>Storage</source>
@@ -1313,8 +1333,28 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>行为</translation>
     </message>
     <message>
+      <source>Bookmark group bar background</source>
+      <translation>书签分组栏背景</translation>
+    </message>
+    <message>
+      <source>Bookmark group button background</source>
+      <translation>书签分组按钮背景</translation>
+    </message>
+    <message>
       <source>Bookmark group tab size</source>
       <translation>书签分组标签大小</translation>
+    </message>
+    <message>
+      <source>Bookmarks list background</source>
+      <translation>书签列表背景</translation>
+    </message>
+    <message>
+      <source>Colors exported successfully.</source>
+      <translation>颜色已成功导出。</translation>
+    </message>
+    <message>
+      <source>Colors imported. Click Save to apply them.</source>
+      <translation>颜色已导入。点击保存以应用。</translation>
     </message>
     <message>
       <source>Colors on file names</source>
@@ -1347,6 +1387,22 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <message>
       <source>Custom actions</source>
       <translation>自定义操作s</translation>
+    </message>
+    <message>
+      <source>Custom colors</source>
+      <translation>自定义颜色</translation>
+    </message>
+    <message>
+      <source>Customize backgrounds for the file panes, bookmarks, sidebar tabs, and top toolbar. Light and dark themes each have their own color set. Leave “Use default” checked to follow the current theme palette.</source>
+      <translation>自定义文件栏、书签、侧栏标签与顶部工具栏的背景色。浅色与深色主题各有独立配色。保持勾选「使用默认」则跟随当前主题调色板。</translation>
+    </message>
+    <message>
+      <source>Dark theme</source>
+      <translation>深色主题</translation>
+    </message>
+    <message>
+      <source>Default</source>
+      <translation>默认</translation>
     </message>
     <message>
       <source>Default mime applications</source>
@@ -1401,6 +1457,30 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>全部</translation>
     </message>
     <message>
+      <source>Export</source>
+      <translation>导出</translation>
+    </message>
+    <message>
+      <source>Export UI colors</source>
+      <translation>导出界面颜色</translation>
+    </message>
+    <message>
+      <source>Export colors…</source>
+      <translation>导出颜色…</translation>
+    </message>
+    <message>
+      <source>Export failed</source>
+      <translation>导出失败</translation>
+    </message>
+    <message>
+      <source>File pane background (focused dual-pane)</source>
+      <translation>文件栏背景（双栏聚焦）</translation>
+    </message>
+    <message>
+      <source>File pane background (inactive / single)</source>
+      <translation>文件栏背景（未聚焦 / 单栏）</translation>
+    </message>
+    <message>
       <source>Filter ...</source>
       <translation>筛选 ...</translation>
     </message>
@@ -1417,12 +1497,44 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>为所有符合条件的文件生成缩略图</translation>
     </message>
     <message>
+      <source>Icon view horizontal gap</source>
+      <translation>图标视图水平间距</translation>
+    </message>
+    <message>
       <source>Icon view size</source>
       <translation>图标视图大小</translation>
     </message>
     <message>
       <source>Icon view spacing</source>
       <translation>图标视图间距</translation>
+    </message>
+    <message>
+      <source>Icon view vertical gap</source>
+      <translation>图标视图垂直间距</translation>
+    </message>
+    <message>
+      <source>Import</source>
+      <translation>导入</translation>
+    </message>
+    <message>
+      <source>Import UI colors</source>
+      <translation>导入界面颜色</translation>
+    </message>
+    <message>
+      <source>Import colors…</source>
+      <translation>导入颜色…</translation>
+    </message>
+    <message>
+      <source>Import failed</source>
+      <translation>导入失败</translation>
+    </message>
+    <message>
+      <source>JSON files (*.json)</source>
+      <translation>JSON 文件 (*.json)</translation>
+    </message>
+    <message>
+      <source>Light theme</source>
+      <translation>浅色主题</translation>
     </message>
     <message>
       <source>Link</source>
@@ -1509,6 +1621,10 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>Options</translation>
     </message>
     <message>
+      <source>Padding around the toolbar row (settings, navigation, path field, terminal, etc.).</source>
+      <translation>工具栏行四周的留白（设置、导航、路径栏、终端等）。</translation>
+    </message>
+    <message>
       <source>Remove</source>
       <translation>移除</translation>
     </message>
@@ -1553,8 +1669,12 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>显示“终端”按钮</translation>
     </message>
     <message>
+      <source>Show dialog with action's output</source>
+      <translation>显示操作输出对话框</translation>
+    </message>
+    <message>
       <source>Show dialog with action's output:</source>
-      <translation>显示 dialog with action's output:</translation>
+      <translation>显示操作输出对话框：</translation>
     </message>
     <message>
       <source>Show notifications</source>
@@ -1565,8 +1685,16 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>在窗口标题显示路径</translation>
     </message>
     <message>
+      <source>Sidebar tab selected (Bookmarks / Disks)</source>
+      <translation>侧栏标签选中（书签 / 磁盘）</translation>
+    </message>
+    <message>
+      <source>Sidebar tab unselected (Bookmarks / Disks)</source>
+      <translation>侧栏标签未选中（书签 / 磁盘）</translation>
+    </message>
+    <message>
       <source>System Tray</source>
-      <translation>System Tray</translation>
+      <translation>系统相关</translation>
     </message>
     <message>
       <source>Terminal emulator</source>
@@ -1589,12 +1717,28 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>工具栏留白（四边相同）</translation>
     </message>
     <message>
+      <source>Top chrome background (menu / toolbar / address / search)</source>
+      <translation>顶部区域背景（菜单 / 工具栏 / 地址 / 搜索）</translation>
+    </message>
+    <message>
+      <source>Top chrome button / control background</source>
+      <translation>顶部按钮 / 控件背景</translation>
+    </message>
+    <message>
+      <source>Top navigation bar</source>
+      <translation>顶部导航栏</translation>
+    </message>
+    <message>
       <source>Turn off the disk sidebar to see whether freezes or high CPU come from disk refresh. Takes effect when you save settings.</source>
       <translation>可关闭磁盘侧栏，排查卡死或高 CPU 是否由磁盘刷新引起。保存设置后立即生效。</translation>
     </message>
     <message>
       <source>Use "Dark Mode"</source>
       <translation>使用深色模式</translation>
+    </message>
+    <message>
+      <source>Use default</source>
+      <translation>使用默认</translation>
     </message>
     <message>
       <source>Video thumbnail frame position:</source>
@@ -1624,7 +1768,7 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
     <name>enWithSettingsWidget</name>
     <message>
       <source>Video</source>
-      <translation>Video</translation>
+      <translation>视频</translation>
     </message>
   </context>
   <context>

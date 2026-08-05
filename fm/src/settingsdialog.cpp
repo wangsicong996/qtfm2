@@ -24,6 +24,7 @@
 #include "bundledicons.h"
 #include "apptranslator.h"
 #include "uicolors.h"
+#include "toggleswitch.h"
 
 #include <QFileDialog>
 #include <QScrollArea>
@@ -132,7 +133,7 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
 
 #if QT_VERSION >= 0x050000
   if (checkDarkTheme) {
-      connect(checkDarkTheme, &QCheckBox::toggled, this, &SettingsDialog::updateDialogButtonIcons);
+      connect(checkDarkTheme, &QAbstractButton::toggled, this, &SettingsDialog::updateDialogButtonIcons);
   }
 #endif
 
@@ -227,7 +228,7 @@ QWidget *SettingsDialog::createGeneralSettings() {
   comboSingleClick->addItem(tr("Everything"),2);
   layoutBehav->addRow(tr("Enable Single Click"), comboSingleClick);
 
-  checkPathHistory = new QCheckBox(grpBehav);
+  checkPathHistory = new ToggleSwitch(grpBehav);
   layoutBehav->addRow(tr("Enable path history"), checkPathHistory);
 
   comboUiLanguage = new QComboBox(grpBehav);
@@ -239,7 +240,7 @@ QWidget *SettingsDialog::createGeneralSettings() {
   // Confirmation
   QGroupBox* grpConfirm = new QGroupBox(tr("Confirmation"), widget);
   QFormLayout* layoutConfirm = new QFormLayout(grpConfirm);
-  checkDelete = new QCheckBox(grpConfirm);
+  checkDelete = new ToggleSwitch(grpConfirm);
   layoutConfirm->addRow(tr("Ask before file is deleted: "), checkDelete);
 
   // Terminal emulator
@@ -309,13 +310,13 @@ QWidget *SettingsDialog::createAppearanceSettings()
     QGroupBox* grpAppear = new QGroupBox(tr("Appearance"), widget);
     QFormLayout* layoutAppear = new QFormLayout(grpAppear);
 #if QT_VERSION >= 0x050000
-    checkDarkTheme = new QCheckBox(grpAppear);
+    checkDarkTheme = new ToggleSwitch(grpAppear);
 #endif
-    checkWindowTitlePath = new QCheckBox(grpAppear);
-    checkFileColor = new QCheckBox(grpAppear);
-    showHomeButton = new QCheckBox(grpAppear);
-    showNewTabButton = new QCheckBox(grpAppear);
-    showTerminalButton = new QCheckBox(grpAppear);
+    checkWindowTitlePath = new ToggleSwitch(grpAppear);
+    checkFileColor = new ToggleSwitch(grpAppear);
+    showHomeButton = new ToggleSwitch(grpAppear);
+    showNewTabButton = new ToggleSwitch(grpAppear);
+    showTerminalButton = new ToggleSwitch(grpAppear);
   spinIconViewGapH = new QSpinBox(grpAppear);
   spinIconViewGapH->setRange(0, 48);
   spinIconViewGapH->setSuffix(tr(" px"));
@@ -331,8 +332,8 @@ QWidget *SettingsDialog::createAppearanceSettings()
   spinBookmarkGroupTabSize = new QSpinBox(grpAppear);
   spinBookmarkGroupTabSize->setRange(24, 128);
   spinBookmarkGroupTabSize->setSuffix(tr(" px"));
-  checkFoldersAlwaysFirst = new QCheckBox(grpAppear);
-  checkFoldersAlwaysFirstIcon = new QCheckBox(grpAppear);
+  checkFoldersAlwaysFirst = new ToggleSwitch(grpAppear);
+  checkFoldersAlwaysFirstIcon = new ToggleSwitch(grpAppear);
   spinListColName = new QSpinBox(grpAppear);
   spinListColSize = new QSpinBox(grpAppear);
   spinListColDate = new QSpinBox(grpAppear);
@@ -365,22 +366,6 @@ QWidget *SettingsDialog::createAppearanceSettings()
     layoutAppear->addRow(tr("List column: Format"), spinListColFormat);
     layoutAppear->addRow(tr("List column: Folder"), spinListColFolder);
 
-    // Bare checkboxes (no label text) are shorter than spin rows — match spin height.
-    const int appearRowH = spinIconViewGapH->sizeHint().height();
-    QList<QCheckBox *> appearChecks;
-#if QT_VERSION >= 0x050000
-    appearChecks << checkDarkTheme;
-#endif
-    appearChecks << checkFileColor << checkWindowTitlePath
-                 << showHomeButton << showNewTabButton << showTerminalButton
-                 << checkFoldersAlwaysFirst << checkFoldersAlwaysFirstIcon;
-    for (QCheckBox *cb : appearChecks) {
-        if (!cb) {
-            continue;
-        }
-        cb->setMinimumHeight(appearRowH);
-        cb->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
-    }
     layoutAppear->setVerticalSpacing(qMax(6, layoutAppear->verticalSpacing()));
     layoutAppear->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
@@ -413,8 +398,12 @@ QWidget* SettingsDialog::createActionsSettings() {
           this, SLOT(readShortcuts()));
   outerLayout->addWidget(customActionsSettingsWidget, 1);
 
-  checkOutput = new QCheckBox(tr("Show dialog with action's output"), widget);
-  outerLayout->addWidget(checkOutput);
+  auto *outputRow = new QHBoxLayout();
+  outputRow->addWidget(new QLabel(tr("Show dialog with action's output"), widget));
+  outputRow->addStretch();
+  checkOutput = new ToggleSwitch(widget);
+  outputRow->addWidget(checkOutput, 0, Qt::AlignRight | Qt::AlignVCenter);
+  outerLayout->addLayout(outputRow);
 
   return widget;
 }
@@ -577,16 +566,16 @@ QWidget *SettingsDialog::createSystraySettings()
     QGroupBox* trayGroup = new QGroupBox(tr("System Tray"), widget);
     QFormLayout* layoutTray = new QFormLayout(trayGroup);
 
-    checkTrayNotify = new QCheckBox(trayGroup);
+    checkTrayNotify = new ToggleSwitch(trayGroup);
     layoutTray->addRow(tr("Show notifications"), checkTrayNotify);
 
-    checkAutoMount = new QCheckBox(trayGroup);
+    checkAutoMount = new ToggleSwitch(trayGroup);
     layoutTray->addRow(tr("Auto mount removable devices"), checkAutoMount);
 
-    checkAudioCD = new QCheckBox(trayGroup);
+    checkAudioCD = new ToggleSwitch(trayGroup);
     layoutTray->addRow(tr("Auto play audio CD's"), checkAudioCD);
 
-    checkDVD = new QCheckBox(trayGroup);
+    checkDVD = new ToggleSwitch(trayGroup);
     layoutTray->addRow(tr("Auto play audio/video DVD's"), checkDVD);
 
     layoutWidget->addWidget(trayGroup);
@@ -668,10 +657,14 @@ QWidget *SettingsDialog::createAdvSettings()
     layoutThumb->addWidget(radioVideoSampleStart);
     layoutThumb->addWidget(radioVideoSampleMiddle);
 
-    checkLogThumbnailDiag =
-        new QCheckBox(tr("Log thumbnail commands to diagnostic log"), grpThumbnails);
+    auto *thumbLogRow = new QHBoxLayout();
+    thumbLogRow->addWidget(new QLabel(tr("Log thumbnail commands to diagnostic log"),
+                                      grpThumbnails));
+    thumbLogRow->addStretch();
+    checkLogThumbnailDiag = new ToggleSwitch(grpThumbnails);
     checkLogThumbnailDiag->setChecked(true);
-    layoutThumb->addWidget(checkLogThumbnailDiag);
+    thumbLogRow->addWidget(checkLogThumbnailDiag, 0, Qt::AlignRight | Qt::AlignVCenter);
+    layoutThumb->addLayout(thumbLogRow);
 
     connect(thumbGenModeGroup, QOverload<int>::of(&QButtonGroup::idClicked), this,
             [this](int) { updateThumbGenModeUi(); });
@@ -686,8 +679,12 @@ QWidget *SettingsDialog::createAdvSettings()
         grpModules);
     modulesHint->setWordWrap(true);
     layoutModules->addWidget(modulesHint);
-    checkEnableDiskSidebar = new QCheckBox(tr("Enable disk sidebar"), grpModules);
-    layoutModules->addWidget(checkEnableDiskSidebar);
+    auto *diskSideRow = new QHBoxLayout();
+    diskSideRow->addWidget(new QLabel(tr("Enable disk sidebar"), grpModules));
+    diskSideRow->addStretch();
+    checkEnableDiskSidebar = new ToggleSwitch(grpModules);
+    diskSideRow->addWidget(checkEnableDiskSidebar, 0, Qt::AlignRight | Qt::AlignVCenter);
+    layoutModules->addLayout(diskSideRow);
     layoutWidget->addWidget(grpModules);
     layoutWidget->addStretch();
 
@@ -1193,8 +1190,6 @@ void SettingsDialog::readSettings() {
       customActionsSettingsWidget->loadFromSettings(settingsPtr);
   }
 
-  connect(comboSingleClick, SIGNAL(currentIndexChanged(int)), this, SLOT(restartToApply(int)));
-
   // Read shortcuts
   readShortcuts();
   updateDialogButtonIcons();
@@ -1371,12 +1366,6 @@ bool SettingsDialog::saveSettings() {
 
   settingsPtr->setValue("singleClick", comboSingleClick->currentIndex());
   const QString newUiLang = comboUiLanguage->currentData().toString();
-  if (AppTranslator::normalizedLanguageCode(newUiLang)
-      != AppTranslator::normalizedLanguageCode(
-          settingsPtr->value(QStringLiteral("uiLanguage"), QStringLiteral("system")).toString())) {
-      QMessageBox::warning(this, tr("Restart to apply settings"),
-                           tr("You must restart application to apply language settings."));
-  }
   settingsPtr->setValue(QStringLiteral("uiLanguage"), newUiLang);
   settingsPtr->setValue("home_button", showHomeButton->isChecked());
   settingsPtr->setValue("newtab_button", showNewTabButton->isChecked());

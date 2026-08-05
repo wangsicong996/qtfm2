@@ -670,90 +670,90 @@ void MainWindow::createMenus() {
 
   // File menu
   // ----------------------------------------------------------------------
-  QMenu *fileMenu = new QMenu(tr("File"));
-  fileMenu->addAction(newDirAct);
-  fileMenu->addAction(newFileAct);
-  fileMenu->addSeparator();
-  fileMenu->addAction(newWinAct);
-  fileMenu->addAction(openTabAct);
-  fileMenu->addSeparator();
-  fileMenu->addAction(closeAct);
-  fileMenu->addAction(exitAct);
+  fileMenuPtr = new QMenu(tr("File"));
+  fileMenuPtr->addAction(newDirAct);
+  fileMenuPtr->addAction(newFileAct);
+  fileMenuPtr->addSeparator();
+  fileMenuPtr->addAction(newWinAct);
+  fileMenuPtr->addAction(openTabAct);
+  fileMenuPtr->addSeparator();
+  fileMenuPtr->addAction(closeAct);
+  fileMenuPtr->addAction(exitAct);
 
   // Edit menu
   // ----------------------------------------------------------------------
-  QMenu *editMenu = new QMenu(tr("Edit"));
-  editMenu->addAction(cutAct);
-  editMenu->addAction(copyAct);
-  editMenu->addAction(pasteAct);
-  editMenu->addAction(renameAct);
-  editMenu->addAction(trashAct);
-  editMenu->addAction(deleteAct);
-  editMenu->addSeparator();
-  editMenu->addAction(addBookmarkAct);
-  editMenu->addSeparator();
-  editMenu->addAction(clearCacheAct);
-  editMenu->addSeparator();
-  editMenu->addAction(settingsAct);
+  editMenuPtr = new QMenu(tr("Edit"));
+  editMenuPtr->addAction(cutAct);
+  editMenuPtr->addAction(copyAct);
+  editMenuPtr->addAction(pasteAct);
+  editMenuPtr->addAction(renameAct);
+  editMenuPtr->addAction(trashAct);
+  editMenuPtr->addAction(deleteAct);
+  editMenuPtr->addSeparator();
+  editMenuPtr->addAction(addBookmarkAct);
+  editMenuPtr->addSeparator();
+  editMenuPtr->addAction(clearCacheAct);
+  editMenuPtr->addSeparator();
+  editMenuPtr->addAction(settingsAct);
 
   // View menu
   // ----------------------------------------------------------------------
-  QMenu *viewMenu = new QMenu(tr("View"));
+  viewMenuPtr = new QMenu(tr("View"));
 
-  QMenu *autoMenu = createPopupMenu();
-  autoMenu->addSeparator();
-  autoMenu->addAction(lockLayoutAct);
-  autoMenu->setTitle(tr("Layout"));
-  viewMenu->addMenu(autoMenu);
+  layoutMenuPtr = createPopupMenu();
+  layoutMenuPtr->addSeparator();
+  layoutMenuPtr->addAction(lockLayoutAct);
+  layoutMenuPtr->setTitle(tr("Layout"));
+  viewMenuPtr->addMenu(layoutMenuPtr);
 
-  viewMenu->addMenu(sortMenu);
+  viewMenuPtr->addMenu(sortMenu);
 
-  viewMenu->addSeparator();
-  viewMenu->addAction(iconAct);
-  viewMenu->addAction(listViewAct);
-  viewMenu->addAction(hiddenAct);
-  viewMenu->addSeparator();
-  viewMenu->addAction(tabsOnTopAct);
-  viewMenu->addAction(thumbsAct);
-  viewMenu->addAction(dualPaneAct);
-  viewMenu->addSeparator();
-  viewMenu->addAction(zoomInAct);
-  viewMenu->addAction(zoomOutAct);
-  viewMenu->addSeparator();
-  viewMenu->addAction(upAct);
-  viewMenu->addAction(backAct);
-  viewMenu->addAction(homeAct);
-  viewMenu->addAction(refreshAct);
+  viewMenuPtr->addSeparator();
+  viewMenuPtr->addAction(iconAct);
+  viewMenuPtr->addAction(listViewAct);
+  viewMenuPtr->addAction(hiddenAct);
+  viewMenuPtr->addSeparator();
+  viewMenuPtr->addAction(tabsOnTopAct);
+  viewMenuPtr->addAction(thumbsAct);
+  viewMenuPtr->addAction(dualPaneAct);
+  viewMenuPtr->addSeparator();
+  viewMenuPtr->addAction(zoomInAct);
+  viewMenuPtr->addAction(zoomOutAct);
+  viewMenuPtr->addSeparator();
+  viewMenuPtr->addAction(upAct);
+  viewMenuPtr->addAction(backAct);
+  viewMenuPtr->addAction(homeAct);
+  viewMenuPtr->addAction(refreshAct);
 
   // Help menu
   // ----------------------------------------------------------------------
-  QMenu* helpMenu = new QMenu(tr("Help"));
+  helpMenuPtr = new QMenu(tr("Help"));
 #ifdef Q_OS_MAC
-  helpMenu->addAction(macFileAccessHelpAct);
-  helpMenu->addAction(macOpenWithHelpAct);
-  helpMenu->addSeparator();
+  helpMenuPtr->addAction(macFileAccessHelpAct);
+  helpMenuPtr->addAction(macOpenWithHelpAct);
+  helpMenuPtr->addSeparator();
 #endif
-  helpMenu->addAction(thumbnailHelpAct);
-  helpMenu->addAction(dualPaneHelpAct);
-  helpMenu->addAction(viewDiagnosticLogAct);
-  helpMenu->addSeparator();
-  helpMenu->addAction(aboutAct);
-  helpMenu->addAction(aboutQtAct);
+  helpMenuPtr->addAction(thumbnailHelpAct);
+  helpMenuPtr->addAction(dualPaneHelpAct);
+  helpMenuPtr->addAction(viewDiagnosticLogAct);
+  helpMenuPtr->addSeparator();
+  helpMenuPtr->addAction(aboutAct);
+  helpMenuPtr->addAction(aboutQtAct);
 
   // Place all menus on menu bar
   // ----------------------------------------------------------------------
 #ifdef Q_OS_MAC
   QMenuBar *mb = menuBar();
-  mb->addMenu(fileMenu);
-  mb->addMenu(editMenu);
-  mb->addMenu(viewMenu);
-  mb->addMenu(helpMenu);
+  mb->addMenu(fileMenuPtr);
+  mb->addMenu(editMenuPtr);
+  mb->addMenu(viewMenuPtr);
+  mb->addMenu(helpMenuPtr);
 #else
   QMenuBar *menuBar = new QMenuBar;
-  menuBar->addMenu(fileMenu);
-  menuBar->addMenu(editMenu);
-  menuBar->addMenu(viewMenu);
-  menuBar->addMenu(helpMenu);
+  menuBar->addMenu(fileMenuPtr);
+  menuBar->addMenu(editMenuPtr);
+  menuBar->addMenu(viewMenuPtr);
+  menuBar->addMenu(helpMenuPtr);
   menuToolBar->addWidget(menuBar);
 #endif
 }

@@ -11,12 +11,13 @@ TS_PATH = os.path.join(DIR, "qtfm_zh_CN.ts")
 # Exact overrides (preferred). Keys are English source strings.
 EXACT = {
     "Settings": "设置",
-    "General": "常规",
+    "General": "全局设置",
     "Appearance": "外观",
-    "Custom Actions": "自定义操作",
+    "Custom Actions": "自定义action",
     "Shortcuts": "快捷键",
     "Open with": "打开方式",
     "Mime Types": "MIME 类型",
+    "System Tray": "系统相关",
     "Advanced": "高级",
     "Module testing (stability)": "模块测试（稳定性）",
     "Turn off the disk sidebar to see whether freezes or high CPU come from disk refresh. Takes effect when you save settings.": "可关闭磁盘侧栏，排查卡死或高 CPU 是否由磁盘刷新引起。保存设置后立即生效。",
@@ -71,12 +72,17 @@ EXACT = {
     "Show \"new tab\" button": "显示“新建标签”按钮",
     "Show Terminal button": "显示“终端”按钮",
     "Icon view spacing": "图标视图间距",
+    "Icon view horizontal gap": "图标视图水平间距",
+    "Icon view vertical gap": "图标视图垂直间距",
     "Icon view size": "图标视图大小",
     "List row height": "列表行高",
     "Bookmark group tab size": "书签分组标签大小",
     "Folders always first (list)": "列表中文件夹始终在前",
     "Folders always first (icon)": "图标视图中文件夹始终在前",
     "Toolbar padding (all sides)": "工具栏留白（四边相同）",
+    "Top navigation bar": "顶部导航栏",
+    "Padding around the toolbar row (settings, navigation, path field, terminal, etc.).":
+        "工具栏行四周的留白（设置、导航、路径栏、终端等）。",
     "List column: Name": "列表列：名称",
     "List column: Size": "列表列：大小",
     "List column: Date": "列表列：日期",
@@ -84,6 +90,83 @@ EXACT = {
     "List column: Folder": "列表列：类型",
     " px": " 像素",
     "Language": "界面语言",
+    "Custom colors": "自定义颜色",
+    "Customize backgrounds for the file panes, bookmarks, sidebar tabs, and top toolbar. "
+    "Light and dark themes each have their own color set. Leave “Use default” checked to "
+    "follow the current theme palette.":
+        "自定义文件栏、书签、侧栏标签与顶部工具栏的背景色。浅色与深色主题各有独立配色。保持勾选「使用默认」则跟随当前主题调色板。",
+    "Light theme": "浅色主题",
+    "Dark theme": "深色主题",
+    "Export colors…": "导出颜色…",
+    "Import colors…": "导入颜色…",
+    "Use default": "使用默认",
+    "Default": "默认",
+    "File pane background (inactive / single)": "文件栏背景（未聚焦 / 单栏）",
+    "File pane background (focused dual-pane)": "文件栏背景（双栏聚焦）",
+    "Bookmarks list background": "书签列表背景",
+    "Bookmark group bar background": "书签分组栏背景",
+    "Bookmark group button background": "书签分组按钮背景",
+    "Sidebar tab selected (Bookmarks / Disks)": "侧栏标签选中（书签 / 磁盘）",
+    "Sidebar tab unselected (Bookmarks / Disks)": "侧栏标签未选中（书签 / 磁盘）",
+    "Top chrome background (menu / toolbar / address / search)":
+        "顶部区域背景（菜单 / 工具栏 / 地址 / 搜索）",
+    "Top chrome button / control background": "顶部按钮 / 控件背景",
+    "Export UI colors": "导出界面颜色",
+    "Import UI colors": "导入界面颜色",
+    "JSON files (*.json)": "JSON 文件 (*.json)",
+    "Export failed": "导出失败",
+    "Import failed": "导入失败",
+    "Export": "导出",
+    "Import": "导入",
+    "Colors exported successfully.": "颜色已成功导出。",
+    "Colors imported. Click Save to apply them.": "颜色已导入。点击保存以应用。",
+    "Show dialog with action's output": "显示操作输出对话框",
+    "Show dialog with action's output:": "显示操作输出对话框：",
+    # Open with
+    "Application name": "应用程序名称",
+    "Extensions": "扩展名",
+    "Command (line 1)": "命令（第 1 行）",
+    "Command (line 2)": "命令（第 2 行）",
+    "Icon path": "图标路径",
+    "Paste icon path": "粘贴图标路径",
+    "Unified categories (first module = double-click default)":
+        "统一分类（第一个模块为双击默认）",
+    "These handlers override system defaults when set. "
+    "Use %f or %F for the file path. "
+    "On macOS, command-line tools installed with Homebrew (e.g. mpv %f, "
+    "/opt/homebrew/bin/mpv %f) are often more reliable than open -a for apps "
+    "that are not a .app bundle. "
+    "For real .app bundles use /Applications/App.app %f or open -a \"Exact App Name\" %f .":
+        "设置后这些处理程序会覆盖系统默认关联。"
+        "命令中请使用 %f 或 %F 表示文件路径。"
+        "在 macOS 上，用 Homebrew 安装的命令行工具（如 mpv %f、"
+        "/opt/homebrew/bin/mpv %f）通常比 open -a 更可靠（当应用不是 .app 包时）。"
+        "真正的 .app 可用 /Applications/App.app %f 或 open -a \"Exact App Name\" %f 。",
+    "These handlers override the \"Mime Types\" tab. "
+    "Use %f or %F for file path in commands.":
+        "这些处理程序会覆盖「MIME 类型」页的设置。命令中请使用 %f 或 %F 表示文件路径。",
+    "Specific extensions": "特定扩展名",
+    "Each module applies to listed extensions (comma-separated), "
+    "e.g. pdf or glb,gltf. Higher priority than category rules.":
+        "每个模块作用于列出的扩展名（逗号分隔），例如 pdf 或 glb,gltf。优先级高于分类规则。",
+    "Add extension module": "添加扩展名模块",
+    "Add application module": "添加应用程序模块",
+    "Category: %1": "分类：%1",
+    "Image": "图片",
+    "Video": "视频",
+    "Text and code": "文本与代码",
+    "Archive": "压缩包",
+    "Delete module": "删除模块",
+    "Default for double-click (first module)": "双击默认（第一个模块）",
+    "Capture output": "捕获输出",
+    "Add module": "添加模块",
+    "Add action module": "添加模块",
+    "No custom actions yet. Click “Add module”.": "尚无自定义操作。点击「添加模块」。",
+    "No custom actions yet. Click “Add action module”.": "尚无自定义操作。点击「添加模块」。",
+    "Each module is one custom context-menu action. "
+    "Icon path overrides the bundled icon when set. "
+    "Use %f, %F, %n in commands.":
+        "每个模块对应一条自定义右键菜单操作。设置图标路径后将覆盖内置图标。命令中可使用 %f、%F、%n。",
     "System default": "跟随系统",
     "English": "English",
     "简体中文": "简体中文",
@@ -199,10 +282,12 @@ EXACT = {
 PHRASES = [
     ("New bookmark group", "新建书签分组"),
     ("bookmark group", "书签分组"),
+    ("Custom Actions", "自定义action"),
     ("Custom action", "自定义操作"),
     ("custom action", "自定义操作"),
     ("Open with", "打开方式"),
     ("Mime Types", "MIME 类型"),
+    ("System Tray", "系统相关"),
     ("Drag and Drop", "拖放"),
     ("Terminal emulator", "终端模拟器"),
     ("Single Click", "单击"),
@@ -234,7 +319,7 @@ PHRASES = [
     ("Terminal", "终端"),
     ("Bookmarks", "书签"),
     ("Settings", "设置"),
-    ("General", "常规"),
+    ("General", "全局设置"),
     ("Appearance", "外观"),
     ("Advanced", "高级"),
     ("Shortcuts", "快捷键"),
