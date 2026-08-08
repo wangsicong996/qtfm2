@@ -101,9 +101,10 @@ myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
   rootItem = new myModelItem(QFileInfo("/"), new myModelItem(QFileInfo(), nullptr));
   currentRootPath = "/";
   QDir root("/");
-  QFileInfoList drives = root.entryInfoList( QDir::AllEntries | QDir::Files
+  QFileInfoList drives = root.entryInfoList(QDir::AllEntries | QDir::Files
                                             | QDir::Hidden | QDir::System
-                                            | QDir::NoDotAndDotDot | QDir::NoSort);
+                                            | QDir::NoDotAndDotDot,
+                                            QDir::NoSort);
 
   // Create item per each drive
   foreach (QFileInfo drive, drives) {
@@ -440,7 +441,8 @@ void myModel::notifyProcessFullRescan(myModelItem *parent, const QString &folder
     parent->dirty = 1;
     QDir dir(parent->absoluteFilePath());
     QFileInfoList all = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot
-                                          | QDir::Hidden | QDir::System | QDir::NoSort);
+                                          | QDir::Hidden | QDir::System,
+                                          QDir::NoSort);
 
     QHash<QString, QFileInfo> onDisk;
     onDisk.reserve(all.size());
@@ -710,7 +712,8 @@ void myModel::populateItem(myModelItem *item)
 
     QDir dir(item->absoluteFilePath());
     const QFileInfoList all = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot
-                                                | QDir::Hidden | QDir::System | QDir::NoSort);
+                                                | QDir::Hidden | QDir::System,
+                                                QDir::NoSort);
     if (all.isEmpty()) {
         return;
     }
