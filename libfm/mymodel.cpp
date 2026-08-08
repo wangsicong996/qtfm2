@@ -917,8 +917,8 @@ Qt::DropActions myModel::supportedDropActions() const
 //---------------------------------------------------------------------------------
 Qt::DropActions myModel::supportedDragActions() const
 {
-    // Copy|Move|Link — Thunar negotiates Move on same volume; Electron wants Copy.
-    return Qt::CopyAction | Qt::MoveAction | Qt::LinkAction;
+    // Match working PyQt FileGridWidget: Move/cut for Thunar & Electron.
+    return Qt::MoveAction;
 }
 
 //---------------------------------------------------------------------------------

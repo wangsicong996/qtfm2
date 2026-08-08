@@ -35,7 +35,7 @@ DfmQTreeView::DfmQTreeView(QWidget *parent) :
     setDragEnabled(true);
     setAcceptDrops(true);
     setDropIndicatorShown(true);
-    setDefaultDropAction(Qt::CopyAction);
+    setDefaultDropAction(Qt::MoveAction);
     setDragDropMode(QAbstractItemView::DragDrop);
     m_fileItemDelegate = new DfmQStyledItemDelegate(this);
     m_fileItemDelegate->setMinimizedNameColumnSelection(false); // if true long filenames will overflow the column!
@@ -212,7 +212,7 @@ void DfmQTreeView::startDrag(Qt::DropActions supportedActions)
         setState(NoState);
         return;
     }
-    Common::startFileUrlDrag(this, urls, supportedActions);
+    Common::startFileUrlDrag(this, urls, Qt::MoveAction);
     setState(NoState);
 }
 

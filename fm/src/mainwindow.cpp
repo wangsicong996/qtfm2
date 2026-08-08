@@ -647,7 +647,7 @@ void MainWindow::lateStart() {
       dt->setSelectionMode(QAbstractItemView::ExtendedSelection);
       dt->setSelectionBehavior(QAbstractItemView::SelectRows);
       dt->setDragDropMode(QAbstractItemView::DragDrop);
-      dt->setDefaultDropAction(Qt::CopyAction);
+      dt->setDefaultDropAction(Qt::MoveAction);
       dt->setDropIndicatorShown(true);
       dt->setEditTriggers(QAbstractItemView::NoEditTriggers);
       lv->setResizeMode(QListView::Adjust);

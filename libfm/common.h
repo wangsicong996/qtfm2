@@ -108,19 +108,17 @@ public:
                                     const QString &destDir,
                                     Qt::KeyboardModifiers mods = Qt::NoModifier,
                                     Qt::DropAction proposed = Qt::IgnoreAction);
-    /** Fill urls + text/uri-list (+ gnome / moz-url). text/plain uses file:// lines
-     *  (not bare paths) so Chromium/Electron fills dataTransfer.files. */
+    /** Fill urls + GTK/KDE formats (PyQt-compatible: url.toString(), CRLF uri-list). */
     static void populateFileListMimeData(QMimeData *data,
                                          const QList<QUrl> &urls,
                                          bool cut = false);
     /**
-     * Start an outbound file drag (Copy|Move|Link, default Copy).
-     * Prefer this over QListView's default startDrag — IconMode + Free movement
-     * only rearranges icons and never talks to Thunar/Electron.
+     * Outbound drag matching working PyQt FileGridWidget:
+     * gnome "cut" + QDrag::exec(MoveAction, MoveAction) for Thunar/Electron.
      */
     static void startFileUrlDrag(class QAbstractItemView *view,
                                  const QList<QUrl> &urls,
-                                 Qt::DropActions supportedActions);
+                                 Qt::DropActions supportedActions = Qt::MoveAction);
     /** Wheel steps as a fraction of half the viewport (0.3–1.5, default 1.0). */
     static qreal fileViewScrollSpeed();
     static void invalidateFileViewScrollSpeedCache();

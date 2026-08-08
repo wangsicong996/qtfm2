@@ -738,7 +738,7 @@ void MainWindow::applyIconView() {
       lv->setFlow(QListView::LeftToRight);
       lv->setMovement(QListView::Static);
       lv->setDragDropMode(QAbstractItemView::DragDrop);
-      lv->setDefaultDropAction(Qt::CopyAction);
+      lv->setDefaultDropAction(Qt::MoveAction);
   }
   stackWidget->setCurrentIndex(0);
   detailTree->setMouseTracking(false);
@@ -759,7 +759,7 @@ void MainWindow::applyIconView() {
   }
 
   list->setDragDropMode(QAbstractItemView::DragDrop);
-  list->setDefaultDropAction(Qt::CopyAction);
+  list->setDefaultDropAction(Qt::MoveAction);
   settings->setValue(QStringLiteral("fileViewMode"), QStringLiteral("icon"));
 }
 //---------------------------------------------------------------------------

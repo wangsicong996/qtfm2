@@ -32,6 +32,7 @@
 #include <QAbstractItemView>
 #include <QPixmap>
 #include <QIcon>
+#include <QPainter>
 #include <QGuiApplication>
 #include <QAbstractScrollArea>
 #include <QScrollBar>
@@ -529,17 +530,11 @@ void Common::populateFileListMimeData(QMimeData *data, const QList<QUrl> &urls, 
         return;
     }
 
-    // Build formats the way GTK/Thunar do. Chromium/Electron is picky:
-    // - Needs text/uri-list with file:// URLs (CRLF)
-    // - Must NOT get text/plain as raw local paths (/home/...), or it treats
-    //   the drop as text paste and never fills dataTransfer.files
+    // Match /thunar-actions/.../file_column.py FileGridWidget.startDrag:
+    // setUrls + uri.toString() + text/uri-list CRLF + gnome cut/copy + kde cutselection.
     QList<QUrl> fileUrls;
     fileUrls.reserve(urls.size());
-    QByteArray uriList;
-    QByteArray gnome;
-    QByteArray mozUrl;
     QStringList uriLines;
-    gnome += cut ? "cut\n" : "copy\n";
 
     for (const QUrl &url : urls) {
         QUrl fileUrl = url;
@@ -550,26 +545,9 @@ void Common::populateFileListMimeData(QMimeData *data, const QList<QUrl> &urls, 
             continue;
         }
         fileUrls.append(fileUrl);
-
-        const QByteArray encoded = fileUrl.toEncoded(QUrl::FullyEncoded);
-        uriList += encoded;
-        uriList += "\r\n";
-
-        gnome += encoded;
-        gnome += '\n';
-
-        uriLines.append(QString::fromUtf8(encoded));
-
-        // text/x-moz-url: "url\ntitle" per entry (Chromium also understands this).
-        if (!mozUrl.isEmpty()) {
-            mozUrl += '\n';
-        }
-        mozUrl += encoded;
-        mozUrl += '\n';
-        const QString title = fileUrl.isLocalFile()
-                                  ? QFileInfo(fileUrl.toLocalFile()).fileName()
-                                  : fileUrl.fileName();
-        mozUrl += title.toUtf8();
+        // Prefer toString() over toEncoded(FullyEncoded) — GTK/Thunar/Electron
+        // accept the same form the working PyQt app sends.
+        uriLines.append(fileUrl.toString());
     }
 
     if (fileUrls.isEmpty()) {
@@ -577,42 +555,52 @@ void Common::populateFileListMimeData(QMimeData *data, const QList<QUrl> &urls, 
     }
 
     data->setUrls(fileUrls);
-    data->setData(QStringLiteral("text/uri-list"), uriList);
+    const QString joinedCrLf = uriLines.join(QStringLiteral("\r\n"));
+    data->setText(joinedCrLf);
+    data->setData(QStringLiteral("text/uri-list"),
+                  (joinedCrLf + QStringLiteral("\r\n")).toUtf8());
+
+    QByteArray gnome = cut ? QByteArray("cut\n") : QByteArray("copy\n");
+    gnome += uriLines.join(QLatin1Char('\n')).toUtf8();
+    gnome += '\n';
     data->setData(QStringLiteral("x-special/gnome-copied-files"), gnome);
-    // KDE / some Qt receivers
     data->setData(QStringLiteral("application/x-kde-cutselection"),
                   cut ? QByteArray("1") : QByteArray("0"));
+
+    // Chromium also understands moz-url (url\ntitle pairs).
+    QByteArray mozUrl;
+    for (int i = 0; i < fileUrls.size(); ++i) {
+        if (!mozUrl.isEmpty()) {
+            mozUrl += '\n';
+        }
+        mozUrl += uriLines.at(i).toUtf8();
+        mozUrl += '\n';
+        const QString title = fileUrls.at(i).isLocalFile()
+                                  ? QFileInfo(fileUrls.at(i).toLocalFile()).fileName()
+                                  : fileUrls.at(i).fileName();
+        mozUrl += title.toUtf8();
+    }
     data->setData(QStringLiteral("text/x-moz-url"), mozUrl);
-    // Prefer file:// lines (GTK-style), never bare filesystem paths.
-    data->setText(uriLines.join(QLatin1Char('\n')));
 }
 
 void Common::startFileUrlDrag(QAbstractItemView *view,
                               const QList<QUrl> &urls,
                               Qt::DropActions supportedActions)
 {
+    Q_UNUSED(supportedActions);
     if (!view || urls.isEmpty()) {
         return;
     }
 
+    // PyQt FileGridWidget: cut + MoveAction only (Thunar/Electron both accept this).
     QMimeData *mime = new QMimeData();
-    populateFileListMimeData(mime, urls, false);
+    populateFileListMimeData(mime, urls, true /*cut/move*/);
     if (!mime->hasUrls()) {
         delete mime;
         return;
     }
 
-    Qt::DropActions actions = supportedActions;
-    if (actions == Qt::IgnoreAction) {
-        actions = Qt::CopyAction | Qt::MoveAction | Qt::LinkAction;
-    } else {
-        actions |= Qt::CopyAction;
-    }
-
-    // On X11/Wayland the drag source should be the viewport surface.
-    QWidget *source = view->viewport() ? static_cast<QWidget *>(view->viewport())
-                                       : static_cast<QWidget *>(view);
-    QDrag *drag = new QDrag(source);
+    QDrag *drag = new QDrag(view);
     drag->setMimeData(mime);
 
     QModelIndex pixIndex;
@@ -628,41 +616,33 @@ void Common::startFileUrlDrag(QAbstractItemView *view,
     }
 
     if (pixIndex.isValid()) {
-#if defined(Q_OS_LINUX)
-        // QWidget::grab() during DnD often breaks XDND / Wayland on Linux
-        // (stuck ghost cursor, target never receives drop). Use the icon only.
         const QVariant dec = pixIndex.data(Qt::DecorationRole);
         QPixmap tip;
         if (dec.canConvert<QIcon>()) {
-            tip = dec.value<QIcon>().pixmap(QSize(48, 48));
+            tip = dec.value<QIcon>().pixmap(QSize(56, 56));
         } else if (dec.canConvert<QPixmap>()) {
-            tip = dec.value<QPixmap>().scaled(48, 48, Qt::KeepAspectRatio,
+            tip = dec.value<QPixmap>().scaled(56, 56, Qt::KeepAspectRatio,
                                               Qt::SmoothTransformation);
         }
         if (!tip.isNull()) {
-            drag->setPixmap(tip);
-            drag->setHotSpot(QPoint(tip.width() / 2, tip.height() / 2));
+            const int canvas = 64;
+            QPixmap base(canvas, canvas);
+            base.fill(Qt::transparent);
+            QPainter p(&base);
+            p.setRenderHint(QPainter::Antialiasing, true);
+            p.drawPixmap((canvas - tip.width()) / 2, (canvas - tip.height()) / 2, tip);
+            p.end();
+            drag->setPixmap(base);
+            drag->setHotSpot(QPoint(canvas / 2, canvas / 2));
         }
-#else
-        const QRect rect = view->visualRect(pixIndex);
-        if (rect.isValid() && view->viewport()) {
-            const QPixmap grab = view->viewport()->grab(rect);
-            if (!grab.isNull()) {
-                drag->setPixmap(grab);
-                drag->setHotSpot(QPoint(qMin(16, rect.width() / 2),
-                                        qMin(16, rect.height() / 2)));
-            }
-        }
-#endif
     }
 
-    qInfo("qtfm DnD: platform=%s urls=%d actions=0x%x",
-          qPrintable(QGuiApplication::platformName()),
-          urls.size(), int(actions));
-    const Qt::DropAction dropped = drag->exec(actions, Qt::CopyAction);
+    qInfo("qtfm DnD: platform=%s urls=%d (Move/cut like PyQt)",
+          qPrintable(QGuiApplication::platformName()), urls.size());
+    const Qt::DropAction dropped = drag->exec(Qt::MoveAction, Qt::MoveAction);
     qInfo("qtfm DnD: finished action=0x%x", int(dropped));
 
-    if (dropped == Qt::MoveAction && view->viewport()) {
+    if (view->viewport()) {
         view->viewport()->update();
     }
 }
