@@ -942,12 +942,11 @@ QMimeData * myModel::mimeData(const QModelIndexList & indexes) const
         // One URL per row (details view may pass every column).
         const QModelIndex rowIndex = index.sibling(index.row(), 0);
         const QModelIndex use = rowIndex.isValid() ? rowIndex : index;
-        QString path;
-        if (use.model() == this) {
-            path = filePath(use);
-        } else if (myModelItem *item = static_cast<myModelItem*>(use.internalPointer())) {
-            path = item->absoluteFilePath();
+        myModelItem *item = static_cast<myModelItem*>(use.internalPointer());
+        if (!item) {
+            continue;
         }
+        const QString path = item->absoluteFilePath();
         if (path.isEmpty()) {
             continue;
         }
