@@ -1,11 +1,16 @@
 #include "dfmqtreeview.h"
 
 #include <QApplication>
+#include <QDrag>
 #include <QEvent>
 #include <QHeaderView>
+#include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QScrollBar>
+#include <QWheelEvent>
+
+#include "common.h"
 
 #if defined(Q_OS_MAC)
 #include <QtGlobal>
@@ -142,6 +147,49 @@ void DfmQTreeView::mouseReleaseEvent(QMouseEvent* event)
         updateElasticBand();
         m_band.show = false;
     }
+}
+
+void DfmQTreeView::startDrag(Qt::DropActions supportedActions)
+{
+    if (!model()) {
+        return;
+    }
+    QModelIndexList indexes;
+    if (selectionModel()) {
+        if (selectionModel()->selectedRows(0).count()) {
+            indexes = selectionModel()->selectedRows(0);
+        } else {
+            indexes = selectionModel()->selectedIndexes();
+        }
+    }
+    if (indexes.isEmpty()) {
+        return;
+    }
+
+    QMimeData *data = model()->mimeData(indexes);
+    if (!data || !data->hasUrls()) {
+        delete data;
+        return;
+    }
+
+    QDrag *drag = new QDrag(this);
+    drag->setMimeData(data);
+    const QModelIndex first = indexes.constFirst();
+    const QIcon icon = qvariant_cast<QIcon>(first.data(Qt::DecorationRole));
+    if (!icon.isNull()) {
+        const QPixmap pm = icon.pixmap(32, 32);
+        drag->setPixmap(pm);
+        drag->setHotSpot(QPoint(pm.width() / 2, pm.height() / 2));
+    }
+
+    const Qt::DropActions actions =
+        supportedActions & (Qt::CopyAction | Qt::MoveAction | Qt::LinkAction);
+    drag->exec(actions == 0 ? supportedActions : actions, Qt::CopyAction);
+}
+
+void DfmQTreeView::wheelEvent(QWheelEvent *event)
+{
+    Common::applyFileViewWheelScroll(this, event);
 }
 
 void DfmQTreeView::paintEvent(QPaintEvent* event)

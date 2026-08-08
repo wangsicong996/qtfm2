@@ -24,6 +24,8 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void startDrag(Qt::DropActions supportedActions) override;
+    void wheelEvent(QWheelEvent *event) override;
 
 private:
     QRect contentRectForVisualRect(const QRect &cellRect) const;

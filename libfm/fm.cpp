@@ -47,7 +47,7 @@ FM::FM(MimeUtils *mimeUtils,
     list->setFlow(QListView::LeftToRight);
     list->setMouseTracking(true);
     list->setDragDropMode(QAbstractItemView::DragDrop);
-    list->setDefaultDropAction(Qt::MoveAction);
+    list->setDefaultDropAction(Qt::CopyAction);
     list->setResizeMode(QListView::Adjust);
     list->setSelectionMode(QAbstractItemView::ExtendedSelection);
     list->setSelectionRectVisible(true);

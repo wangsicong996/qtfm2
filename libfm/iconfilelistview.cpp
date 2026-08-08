@@ -1,9 +1,13 @@
 #include "iconfilelistview.h"
 #include "iconview.h"
+#include "common.h"
 
 #include <QFontMetrics>
 #include <QMouseEvent>
 #include <QApplication>
+#include <QDrag>
+#include <QMimeData>
+#include <QWheelEvent>
 
 IconFileListView::IconFileListView(QWidget *parent)
     : QListView(parent)
@@ -128,4 +132,45 @@ void IconFileListView::mouseDoubleClickEvent(QMouseEvent *event)
         return;
     }
     QListView::mouseDoubleClickEvent(event);
+}
+
+void IconFileListView::startDrag(Qt::DropActions supportedActions)
+{
+    if (!model()) {
+        return;
+    }
+    QModelIndexList indexes;
+    if (selectionModel()) {
+        indexes = selectionModel()->selectedIndexes();
+    }
+    if (indexes.isEmpty()) {
+        return;
+    }
+
+    QMimeData *data = model()->mimeData(indexes);
+    if (!data || !data->hasUrls()) {
+        delete data;
+        return;
+    }
+
+    QDrag *drag = new QDrag(this);
+    drag->setMimeData(data);
+    const QModelIndex first = indexes.constFirst();
+    const QIcon icon = qvariant_cast<QIcon>(first.data(Qt::DecorationRole));
+    if (!icon.isNull()) {
+        const QPixmap pm = icon.pixmap(32, 32);
+        drag->setPixmap(pm);
+        drag->setHotSpot(QPoint(pm.width() / 2, pm.height() / 2));
+    }
+
+    // Offer Copy|Move|Link; default Copy so Electron/GTK targets accept the drop.
+    // Destination (or our dropMimeData) decides same-disk move vs cross-disk copy.
+    const Qt::DropActions actions =
+        supportedActions & (Qt::CopyAction | Qt::MoveAction | Qt::LinkAction);
+    drag->exec(actions == 0 ? supportedActions : actions, Qt::CopyAction);
+}
+
+void IconFileListView::wheelEvent(QWheelEvent *event)
+{
+    Common::applyFileViewWheelScroll(this, event);
 }

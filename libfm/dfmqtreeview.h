@@ -33,6 +33,8 @@ protected:
     virtual void mouseReleaseEvent(QMouseEvent* event);
     virtual void paintEvent(QPaintEvent* event);
     virtual void setSelection(const QRect& rect, QItemSelectionModel::SelectionFlags command);
+    void startDrag(Qt::DropActions supportedActions) override;
+    void wheelEvent(QWheelEvent *event) override;
 
 private slots:
     /**

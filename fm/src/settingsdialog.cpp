@@ -230,6 +230,15 @@ QWidget *SettingsDialog::createGeneralSettings() {
   comboSingleClick->addItem(tr("Everything"),2);
   layoutBehav->addRow(tr("Enable Single Click"), comboSingleClick);
 
+  spinFileViewScrollSpeed = new QDoubleSpinBox(grpBehav);
+  spinFileViewScrollSpeed->setRange(0.3, 1.5);
+  spinFileViewScrollSpeed->setSingleStep(0.1);
+  spinFileViewScrollSpeed->setDecimals(1);
+  spinFileViewScrollSpeed->setSuffix(QStringLiteral("×"));
+  spinFileViewScrollSpeed->setToolTip(
+      tr("Wheel scroll distance relative to half the visible view height."));
+  layoutBehav->addRow(tr("Wheel scroll speed:"), spinFileViewScrollSpeed);
+
   checkPathHistory = new ToggleSwitch(grpBehav);
   layoutBehav->addRow(tr("Enable path history"), checkPathHistory);
 
@@ -1062,6 +1071,12 @@ void SettingsDialog::readSettings() {
   comboDADshift->setCurrentIndex(settingsPtr->value("dad_shift", 2).toInt());
 
   comboSingleClick->setCurrentIndex(settingsPtr->value("singleClick", 0).toInt());
+  if (spinFileViewScrollSpeed) {
+      spinFileViewScrollSpeed->setValue(
+          qBound(0.3,
+                settingsPtr->value(QStringLiteral("fileViewScrollSpeed"), 1.0).toReal(),
+                1.5));
+  }
   showHomeButton->setChecked(settingsPtr->value("home_button", true).toBool());
   showNewTabButton->setChecked(settingsPtr->value("newtab_button", false).toBool());
   showTerminalButton->setChecked(settingsPtr->value("terminal_button", true).toBool());
@@ -1347,6 +1362,10 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("dad_shift", comboDADshift->currentIndex());
 
   settingsPtr->setValue("singleClick", comboSingleClick->currentIndex());
+  if (spinFileViewScrollSpeed) {
+      settingsPtr->setValue(QStringLiteral("fileViewScrollSpeed"),
+                            spinFileViewScrollSpeed->value());
+  }
   const QString newUiLang = comboUiLanguage->currentData().toString();
   settingsPtr->setValue(QStringLiteral("uiLanguage"), newUiLang);
   settingsPtr->setValue("home_button", showHomeButton->isChecked());

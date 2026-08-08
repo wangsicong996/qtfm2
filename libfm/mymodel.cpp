@@ -911,29 +911,52 @@ QModelIndex myModel::insertFileWithSuffix(QModelIndex parent, const QString &suf
 //---------------------------------------------------------------------------------
 Qt::DropActions myModel::supportedDropActions() const
 {
-    return Qt::CopyAction | Qt::MoveAction;
+    return Qt::CopyAction | Qt::MoveAction | Qt::LinkAction;
+}
+
+//---------------------------------------------------------------------------------
+Qt::DropActions myModel::supportedDragActions() const
+{
+    return Qt::CopyAction | Qt::MoveAction | Qt::LinkAction;
 }
 
 //---------------------------------------------------------------------------------
 QStringList myModel::mimeTypes() const
 {
-    return QStringList("text/uri-list");
+    return QStringList()
+        << QStringLiteral("text/uri-list")
+        << QStringLiteral("x-special/gnome-copied-files")
+        << QStringLiteral("text/plain");
 }
 
 //---------------------------------------------------------------------------------
 QMimeData * myModel::mimeData(const QModelIndexList & indexes) const
 {
     QMimeData *data = new QMimeData();
-
     QList<QUrl> files;
 
-    foreach(QModelIndex index, indexes) {
-        myModelItem *item = static_cast<myModelItem*>(index.internalPointer());
-        QUrl url = QUrl::fromLocalFile(item->absoluteFilePath());
-        if (!files.contains(url)) { files.append(url); }
+    foreach (const QModelIndex &index, indexes) {
+        if (!index.isValid()) {
+            continue;
+        }
+        // One URL per row (details view may pass every column).
+        const QModelIndex rowIndex = index.sibling(index.row(), 0);
+        const QModelIndex use = rowIndex.isValid() ? rowIndex : index;
+        myModelItem *item = static_cast<myModelItem*>(use.internalPointer());
+        if (!item) {
+            continue;
+        }
+        const QString path = item->absoluteFilePath();
+        if (path.isEmpty()) {
+            continue;
+        }
+        const QUrl url = QUrl::fromLocalFile(path);
+        if (!files.contains(url)) {
+            files.append(url);
+        }
     }
 
-    data->setUrls(files);
+    Common::populateFileListMimeData(data, files, false /*copy for outbound DnD*/);
     return data;
 }
 
@@ -1773,8 +1796,6 @@ bool myModel::remove(const QModelIndex & theIndex)
 bool myModel::dropMimeData(const QMimeData *data, Qt::DropAction action,
                            int row, int column, const QModelIndex &parent) {
 
-  // Unused
-  Q_UNUSED(action);
   Q_UNUSED(row);
   Q_UNUSED(column);
 
@@ -1785,31 +1806,19 @@ bool myModel::dropMimeData(const QMimeData *data, Qt::DropAction action,
 
   // Get urls of files
   QList<QUrl> files = data->urls();
-  //QStringList cutList;
-
-  // Don't do anything if drag and drop in same folder
-  if (QFileInfo(files.at(0).path()).canonicalPath() == filePath(parent)) {
+  if (files.isEmpty()) {
     return false;
   }
 
-  // Holding ctrl is copy, holding shift is move, holding alt is ask
-  Qt::KeyboardModifiers mods = QApplication::keyboardModifiers();
-  Common::DragMode mode = Common::getDefaultDragAndDrop();
-  if (mods == Qt::ControlModifier) {
-    mode = Common::getDADctrlMod();
-  } else if (mods == Qt::ShiftModifier) {
-    mode = Common::getDADshiftMod();
-  } else if (mods == Qt::AltModifier) {
-    mode = Common::getDADaltMod();
+  // Don't do anything if drag and drop in same folder
+  if (QFileInfo(files.at(0).toLocalFile()).canonicalPath() == filePath(parent)) {
+    return false;
   }
 
+  const QString sourceDir = QFileInfo(files.at(0).toLocalFile()).absolutePath();
+  const Common::DragMode mode = Common::resolveDragMode(
+      sourceDir, filePath(parent), QApplication::keyboardModifiers(), action);
 
-    /*foreach (QUrl item, files) {
-      cutList.append(item.path());
-    }*/
-
-
-  // Emit drag drop paste
   emit dragDropPaste(data, filePath(parent), mode);
   return true;
 }

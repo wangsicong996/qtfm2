@@ -62,6 +62,7 @@ public:
   QStringList mimeTypes() const;
   QFileInfo fileInfo(const QModelIndex &index);
   Qt::DropActions supportedDropActions () const;
+  Qt::DropActions supportedDragActions() const;
   QMimeData* mimeData(const QModelIndexList & indexes) const;
   MimeUtils* getMimeUtils() const;
   QHash<QString,QIcon> *mimeIcons;

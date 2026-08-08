@@ -17,6 +17,7 @@
 #include <QComboBox>
 #include <QGroupBox>
 #include <QSpinBox>
+#include <QDoubleSpinBox>
 #include <QDialogButtonBox>
 #include <QRadioButton>
 #include <QButtonGroup>
@@ -93,6 +94,7 @@ protected:
   QLineEdit* editTerm;
   QComboBox* cmbDefaultMimeApps;
   QComboBox* comboSingleClick;
+  QDoubleSpinBox *spinFileViewScrollSpeed = nullptr;
   ToggleSwitch* showTerminalButton;
   ToggleSwitch* showHomeButton;
   ToggleSwitch* showNewTabButton;

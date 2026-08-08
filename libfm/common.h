@@ -25,6 +25,12 @@
 #include <QObject>
 #include <QString>
 #include <QVariant>
+#include <QList>
+#include <QUrl>
+
+class QMimeData;
+class QAbstractScrollArea;
+class QWheelEvent;
 
 #ifndef APP
 #define APP "qtfm"
@@ -94,6 +100,25 @@ public:
     static DragMode getDADctrlMod();
     static DragMode getDADshiftMod();
     static DragMode getDefaultDragAndDrop();
+    /**
+     * Resolve copy/move/link for a file drop like a normal file manager:
+     * Ctrl=copy, Shift=move, Alt=ask; otherwise same device → move, else → copy.
+     */
+    static DragMode resolveDragMode(const QString &sourceDir,
+                                    const QString &destDir,
+                                    Qt::KeyboardModifiers mods = Qt::NoModifier,
+                                    Qt::DropAction proposed = Qt::IgnoreAction);
+    /** Fill urls + text/uri-list + x-special/gnome-copied-files (+ plain paths).
+     *  Single local images also get image/png + imageData for Electron-style paste drops. */
+    static void populateFileListMimeData(QMimeData *data,
+                                         const QList<QUrl> &urls,
+                                         bool cut = false);
+    /** Wheel steps as a fraction of half the viewport (0.3–1.5, default 1.0). */
+    static qreal fileViewScrollSpeed();
+    static void invalidateFileViewScrollSpeedCache();
+    /** Half-page baseline wheel scroll for file views (ignores Qt's huge default steps). */
+    static void applyFileViewWheelScroll(class QAbstractScrollArea *area,
+                                         class QWheelEvent *event);
     static QString getDeviceForDir(QString dir);
     static QPalette lightTheme();
     static QPalette darkTheme();

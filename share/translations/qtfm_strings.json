@@ -1776,6 +1776,14 @@
     "source": "Warning"
   },
   {
+    "context": "SettingsDialog",
+    "source": "Wheel scroll distance relative to half the visible view height."
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Wheel scroll speed:"
+  },
+  {
     "context": "SettingsUiStyles",
     "source": "Each module is one custom context-menu action. "
   },

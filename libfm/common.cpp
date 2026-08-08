@@ -27,6 +27,12 @@
 #include <QUrl>
 #include <QStandardPaths>
 #include <QBuffer>
+#include <QMimeData>
+#include <QAbstractScrollArea>
+#include <QScrollBar>
+#include <QWheelEvent>
+#include <QImage>
+#include <QSet>
 #include "thumbdiag.h"
 #include <QProcess>
 #include <QTemporaryFile>
@@ -392,6 +398,9 @@ void Common::writeSetting(QString key, QVariant value) {
         || key == QLatin1String("thumbnailVideoSample")) {
         invalidateThumbnailSettingsCache();
     }
+    if (key == QLatin1String("fileViewScrollSpeed")) {
+        invalidateFileViewScrollSpeedCache();
+    }
 }
 
 namespace {
@@ -470,6 +479,187 @@ Common::DragMode Common::getDefaultDragAndDrop()
 {
     QSettings settings(Common::configFile(), QSettings::IniFormat);
     return int2dad(settings.value("dad", DM_MOVE).toInt());
+}
+
+Common::DragMode Common::resolveDragMode(const QString &sourceDir,
+                                         const QString &destDir,
+                                         Qt::KeyboardModifiers mods,
+                                         Qt::DropAction proposed)
+{
+    if (mods & Qt::ControlModifier) {
+        const DragMode mode = getDADctrlMod();
+        return mode == DM_UNKNOWN ? DM_COPY : mode;
+    }
+    if (mods & Qt::ShiftModifier) {
+        const DragMode mode = getDADshiftMod();
+        return mode == DM_UNKNOWN ? DM_MOVE : mode;
+    }
+    if (mods & Qt::AltModifier) {
+        return DM_UNKNOWN; // ask
+    }
+
+    // Normal FM: same filesystem → move, otherwise → copy.
+    const QString srcDev = getDeviceForDir(sourceDir);
+    const QString dstDev = getDeviceForDir(destDir);
+    if (!srcDev.isEmpty() && !dstDev.isEmpty()) {
+        return (srcDev == dstDev) ? DM_MOVE : DM_COPY;
+    }
+
+    // mtab probe failed — honor negotiated XDND action if any.
+    if (proposed == Qt::CopyAction) {
+        return DM_COPY;
+    }
+    if (proposed == Qt::MoveAction) {
+        return DM_MOVE;
+    }
+    if (proposed == Qt::LinkAction) {
+        return DM_LINK;
+    }
+    return DM_COPY;
+}
+
+void Common::populateFileListMimeData(QMimeData *data, const QList<QUrl> &urls, bool cut)
+{
+    if (!data || urls.isEmpty()) {
+        return;
+    }
+    data->setUrls(urls);
+
+    QByteArray gnome;
+    gnome += cut ? "cut\n" : "copy\n";
+    QStringList paths;
+    paths.reserve(urls.size());
+    for (const QUrl &url : urls) {
+        gnome += url.toEncoded();
+        gnome += '\n';
+        if (url.isLocalFile()) {
+            paths.append(url.toLocalFile());
+        }
+    }
+    data->setData(QStringLiteral("x-special/gnome-copied-files"), gnome);
+    if (!paths.isEmpty()) {
+        data->setText(paths.join(QLatin1Char('\n')));
+    }
+
+    // Single-file media: help Chromium/Electron treat the drop like a paste.
+    if (!cut && urls.size() == 1 && urls.constFirst().isLocalFile()) {
+        const QString path = urls.constFirst().toLocalFile();
+        const QFileInfo fi(path);
+        const QString ext = fi.suffix().toLower();
+        static const QSet<QString> kImageExt = {
+            QStringLiteral("png"), QStringLiteral("jpg"), QStringLiteral("jpeg"),
+            QStringLiteral("gif"), QStringLiteral("bmp"), QStringLiteral("webp"),
+            QStringLiteral("tif"), QStringLiteral("tiff"), QStringLiteral("svg"),
+        };
+        static const QSet<QString> kVideoExt = {
+            QStringLiteral("mp4"), QStringLiteral("mkv"), QStringLiteral("mov"),
+            QStringLiteral("avi"), QStringLiteral("webm"), QStringLiteral("m4v"),
+            QStringLiteral("mpeg"), QStringLiteral("mpg"), QStringLiteral("wmv"),
+        };
+
+        // Chromium DownloadURL: "mime:filename:url"
+        if (kImageExt.contains(ext) || kVideoExt.contains(ext)
+            || ext == QLatin1String("pdf")) {
+            const QByteArray encodedUrl = urls.constFirst().toEncoded();
+            const QString download = QStringLiteral("application/octet-stream:%1:%2")
+                                         .arg(fi.fileName(),
+                                              QString::fromUtf8(encodedUrl));
+            data->setData(QStringLiteral("DownloadURL"), download.toUtf8());
+        }
+
+        if (kImageExt.contains(ext) && fi.size() > 0 && fi.size() <= 40 * 1024 * 1024) {
+            QImage img(path);
+            if (!img.isNull()) {
+                data->setImageData(img);
+                QByteArray png;
+                QBuffer buf(&png);
+                if (buf.open(QIODevice::WriteOnly) && img.save(&buf, "PNG")) {
+                    data->setData(QStringLiteral("image/png"), png);
+                }
+                if (ext == QLatin1String("jpg") || ext == QLatin1String("jpeg")) {
+                    QByteArray jpg;
+                    QBuffer jbuf(&jpg);
+                    if (jbuf.open(QIODevice::WriteOnly)
+                        && img.save(&jbuf, "JPEG", 90)) {
+                        data->setData(QStringLiteral("image/jpeg"), jpg);
+                    }
+                }
+            }
+        }
+    }
+}
+
+namespace {
+
+qreal &scrollSpeedCacheValue()
+{
+    static qreal speed = 1.0;
+    return speed;
+}
+
+bool &scrollSpeedCacheValid()
+{
+    static bool valid = false;
+    return valid;
+}
+
+} // namespace
+
+void Common::invalidateFileViewScrollSpeedCache()
+{
+    scrollSpeedCacheValid() = false;
+}
+
+qreal Common::fileViewScrollSpeed()
+{
+    if (!scrollSpeedCacheValid()) {
+        QSettings settings(Common::configFile(), QSettings::IniFormat);
+        const qreal v = settings.value(QStringLiteral("fileViewScrollSpeed"), 1.0).toReal();
+        scrollSpeedCacheValue() = qBound(0.3, v, 1.5);
+        scrollSpeedCacheValid() = true;
+    }
+    return scrollSpeedCacheValue();
+}
+
+void Common::applyFileViewWheelScroll(QAbstractScrollArea *area, QWheelEvent *event)
+{
+    if (!area || !event) {
+        return;
+    }
+    QScrollBar *vbar = area->verticalScrollBar();
+    QScrollBar *hbar = area->horizontalScrollBar();
+    const QPoint angle = event->angleDelta();
+    const bool preferHorizontal = qAbs(angle.x()) > qAbs(angle.y());
+    QScrollBar *bar = preferHorizontal ? hbar : vbar;
+    if (!bar || !bar->isEnabled()) {
+        bar = vbar;
+    }
+    if (!bar || !bar->isEnabled()) {
+        event->ignore();
+        return;
+    }
+
+    int delta = preferHorizontal ? angle.x() : angle.y();
+    if (delta == 0) {
+        const QPoint pixels = event->pixelDelta();
+        delta = preferHorizontal ? pixels.x() : pixels.y();
+        if (delta == 0) {
+            event->ignore();
+            return;
+        }
+        // Trackpads report pixels; scale by the same speed multiplier.
+        const int pixelStep = qMax(1, qRound(qAbs(delta) * fileViewScrollSpeed()));
+        bar->setValue(bar->value() + (delta > 0 ? -pixelStep : pixelStep));
+        event->accept();
+        return;
+    }
+
+    // One notch ≈ 120; baseline = half a page per notch.
+    const qreal notches = qAbs(delta) / 120.0;
+    const int halfPage = qMax(1, bar->pageStep() / 2);
+    const int step = qMax(1, qRound(halfPage * fileViewScrollSpeed() * notches));
+    bar->setValue(bar->value() + (delta > 0 ? -step : step));
+    event->accept();
 }
 
 Common::ThumbnailGenMode Common::thumbnailGenerationMode()

@@ -57,6 +57,8 @@ EXACT = {
     "Drag and Drop ALT action: ": "按住 Alt 拖放：",
     "Enable Single Click": "启用单击打开",
     "Enable path history": "启用路径历史",
+    "Wheel scroll speed:": "滚轮滚动速度：",
+    "Wheel scroll distance relative to half the visible view height.": "相对可视区域半页高度的滚轮步进（0.3–1.5 倍）。",
     "Ask before file is deleted: ": "删除文件前询问：",
     "Ask": "询问",
     "Copy": "复制",

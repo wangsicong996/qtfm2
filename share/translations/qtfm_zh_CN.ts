@@ -1867,6 +1867,14 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <source>Warning</source>
       <translation>警告</translation>
     </message>
+    <message>
+      <source>Wheel scroll distance relative to half the visible view height.</source>
+      <translation>相对可视区域半页高度的滚轮步进（0.3–1.5 倍）。</translation>
+    </message>
+    <message>
+      <source>Wheel scroll speed:</source>
+      <translation>滚轮滚动速度：</translation>
+    </message>
   </context>
   <context>
     <name>SettingsUiStyles</name>

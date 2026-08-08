@@ -517,7 +517,11 @@ void MainWindow::cutFile() {
       tempFile.close();
   }
 
-  QApplication::clipboard()->setMimeData(modelView->mimeData(selList));
+  QMimeData *mime = modelView->mimeData(selList);
+  if (mime) {
+      Common::populateFileListMimeData(mime, mime->urls(), true /*cut*/);
+      QApplication::clipboard()->setMimeData(mime);
+  }
 
   modelTree->invalidate();
   listSelectionModel->clear();
@@ -733,7 +737,7 @@ void MainWindow::applyIconView() {
       lv->setIconSize(QSize(zoom, zoom));
       lv->setFlow(QListView::LeftToRight);
       lv->setDragDropMode(QAbstractItemView::DragDrop);
-      lv->setDefaultDropAction(Qt::MoveAction);
+      lv->setDefaultDropAction(Qt::CopyAction);
   }
   stackWidget->setCurrentIndex(0);
   detailTree->setMouseTracking(false);
@@ -754,7 +758,7 @@ void MainWindow::applyIconView() {
   }
 
   list->setDragDropMode(QAbstractItemView::DragDrop);
-  list->setDefaultDropAction(Qt::MoveAction);
+  list->setDefaultDropAction(Qt::CopyAction);
   settings->setValue(QStringLiteral("fileViewMode"), QStringLiteral("icon"));
 }
 //---------------------------------------------------------------------------

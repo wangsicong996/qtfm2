@@ -636,7 +636,7 @@ void MainWindow::lateStart() {
 
   // Configure tree view
   tree->setDragDropMode(QAbstractItemView::DragDrop);
-  tree->setDefaultDropAction(Qt::MoveAction);
+  tree->setDefaultDropAction(Qt::CopyAction);
   tree->setDropIndicatorShown(true);
   tree->setEditTriggers(QAbstractItemView::EditKeyPressed |
                         QAbstractItemView::SelectedClicked);
@@ -647,7 +647,7 @@ void MainWindow::lateStart() {
       dt->setSelectionMode(QAbstractItemView::ExtendedSelection);
       dt->setSelectionBehavior(QAbstractItemView::SelectRows);
       dt->setDragDropMode(QAbstractItemView::DragDrop);
-      dt->setDefaultDropAction(Qt::MoveAction);
+      dt->setDefaultDropAction(Qt::CopyAction);
       dt->setDropIndicatorShown(true);
       dt->setEditTriggers(QAbstractItemView::NoEditTriggers);
       lv->setResizeMode(QListView::Adjust);
@@ -997,6 +997,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
 #endif
 
   applyModuleTogglesFromSettings();
+  Common::invalidateFileViewScrollSpeedCache();
 
   ThumbDiag::setLoggingEnabled(settings->value(QStringLiteral("logThumbnailDiag"), true).toBool());
 
@@ -1754,6 +1755,7 @@ void MainWindow::applySettingsFromDialog()
 
     ThumbDiag::setLoggingEnabled(settings->value(QStringLiteral("logThumbnailDiag"), true).toBool());
     OpenWithConfig::load(settings);
+    Common::invalidateFileViewScrollSpeedCache();
 
     if (modelList) {
         modelList->setMode(thumbsAct && thumbsAct->isChecked());
@@ -2289,6 +2291,33 @@ void MainWindow::applyViewChromeStyles()
     shellQss += QStringLiteral(
         "QMainWindow::separator { height: 0px; width: 0px; margin: 0; padding: 0; border: none; }");
 #endif
+    // macOS-like minimal scrollbars: no arrow buttons, blue thumb.
+    const QString scrollBlue = darkUi ? QStringLiteral("#0A84FF")
+                                      : QStringLiteral("#007AFF");
+    shellQss += QStringLiteral(
+        "QScrollBar:vertical {"
+        " background: transparent; width: 10px; margin: 0px; border: none; }"
+        "QScrollBar::handle:vertical {"
+        " background: %1; min-height: 28px; border-radius: 5px; margin: 2px; }"
+        "QScrollBar::handle:vertical:hover { background: %1; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {"
+        " height: 0px; width: 0px; border: none; background: none; }"
+        "QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {"
+        " width: 0px; height: 0px; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {"
+        " background: none; }"
+        "QScrollBar:horizontal {"
+        " background: transparent; height: 10px; margin: 0px; border: none; }"
+        "QScrollBar::handle:horizontal {"
+        " background: %1; min-width: 28px; border-radius: 5px; margin: 2px; }"
+        "QScrollBar::handle:horizontal:hover { background: %1; }"
+        "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {"
+        " height: 0px; width: 0px; border: none; background: none; }"
+        "QScrollBar::left-arrow:horizontal, QScrollBar::right-arrow:horizontal {"
+        " width: 0px; height: 0px; }"
+        "QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {"
+        " background: none; }"
+    ).arg(scrollBlue);
     setStyleSheet(shellQss);
 
     if (navToolBar) {
@@ -2727,25 +2756,29 @@ void MainWindow::dragLauncher(const QMimeData *data, const QString &newPath,
 
   // Retrieve urls (paths) of data
   QList<QUrl> files = data->urls();
+  if (files.isEmpty()) {
+    return;
+  }
 
-  // get original path
-  QStringList getOldPath = files.at(0).toLocalFile().split("/", Qt::SkipEmptyParts);
-  QString oldPath;
-  for (int i=0;i<getOldPath.size()-1;++i) { oldPath.append(QString("/%1").arg(getOldPath.at(i))); }
+  const QString oldPath = QFileInfo(files.at(0).toLocalFile()).absolutePath();
   QString oldDevice = Common::getDeviceForDir(oldPath);
   QString newDevice = Common::getDeviceForDir(newPath);
 
   qDebug() << "oldpath:" << oldDevice << oldPath;
   qDebug() << "newpath:" << newDevice << newPath;
 
-  QString extraText;
   Common::DragMode currentDragMode = dragMode;
-  if (oldDevice != newDevice) {
-      extraText = QString(tr("Source and destination is on a different storage."));
-      currentDragMode = Common::DM_UNKNOWN;
+  if (currentDragMode == Common::DM_UNKNOWN) {
+    currentDragMode = Common::resolveDragMode(
+        oldPath, newPath, QApplication::keyboardModifiers(), Qt::IgnoreAction);
   }
 
-  // If drag mode is unknown then ask what to do
+  QString extraText;
+  if (oldDevice != newDevice && !oldDevice.isEmpty() && !newDevice.isEmpty()) {
+      extraText = QString(tr("Source and destination is on a different storage."));
+  }
+
+  // If drag mode is unknown then ask what to do (Alt / explicit ask)
   if (currentDragMode == Common::DM_UNKNOWN) {
     QMessageBox box;
     box.setWindowTitle(tr("Select file action"));
@@ -2766,28 +2799,27 @@ void MainWindow::dragLauncher(const QMimeData *data, const QString &newPath,
 
     box.exec();
     if (box.clickedButton() == move) {
-      dragMode = Common::DM_MOVE;
+      currentDragMode = Common::DM_MOVE;
     } else if (box.clickedButton() == copy) {
-      dragMode = Common::DM_COPY;
+      currentDragMode = Common::DM_COPY;
     } else if (box.clickedButton() == link) {
-      dragMode = Common::DM_LINK;
-    } else if (box.clickedButton() == canc) {
+      currentDragMode = Common::DM_LINK;
+    } else {
       return;
     }
-    currentDragMode = dragMode;
   }
 
   // If moving is enabled, cut files from the original location
   QStringList cutList;
   if (currentDragMode == Common::DM_MOVE) {
     foreach (QUrl item, files) {
-      cutList.append(item.path());
+      cutList.append(item.toLocalFile());
     }
   }
 
   // Paste launcher (this method has to be called instead of that with 'data'
   // parameter, because that 'data' can timeout)
-  pasteLauncher(files, newPath, cutList, dragMode == Common::DM_LINK);
+  pasteLauncher(files, newPath, cutList, currentDragMode == Common::DM_LINK);
 }
 //---------------------------------------------------------------------------
 
