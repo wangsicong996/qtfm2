@@ -245,9 +245,10 @@ QWidget *SettingsDialog::createGeneralSettings() {
 #if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
   checkPreferX11Backend = new ToggleSwitch(grpBehav);
   checkPreferX11Backend->setToolTip(
-      tr("Thunar and many Electron apps use X11/XWayland. Running QtFM on the "
-         "X11 backend improves cross-app drag and drop. Restart QtFM after "
-         "changing this. Override with QT_QPA_PLATFORM or QTFM_NATIVE_WAYLAND."));
+      tr("Only enable if drag-and-drop to X11 apps (e.g. Thunar) fails under "
+         "Wayland. On GNOME, leaving this off usually works better with native "
+         "Wayland apps. Restart QtFM after changing. "
+         "Override: QT_QPA_PLATFORM / QTFM_FORCE_X11 / QTFM_NATIVE_WAYLAND."));
   layoutBehav->addRow(
       tr("Prefer X11 backend for drag-and-drop"), checkPreferX11Backend);
 #endif
@@ -1131,7 +1132,7 @@ void SettingsDialog::readSettings() {
   checkPathHistory->setChecked(settingsPtr->value("pathHistory", true).toBool());
   if (checkPreferX11Backend) {
       checkPreferX11Backend->setChecked(
-          settingsPtr->value(QStringLiteral("preferX11Backend"), true).toBool());
+          settingsPtr->value(QStringLiteral("preferX11Backend"), false).toBool());
   }
   const QString uiLang = AppTranslator::normalizedLanguageCode(
       settingsPtr->value(QStringLiteral("uiLanguage"), QStringLiteral("system")).toString());

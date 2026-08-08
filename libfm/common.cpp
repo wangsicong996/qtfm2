@@ -31,6 +31,8 @@
 #include <QDrag>
 #include <QAbstractItemView>
 #include <QPixmap>
+#include <QIcon>
+#include <QGuiApplication>
 #include <QAbstractScrollArea>
 #include <QScrollBar>
 #include <QWheelEvent>
@@ -577,6 +579,9 @@ void Common::populateFileListMimeData(QMimeData *data, const QList<QUrl> &urls, 
     data->setUrls(fileUrls);
     data->setData(QStringLiteral("text/uri-list"), uriList);
     data->setData(QStringLiteral("x-special/gnome-copied-files"), gnome);
+    // KDE / some Qt receivers
+    data->setData(QStringLiteral("application/x-kde-cutselection"),
+                  cut ? QByteArray("1") : QByteArray("0"));
     data->setData(QStringLiteral("text/x-moz-url"), mozUrl);
     // Prefer file:// lines (GTK-style), never bare filesystem paths.
     data->setText(uriLines.join(QLatin1Char('\n')));
@@ -601,50 +606,63 @@ void Common::startFileUrlDrag(QAbstractItemView *view,
     if (actions == Qt::IgnoreAction) {
         actions = Qt::CopyAction | Qt::MoveAction | Qt::LinkAction;
     } else {
-        // External targets (Thunar / Electron) need Copy; keep Move/Link if offered.
         actions |= Qt::CopyAction;
     }
 
-    QDrag *drag = new QDrag(view);
+    // On X11/Wayland the drag source should be the viewport surface.
+    QWidget *source = view->viewport() ? static_cast<QWidget *>(view->viewport())
+                                       : static_cast<QWidget *>(view);
+    QDrag *drag = new QDrag(source);
     drag->setMimeData(mime);
 
-    // Lightweight drag pixmap from the first selected cell (no image decode).
-    const QModelIndexList selected = view->selectionModel()
-                                         ? view->selectionModel()->selectedIndexes()
-                                         : QModelIndexList();
     QModelIndex pixIndex;
-    for (const QModelIndex &idx : selected) {
-        if (idx.isValid() && idx.column() == 0) {
-            pixIndex = idx;
-            break;
+    if (view->selectionModel()) {
+        for (const QModelIndex &idx : view->selectionModel()->selectedIndexes()) {
+            if (idx.isValid()) {
+                pixIndex = (idx.column() == 0) ? idx : idx.sibling(idx.row(), 0);
+                if (pixIndex.isValid()) {
+                    break;
+                }
+            }
         }
     }
-    if (!pixIndex.isValid() && !selected.isEmpty()) {
-        pixIndex = selected.first();
-    }
+
     if (pixIndex.isValid()) {
+#if defined(Q_OS_LINUX)
+        // QWidget::grab() during DnD often breaks XDND / Wayland on Linux
+        // (stuck ghost cursor, target never receives drop). Use the icon only.
+        const QVariant dec = pixIndex.data(Qt::DecorationRole);
+        QPixmap tip;
+        if (dec.canConvert<QIcon>()) {
+            tip = dec.value<QIcon>().pixmap(QSize(48, 48));
+        } else if (dec.canConvert<QPixmap>()) {
+            tip = dec.value<QPixmap>().scaled(48, 48, Qt::KeepAspectRatio,
+                                              Qt::SmoothTransformation);
+        }
+        if (!tip.isNull()) {
+            drag->setPixmap(tip);
+            drag->setHotSpot(QPoint(tip.width() / 2, tip.height() / 2));
+        }
+#else
         const QRect rect = view->visualRect(pixIndex);
         if (rect.isValid() && view->viewport()) {
-            QPixmap grab = view->viewport()->grab(rect);
+            const QPixmap grab = view->viewport()->grab(rect);
             if (!grab.isNull()) {
                 drag->setPixmap(grab);
                 drag->setHotSpot(QPoint(qMin(16, rect.width() / 2),
                                         qMin(16, rect.height() / 2)));
             }
         }
+#endif
     }
 
-    qInfo("qtfm DnD: start drag with %d url(s), actions=0x%x",
+    qInfo("qtfm DnD: platform=%s urls=%d actions=0x%x",
+          qPrintable(QGuiApplication::platformName()),
           urls.size(), int(actions));
-    // Default Copy so GTK/Electron accept; Thunar can still negotiate Move.
     const Qt::DropAction dropped = drag->exec(actions, Qt::CopyAction);
-    qInfo("qtfm DnD: drag finished action=0x%x", int(dropped));
+    qInfo("qtfm DnD: finished action=0x%x", int(dropped));
 
-    // External file managers perform the filesystem move themselves. Do not
-    // QAbstractItemView::clearOrRemove() — that only drops model rows and
-    // leaves a stale view when the target already moved the files.
-    if (dropped == Qt::MoveAction) {
-        // Soft refresh: inotify / next listing will sync; force a viewport update.
+    if (dropped == Qt::MoveAction && view->viewport()) {
         view->viewport()->update();
     }
 }

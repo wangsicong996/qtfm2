@@ -35,10 +35,10 @@
 
 #if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
 /**
- * Thunar and many Electron builds still use X11/XWayland. Native Wayland Qt
- * apps often cannot complete cross-protocol drag-and-drop with them.
- * Prefer xcb unless the user already set QT_QPA_PLATFORM, opted into native
- * Wayland via QTFM_NATIVE_WAYLAND, or disabled preferX11Backend in settings.
+ * Optional X11 backend for Wayland sessions. Default OFF on GNOME/etc.: native
+ * Wayland can DnD to Wayland apps; forcing xcb breaks that and only helps some
+ * XWayland targets (e.g. Thunar). Enable in Settings if needed.
+ * Respect QT_QPA_PLATFORM / QTFM_NATIVE_WAYLAND / QTFM_FORCE_X11.
  */
 static void applyPreferredDisplayBackend()
 {
@@ -47,16 +47,21 @@ static void applyPreferredDisplayBackend()
   if (qEnvironmentVariableIsSet("QTFM_NATIVE_WAYLAND"))
     return;
 
+  if (qEnvironmentVariableIsSet("QTFM_FORCE_X11")) {
+    qputenv("QT_QPA_PLATFORM", "xcb");
+    return;
+  }
+
   const bool waylandSession =
       qEnvironmentVariableIsSet("WAYLAND_DISPLAY")
       || qgetenv("XDG_SESSION_TYPE") == "wayland";
   if (!waylandSession)
     return;
 
-  bool preferX11 = true;
+  bool preferX11 = false;
   {
     QSettings settings(Common::configFile(), QSettings::IniFormat);
-    preferX11 = settings.value(QStringLiteral("preferX11Backend"), true).toBool();
+    preferX11 = settings.value(QStringLiteral("preferX11Backend"), false).toBool();
   }
   if (preferX11)
     qputenv("QT_QPA_PLATFORM", "xcb");

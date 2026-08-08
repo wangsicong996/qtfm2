@@ -4,10 +4,8 @@ set -e
 APPIMAGE="${1:?Usage: run-qtfm-appimage.sh /path/to/qtfm-*.AppImage}"
 shift
 export APPIMAGE_EXTRACT_AND_RUN=1
-# Match fm/src/main.cpp: prefer X11 on Wayland so DnD works with Thunar/Electron.
-if [ -z "${QT_QPA_PLATFORM:-}" ] && [ -z "${QTFM_NATIVE_WAYLAND:-}" ]; then
-  if [ -n "${WAYLAND_DISPLAY:-}" ] || [ "${XDG_SESSION_TYPE:-}" = "wayland" ]; then
-    export QT_QPA_PLATFORM=xcb
-  fi
+# Optional: QTFM_FORCE_X11=1 for XWayland targets (Thunar). Default stays native.
+if [ -z "${QT_QPA_PLATFORM:-}" ] && [ -n "${QTFM_FORCE_X11:-}" ]; then
+  export QT_QPA_PLATFORM=xcb
 fi
 exec "$APPIMAGE" "$@"

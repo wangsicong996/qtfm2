@@ -58,6 +58,7 @@ EXACT = {
     "Enable Single Click": "启用单击打开",
     "Enable path history": "启用路径历史",
     "Prefer X11 backend for drag-and-drop": "优先使用 X11 后端（改善拖放）",
+    "Only enable if drag-and-drop to X11 apps (e.g. Thunar) fails under Wayland. On GNOME, leaving this off usually works better with native Wayland apps. Restart QtFM after changing. Override: QT_QPA_PLATFORM / QTFM_FORCE_X11 / QTFM_NATIVE_WAYLAND.": "仅在 Wayland 下拖到 X11 应用（如 Thunar）失败时开启。GNOME 上通常保持关闭，更利原生 Wayland 应用。修改后需重启。可用 QT_QPA_PLATFORM / QTFM_FORCE_X11 / QTFM_NATIVE_WAYLAND 覆盖。",
     "Thunar and many Electron apps use X11/XWayland. Running QtFM on the X11 backend improves cross-app drag and drop. Restart QtFM after changing this. Override with QT_QPA_PLATFORM or QTFM_NATIVE_WAYLAND.": "Thunar 与多数 Electron 应用仍使用 X11/XWayland。QtFM 走 X11 后端可改善跨应用拖放。修改后需重启 QtFM。可用 QT_QPA_PLATFORM 或 QTFM_NATIVE_WAYLAND 覆盖。",
     "Wheel scroll speed:": "滚轮滚动速度：",
     "Wheel scroll distance relative to half the visible view height.": "相对可视区域半页高度的滚轮步进（0.3–1.5 倍）。",

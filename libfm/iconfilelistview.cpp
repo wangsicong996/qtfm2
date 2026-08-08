@@ -1,6 +1,8 @@
 #include "iconfilelistview.h"
 #include "iconview.h"
 #include "common.h"
+#include "mymodel.h"
+#include "mymodelitem.h"
 
 #include <QFontMetrics>
 #include <QMouseEvent>
@@ -8,6 +10,62 @@
 #include <QWheelEvent>
 #include <QMimeData>
 #include <QUrl>
+#include <QFileInfo>
+#include <QAbstractProxyModel>
+#include <QSet>
+
+namespace {
+
+QList<QUrl> selectedLocalFileUrls(QAbstractItemView *view)
+{
+    QList<QUrl> urls;
+    if (!view || !view->model() || !view->selectionModel()) {
+        return urls;
+    }
+
+    QSet<QString> seen;
+    const QModelIndexList indexes = view->selectionModel()->selectedIndexes();
+    for (const QModelIndex &index : indexes) {
+        if (!index.isValid()) {
+            continue;
+        }
+        QModelIndex use = (index.column() == 0) ? index : index.sibling(index.row(), 0);
+        if (!use.isValid()) {
+            use = index;
+        }
+
+        QModelIndex src = use;
+        const QAbstractItemModel *m = view->model();
+        while (const auto *proxy = qobject_cast<const QAbstractProxyModel *>(m)) {
+            src = proxy->mapToSource(src);
+            m = proxy->sourceModel();
+            if (!src.isValid() || !m) {
+                break;
+            }
+        }
+        if (!src.isValid()) {
+            continue;
+        }
+
+        QString path;
+        if (auto *fm = const_cast<myModel *>(qobject_cast<const myModel *>(m))) {
+            path = fm->filePath(src);
+        } else if (src.internalPointer()) {
+            path = static_cast<myModelItem *>(src.internalPointer())->absoluteFilePath();
+        }
+        if (path.isEmpty() || seen.contains(path)) {
+            continue;
+        }
+        seen.insert(path);
+        const QUrl url = QUrl::fromLocalFile(QFileInfo(path).absoluteFilePath());
+        if (url.isValid()) {
+            urls.append(url);
+        }
+    }
+    return urls;
+}
+
+} // namespace
 
 IconFileListView::IconFileListView(QWidget *parent)
     : QListView(parent)
@@ -149,30 +207,12 @@ void IconFileListView::wheelEvent(QWheelEvent *event)
 
 void IconFileListView::startDrag(Qt::DropActions supportedActions)
 {
-    if (!model() || !selectionModel()) {
-        return;
-    }
-
-    // Column-0 only so details-style multi-column selections do not duplicate.
-    QModelIndexList indexes;
-    for (const QModelIndex &index : selectionModel()->selectedIndexes()) {
-        if (index.isValid() && index.column() == 0) {
-            indexes.append(index);
-        }
-    }
-    if (indexes.isEmpty()) {
-        return;
-    }
-
-    QMimeData *probe = model()->mimeData(indexes);
-    if (!probe) {
-        return;
-    }
-    const QList<QUrl> urls = probe->urls();
-    delete probe;
+    const QList<QUrl> urls = selectedLocalFileUrls(this);
     if (urls.isEmpty()) {
+        qWarning("qtfm DnD: icon view startDrag with no local URLs");
+        setState(NoState);
         return;
     }
-
     Common::startFileUrlDrag(this, urls, supportedActions);
+    setState(NoState);
 }
