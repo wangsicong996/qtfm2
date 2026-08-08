@@ -402,7 +402,7 @@ void IconViewDelegate::paint(QPainter *painter,
 
     const QColor textColor = isSelected
         ? opt.palette.highlightedText().color()
-        : (index.data(Qt::ForegroundRole).isValid()
+        : (txtBrush.style() != Qt::NoBrush
                ? txtBrush.color()
                : opt.palette.text().color());
     const QString fileName = index.data().toString();

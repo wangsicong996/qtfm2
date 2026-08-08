@@ -8,7 +8,9 @@
 #include "common.h"
 
 #include <QAtomicInt>
+#include <QHash>
 #include <QMutex>
+#include <QQueue>
 #include <QSet>
 #include <QTimer>
 
@@ -79,6 +81,7 @@ public slots:
   void forceRefresh();
   void refreshForegroundRoles();
   void refreshDecorationRoles();
+  void reloadAppearanceCaches();
   void pumpThumbnailQueue();
   void finishThumbnailJob(QString path, QString cachePath);
   void flushPendingThumbDecorations();
@@ -97,15 +100,30 @@ protected:
   QVariant findIcon(myModelItem *item) const;
   QVariant findMimeIcon(myModelItem *item) const;
 private:
-  static bool fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils);
+  struct PendingFsNotify {
+    bool overflow = false;
+    bool needFullScan = false;
+    /** file name -> combined inotify masks within the debounce window. */
+    QHash<QString, quint32> byName;
+  };
+
+  static bool fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils,
+                                 bool allowMimeProbe = true);
   static QString generateThumbnailToCache(const QString &absolutePath,
                                           const QString &itemMime);
   void enqueueThumbnailPaths(const QStringList &files);
   void queueThumbnailDecorationUpdate(const QString &absolutePath);
+  void notifyProcessFullRescan(myModelItem *parent, const QString &folderChanged,
+                               QStringList *newFilePaths);
+  bool notifyProcessIncremental(myModelItem *parent, const PendingFsNotify &pending,
+                                QStringList *newFilePaths);
+  void removeChildItem(myModelItem *parent, myModelItem *child);
 
   bool realMimeTypes;
   bool showThumbs;
   bool m_showListDecorations = true;
+  bool m_fileColorEnabled = false;
+  Common::ThumbnailGenMode m_thumbGenMode = Common::ThumbGenAll;
 
   QPalette colors;
   QStringList cutItems;
@@ -114,8 +132,11 @@ private:
   QHash<QString, QString> *thumbPaths;
 
   mutable QMutex thumbMutex;
-  QStringList thumbQueue;
+  QQueue<QString> thumbQueue;
+  QSet<QString> thumbQueued;
   QSet<QString> thumbInFlight;
+  /** Absolute paths known to have no usable thumbnail (memory negative cache). */
+  mutable QSet<QString> m_thumbMissCache;
   QAtomicInt thumbActiveJobs;
   /** Bumped on every root-path change so in-flight thumb jobs can discard stale work. */
   QAtomicInt thumbEpoch;
@@ -133,6 +154,7 @@ private:
   int inotifyFD;
   QSocketNotifier *notifier;
   QHash<int, QString> watchers;
+  QHash<int, PendingFsNotify> m_pendingFsNotifies;
   QTimer eventTimer;
   int lastEventID;
   QString lastEventFilename;

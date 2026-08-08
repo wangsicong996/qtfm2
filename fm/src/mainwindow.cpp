@@ -1367,9 +1367,10 @@ void MainWindow::dirLoaded(bool thumbs)
     qint64 bytes = 0;
     QModelIndexList items;
     bool includeHidden = hiddenAct->isChecked();
+    const QModelIndex root = modelList->index(pathEdit->currentText());
 
-    for (int x = 0; x < modelList->rowCount(modelList->index(pathEdit->currentText())); ++x) {
-        const QModelIndex idx = modelList->index(x, 0, modelList->index(pathEdit->currentText()));
+    for (int x = 0; x < modelList->rowCount(root); ++x) {
+        const QModelIndex idx = modelList->index(x, 0, root);
         if (includeHidden || !modelList->fileInfo(idx).isHidden()) {
             items.append(idx);
             bytes += modelList->size(idx);
@@ -1388,21 +1389,12 @@ void MainWindow::dirLoaded(bool thumbs)
     if (thumbsAct->isChecked() && thumbs) {
       // Defer thumbnails so the icon grid paints first (bookmark path switches).
       const QString rootPath = pathEdit->currentText();
-      QTimer::singleShot(0, this, [this, rootPath]() {
+      QTimer::singleShot(0, this, [this, rootPath, items]() {
           if (!modelList || pathEdit->currentText() != rootPath) {
               return;
           }
           if (!thumbsAct || !thumbsAct->isChecked()) {
               return;
-          }
-          QModelIndexList items;
-          const bool includeHidden = hiddenAct && hiddenAct->isChecked();
-          const QModelIndex root = modelList->index(rootPath);
-          for (int x = 0; x < modelList->rowCount(root); ++x) {
-              const QModelIndex idx = modelList->index(x, 0, root);
-              if (includeHidden || !modelList->fileInfo(idx).isHidden()) {
-                  items.append(idx);
-              }
           }
           modelList->loadThumbs(items);
       });

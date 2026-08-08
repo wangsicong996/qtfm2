@@ -66,10 +66,13 @@ int myModelItem::childCount() const
 //---------------------------------------------------------------------------------------
 bool myModelItem::hasChild(QString fileName)
 {
-    foreach(myModelItem * item, mChildren)
-        if(item->fileName() == fileName) return true;
+    return mChildByName.contains(fileName);
+}
 
-    return false;
+//---------------------------------------------------------------------------------------
+myModelItem* myModelItem::childByName(const QString &fileName) const
+{
+    return mChildByName.value(fileName, nullptr);
 }
 
 //---------------------------------------------------------------------------------------
@@ -126,13 +129,19 @@ void myModelItem::refreshFileInfo()
 //---------------------------------------------------------------------------------------
 void myModelItem::addChild(myModelItem *child)
 {
-    if(!mChildren.contains(child))
+    if(!mChildren.contains(child)) {
         mChildren.append(child);
+        mChildByName.insert(child->fileName(), child);
+    }
 }
 
 //---------------------------------------------------------------------------------------
 void myModelItem::removeChild(myModelItem *child)
 {
+    if (!child) {
+        return;
+    }
+    mChildByName.remove(child->fileName());
     mChildren.removeOne(child);
     delete child;
 }
@@ -143,14 +152,21 @@ void myModelItem::clearAll()
     foreach(myModelItem *child, mChildren)
         delete child;
     mChildren.clear();
+    mChildByName.clear();
     walked = 0;
 }
 
 //---------------------------------------------------------------------------------------
 void myModelItem::changeName(QString newName)
 {
+    if (mParent) {
+        mParent->mChildByName.remove(fileName());
+    }
     mAbsFilePath = mParent->absoluteFilePath() + SEPARATOR + newName;
     mFileInfo.setFile(mAbsFilePath);
+    if (mParent) {
+        mParent->mChildByName.insert(fileName(), this);
+    }
     clearAll();
 }
 
@@ -165,26 +181,25 @@ myModelItem* myModelItem::matchPath(const QStringList& path, int startIndex)
     {
         walked = true;
         QDir dir(this->absoluteFilePath());
-        QFileInfoList all = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+        QFileInfoList all = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot
+                                              | QDir::Hidden | QDir::System | QDir::NoSort);
 
         foreach(QFileInfo one, all)
             new myModelItem(one,this);
     }
 
-    foreach(myModelItem* child, mChildren)
-    {
-        QString match = temp.at(startIndex);
-
-        if(child->fileName() == match)
-        {
-            if(startIndex + 1 == temp.count()) return child;
-            else return child->matchPath(path,startIndex + 1);
-        }
+    if (startIndex >= temp.count()) {
+        return nullptr;
     }
 
-    return nullptr;
+    myModelItem *child = childByName(temp.at(startIndex));
+    if (!child) {
+        return nullptr;
+    }
+    if (startIndex + 1 == temp.count()) {
+        return child;
+    }
+    return child->matchPath(path, startIndex + 1);
 }
 
 //---------------------------------------------------------------------------------------
-
-

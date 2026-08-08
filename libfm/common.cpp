@@ -386,6 +386,66 @@ QVariant Common::readSetting(QString key, QString fallback) {
 void Common::writeSetting(QString key, QVariant value) {
     QSettings settings(Common::configFile(), QSettings::IniFormat);
     settings.setValue(key, value);
+    if (key == QLatin1String("thumbnailGenerationMode")
+        || key == QLatin1String("enableThumbnailGeneration")
+        || key == QLatin1String("thumbnailNewestLimit")
+        || key == QLatin1String("thumbnailVideoSample")) {
+        invalidateThumbnailSettingsCache();
+    }
+}
+
+namespace {
+
+struct ThumbSettingsCache {
+    bool valid = false;
+    Common::ThumbnailGenMode mode = Common::ThumbGenAll;
+    int newestLimit = 100;
+    Common::ThumbnailVideoSample videoSample = Common::ThumbVideoSampleStart;
+};
+
+ThumbSettingsCache &thumbSettingsCache()
+{
+    static ThumbSettingsCache cache;
+    return cache;
+}
+
+void ensureThumbSettingsCache()
+{
+    ThumbSettingsCache &cache = thumbSettingsCache();
+    if (cache.valid) {
+        return;
+    }
+    QSettings settings(Common::configFile(), QSettings::IniFormat);
+    if (settings.contains(QStringLiteral("enableThumbnailGeneration"))
+        && !settings.value(QStringLiteral("enableThumbnailGeneration"), true).toBool()) {
+        cache.mode = Common::ThumbGenOff;
+    } else {
+        const int mode = settings.value(QStringLiteral("thumbnailGenerationMode"),
+                                        static_cast<int>(Common::ThumbGenAll))
+                             .toInt();
+        if (mode == static_cast<int>(Common::ThumbGenOff)
+            || mode == static_cast<int>(Common::ThumbGenNewestOnly)) {
+            cache.mode = static_cast<Common::ThumbnailGenMode>(mode);
+        } else {
+            cache.mode = Common::ThumbGenAll;
+        }
+    }
+    cache.newestLimit = qBound(1,
+        settings.value(QStringLiteral("thumbnailNewestLimit"), 100).toInt(), 100000);
+    const int sample = settings.value(QStringLiteral("thumbnailVideoSample"),
+                                      static_cast<int>(Common::ThumbVideoSampleStart))
+                           .toInt();
+    cache.videoSample = sample == static_cast<int>(Common::ThumbVideoSampleMiddle)
+                            ? Common::ThumbVideoSampleMiddle
+                            : Common::ThumbVideoSampleStart;
+    cache.valid = true;
+}
+
+} // namespace
+
+void Common::invalidateThumbnailSettingsCache()
+{
+    thumbSettingsCache().valid = false;
 }
 
 Common::DragMode Common::getDADaltMod()
@@ -414,36 +474,20 @@ Common::DragMode Common::getDefaultDragAndDrop()
 
 Common::ThumbnailGenMode Common::thumbnailGenerationMode()
 {
-    QSettings settings(Common::configFile(), QSettings::IniFormat);
-    if (settings.contains(QStringLiteral("enableThumbnailGeneration"))
-        && !settings.value(QStringLiteral("enableThumbnailGeneration"), true).toBool()) {
-        return ThumbGenOff;
-    }
-    const int mode = settings.value(QStringLiteral("thumbnailGenerationMode"),
-                                    static_cast<int>(ThumbGenAll))
-                         .toInt();
-    if (mode == static_cast<int>(ThumbGenOff)
-        || mode == static_cast<int>(ThumbGenNewestOnly)) {
-        return static_cast<ThumbnailGenMode>(mode);
-    }
-    return ThumbGenAll;
+    ensureThumbSettingsCache();
+    return thumbSettingsCache().mode;
 }
 
 int Common::thumbnailNewestLimit()
 {
-    QSettings settings(Common::configFile(), QSettings::IniFormat);
-    return qBound(1, settings.value(QStringLiteral("thumbnailNewestLimit"), 100).toInt(),
-                  100000);
+    ensureThumbSettingsCache();
+    return thumbSettingsCache().newestLimit;
 }
 
 Common::ThumbnailVideoSample Common::thumbnailVideoSample()
 {
-    QSettings settings(Common::configFile(), QSettings::IniFormat);
-    const int v = settings.value(QStringLiteral("thumbnailVideoSample"),
-                                 static_cast<int>(ThumbVideoSampleStart))
-                      .toInt();
-    return v == static_cast<int>(ThumbVideoSampleMiddle) ? ThumbVideoSampleMiddle
-                                                         : ThumbVideoSampleStart;
+    ensureThumbSettingsCache();
+    return thumbSettingsCache().videoSample;
 }
 
 QStringList Common::filterThumbnailGenerationPaths(const QStringList &absolutePaths)

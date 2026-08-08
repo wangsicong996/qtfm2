@@ -28,6 +28,9 @@
 #include <sys/ioctl.h>
 #include <QApplication>
 #include <QBuffer>
+#include <QCoreApplication>
+#include <QDirIterator>
+#include <QEventLoop>
 #include <QImageReader>
 #include <QImageWriter>
 #include <QMessageBox>
@@ -61,6 +64,8 @@ myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
   thumbActiveJobs.storeRelaxed(0);
   thumbEpoch.storeRelaxed(0);
   showThumbs = true;
+  m_fileColorEnabled = Common::readSetting(QStringLiteral("fileColor")).toBool();
+  m_thumbGenMode = Common::thumbnailGenerationMode();
 
   // Loads cached mime icons
   QFile fileIcons(QString("%1/file.cache").arg(Common::configDir()));
@@ -98,7 +103,7 @@ myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
   QDir root("/");
   QFileInfoList drives = root.entryInfoList( QDir::AllEntries | QDir::Files
                                             | QDir::Hidden | QDir::System
-                                            | QDir::NoDotAndDotDot);
+                                            | QDir::NoDotAndDotDot | QDir::NoSort);
 
   // Create item per each drive
   foreach (QFileInfo drive, drives) {
@@ -146,9 +151,15 @@ void myModel::clearIconCache() {
   folderIcons->clear();
   mimeIcons->clear();
   pathIconNames->clear();
+  icons->clear();
+  {
+    QMutexLocker lock(&thumbMutex);
+    m_thumbMissCache.clear();
+  }
   QFile(QString("%1/folder.cache").arg(Common::configDir())).remove();
   QFile(QString("%1/file.cache").arg(Common::configDir())).remove();
   QFile(QString("%1/path-icons.cache").arg(Common::configDir())).remove();
+  reloadAppearanceCaches();
 }
 
 void myModel::setPathIcon(const QString &absolutePath, const QString &iconBaseName)
@@ -331,6 +342,8 @@ QString myModel::getMimeType(const QModelIndex &index)
 namespace {
 
 constexpr int kFsNotifyDebounceMs = 400;
+constexpr int kPopulateBatchSize = 150;
+constexpr int kPopulateProcessEventsThreshold = 200;
 
 } // namespace
 
@@ -350,14 +363,33 @@ void myModel::notifyChange()
 
     while (at < end) {
         const inotify_event *event = reinterpret_cast<const inotify_event *>(at);
-        int w = event->wd;
-        lastEventFilename = event->name;
+        const int w = event->wd;
+        PendingFsNotify &pending = m_pendingFsNotifies[w];
+        if (event->mask & IN_Q_OVERFLOW) {
+            pending.overflow = true;
+        }
+        QString name;
+        if (event->len > 0) {
+            name = QString::fromLocal8Bit(event->name);
+            // inotify name is null-terminated inside event->len bytes
+            const int z = name.indexOf(QLatin1Char('\0'));
+            if (z >= 0) {
+                name.truncate(z);
+            }
+        }
+        lastEventFilename = name;
+        if (name.isEmpty()) {
+            pending.needFullScan = true;
+        } else {
+            pending.byName[name] |= event->mask;
+        }
+
         if (eventTimer.isActive()) {
             if (w == lastEventID) {
                 eventTimer.start(kFsNotifyDebounceMs);
             } else {
                 eventTimer.stop();
-                notifyProcess(lastEventID, lastEventFilename);
+                notifyProcess(lastEventID);
                 lastEventID = w;
                 eventTimer.start(kFsNotifyDebounceMs);
             }
@@ -369,67 +401,204 @@ void myModel::notifyChange()
     }
 
     notifier->setEnabled(1);
-    //if (!lastEventFilename.isEmpty()) { emit reloadDir(); }
 }
 
 //---------------------------------------------------------------------------------------
 void myModel::eventTimeout()
 {
-    notifyProcess(lastEventID, lastEventFilename);
+    notifyProcess(lastEventID);
     eventTimer.stop();
 }
 
 //---------------------------------------------------------------------------------------
+void myModel::removeChildItem(myModelItem *parent, myModelItem *child)
+{
+    if (!parent || !child) {
+        return;
+    }
+    if (child->fileInfo().isDir()) {
+        const int wd = watchers.key(child->absoluteFilePath(), -1);
+        if (wd >= 0) {
+            inotify_rm_watch(inotifyFD, wd);
+            watchers.remove(wd);
+            m_pendingFsNotifies.remove(wd);
+        }
+    }
+    const QModelIndex parentIndex = index(parent->absoluteFilePath());
+    const int row = child->childNumber();
+    beginRemoveRows(parentIndex, row, row);
+    parent->removeChild(child);
+    endRemoveRows();
+}
+
+void myModel::notifyProcessFullRescan(myModelItem *parent, const QString &folderChanged,
+                                      QStringList *newFilePaths)
+{
+    if (!parent) {
+        return;
+    }
+    parent->dirty = 1;
+    QDir dir(parent->absoluteFilePath());
+    QFileInfoList all = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot
+                                          | QDir::Hidden | QDir::System | QDir::NoSort);
+
+    QHash<QString, QFileInfo> onDisk;
+    onDisk.reserve(all.size());
+    for (const QFileInfo &fi : all) {
+        onDisk.insert(fi.fileName(), fi);
+    }
+
+    const QList<myModelItem*> children = parent->children();
+    for (myModelItem *child : children) {
+        if (onDisk.contains(child->fileName())) {
+            onDisk.remove(child->fileName());
+        } else {
+            removeChildItem(parent, child);
+        }
+    }
+
+    const QModelIndex parentIndex = index(parent->absoluteFilePath());
+    for (auto it = onDisk.cbegin(); it != onDisk.cend(); ++it) {
+        beginInsertRows(parentIndex, parent->childCount(), parent->childCount());
+        new myModelItem(it.value(), parent);
+        endInsertRows();
+        if (!it.value().isDir() && newFilePaths) {
+            newFilePaths->append(it.value().absoluteFilePath());
+        }
+    }
+
+    if (!folderChanged.isEmpty()) {
+        qDebug() << "folder modified" << folderChanged;
+        emit reloadDir(folderChanged);
+    }
+}
+
+bool myModel::notifyProcessIncremental(myModelItem *parent, const PendingFsNotify &pending,
+                                       QStringList *newFilePaths)
+{
+    if (!parent || !parent->walked) {
+        return false;
+    }
+
+    const QString parentPath = parent->absoluteFilePath();
+    const QModelIndex parentIndex = index(parentPath);
+
+    for (auto it = pending.byName.cbegin(); it != pending.byName.cend(); ++it) {
+        const QString &name = it.key();
+        const quint32 mask = it.value();
+        const bool created = mask & (IN_CREATE | IN_MOVED_TO);
+        const bool deleted = mask & (IN_DELETE | IN_MOVED_FROM);
+        const bool modified = mask & (IN_MODIFY | IN_ATTRIB);
+        const QString abs = parentPath.endsWith(QLatin1Char('/'))
+                                ? parentPath + name
+                                : parentPath + QLatin1Char('/') + name;
+        myModelItem *child = parent->childByName(name);
+
+        if (created && deleted) {
+            QFileInfo fi(abs);
+            if (fi.exists()) {
+                if (child) {
+                    child->refreshFileInfo();
+                    const QModelIndex idx = index(abs);
+                    if (idx.isValid()) {
+                        emit dataChanged(idx, idx);
+                    }
+                } else {
+                    beginInsertRows(parentIndex, parent->childCount(), parent->childCount());
+                    new myModelItem(fi, parent);
+                    endInsertRows();
+                    if (!fi.isDir() && newFilePaths) {
+                        newFilePaths->append(fi.absoluteFilePath());
+                    }
+                }
+            } else if (child) {
+                removeChildItem(parent, child);
+            }
+            continue;
+        }
+
+        if (deleted) {
+            if (child) {
+                removeChildItem(parent, child);
+            }
+            continue;
+        }
+
+        if (created) {
+            QFileInfo fi(abs);
+            if (!fi.exists()) {
+                continue;
+            }
+            if (child) {
+                child->refreshFileInfo();
+                const QModelIndex idx = index(abs);
+                if (idx.isValid()) {
+                    emit dataChanged(idx, idx);
+                }
+            } else {
+                beginInsertRows(parentIndex, parent->childCount(), parent->childCount());
+                new myModelItem(fi, parent);
+                endInsertRows();
+                if (!fi.isDir() && newFilePaths) {
+                    newFilePaths->append(fi.absoluteFilePath());
+                }
+            }
+            continue;
+        }
+
+        if (modified && child) {
+            child->refreshFileInfo();
+            icons->remove(abs);
+            {
+                QMutexLocker lock(&thumbMutex);
+                m_thumbMissCache.remove(abs);
+                thumbPaths->remove(abs);
+            }
+            const QModelIndex idx = index(abs);
+            if (idx.isValid()) {
+                emit dataChanged(idx, idx);
+            }
+            if (!child->fileInfo().isDir() && newFilePaths
+                && showThumbs) {
+                newFilePaths->append(abs);
+            }
+        }
+    }
+    return true;
+}
+
 void myModel::notifyProcess(int eventID, QString fileName)
 {
-    qDebug() << "notifyProcess" << eventID << fileName;
+    Q_UNUSED(fileName);
+    qDebug() << "notifyProcess" << eventID;
+    const PendingFsNotify pending = m_pendingFsNotifies.take(eventID);
+
     QString folderChanged;
     QStringList newFilePaths;
     if (watchers.contains(eventID)) {
         myModelItem *parent = rootItem->matchPath(watchers.value(eventID).split(SEPARATOR));
         if (parent) {
-            parent->dirty = 1;
-            QDir dir(parent->absoluteFilePath());
-            folderChanged = dir.absolutePath();
-            QFileInfoList all = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
-            foreach(myModelItem * child, parent->children()) {
-                if (all.contains(child->fileInfo())) {
-                    //just remove known items
-                    all.removeOne(child->fileInfo());
-                } else {
-                    //must have been deleted, remove from model
-                    if (child->fileInfo().isDir()) {
-                        int wd = watchers.key(child->absoluteFilePath());
-                        inotify_rm_watch(inotifyFD,wd);
-                        watchers.remove(wd);
-                    }
-                    beginRemoveRows(index(parent->absoluteFilePath()),child->childNumber(),child->childNumber());
-                    parent->removeChild(child);
-                    endRemoveRows();
-                }
+            folderChanged = parent->absoluteFilePath();
+            const bool canIncremental = !pending.overflow && !pending.needFullScan
+                                        && !pending.byName.isEmpty() && parent->walked;
+            bool ok = false;
+            if (canIncremental) {
+                ok = notifyProcessIncremental(parent, pending, &newFilePaths);
             }
-            foreach(QFileInfo one, all) { //only new items left in list
-                beginInsertRows(index(parent->absoluteFilePath()),parent->childCount(),parent->childCount());
-                new myModelItem(one,parent);
-                endInsertRows();
-                if (!one.isDir()) {
-                    newFilePaths.append(one.absoluteFilePath());
-                }
+            if (!ok) {
+                notifyProcessFullRescan(parent, folderChanged, &newFilePaths);
+                folderChanged.clear(); // already emitted reloadDir inside full rescan
+            } else if (folderChanged == currentRootPath) {
+                // Model rows already updated; refresh status bar only (thumbs=false).
+                emit reloadDir(folderChanged);
             }
         }
     } else {
         inotify_rm_watch(inotifyFD,eventID);
         watchers.remove(eventID);
     }
-    if (!fileName.isEmpty() && showThumbs) {
-        lastEventFilename = fileName;
-    }
-    if (!folderChanged.isEmpty()) {
-        qDebug() << "folder modified" << folderChanged;
-        emit reloadDir(folderChanged);
-    }
-    if (!newFilePaths.isEmpty() && showThumbs) {
-        if (Common::thumbnailGenerationMode() == Common::ThumbGenNewestOnly) {
+    if (showThumbs && !newFilePaths.isEmpty()) {
+        if (m_thumbGenMode == Common::ThumbGenNewestOnly) {
             emit reloadDir(currentRootPath);
         } else {
             enqueueThumbnailPaths(newFilePaths);
@@ -461,6 +630,8 @@ bool myModel::setRootPath(const QString& path)
     if (path != currentRootPath) {
         QMutexLocker lock(&thumbMutex);
         thumbQueue.clear();
+        thumbQueued.clear();
+        m_thumbMissCache.clear();
         // Invalidate in-flight workers so they skip ffmpeg / failure markers.
         thumbEpoch.ref();
     }
@@ -509,16 +680,15 @@ bool myModel::hasChildren(const QModelIndex &parent) const
 {
     if (!parent.isValid()) { return true; }
     myModelItem *item = static_cast<myModelItem*>(parent.internalPointer());
-    if (item && item->fileInfo().isDir()) {
-        if (QDir(item->fileInfo()
-                 .absoluteFilePath())
-                .entryInfoList(QDir::NoDotAndDotDot|QDir::AllEntries|QDir::System)
-                .count() > 0)
-        {
-            return true;
-        }
+    if (!item || !item->fileInfo().isDir()) {
+        return false;
     }
-    return false;
+    if (item->walked) {
+        return item->childCount() > 0;
+    }
+    QDirIterator it(item->absoluteFilePath(),
+                    QDir::NoDotAndDotDot | QDir::AllEntries | QDir::System);
+    return it.hasNext();
 }
 
 //---------------------------------------------------------------------------------------
@@ -539,9 +709,32 @@ void myModel::populateItem(myModelItem *item)
     item->walked = 1;
 
     QDir dir(item->absoluteFilePath());
-    QFileInfoList all = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+    const QFileInfoList all = dir.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot
+                                                | QDir::Hidden | QDir::System | QDir::NoSort);
+    if (all.isEmpty()) {
+        return;
+    }
 
-    foreach(QFileInfo one, all) { new myModelItem(one,item); }
+    const QModelIndex parentIndex = index(item->absoluteFilePath());
+    const bool emitInserts = parentIndex.isValid();
+    int i = 0;
+    while (i < all.size()) {
+        const int batchEnd = qMin(i + kPopulateBatchSize, all.size());
+        const int firstRow = item->childCount();
+        const int lastRow = firstRow + (batchEnd - i) - 1;
+        if (emitInserts) {
+            beginInsertRows(parentIndex, firstRow, lastRow);
+        }
+        for (; i < batchEnd; ++i) {
+            new myModelItem(all.at(i), item);
+        }
+        if (emitInserts) {
+            endInsertRows();
+        }
+        if (all.size() > kPopulateProcessEventsThreshold && i < all.size()) {
+            QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+        }
+    }
 }
 
 //---------------------------------------------------------------------------------
@@ -566,6 +759,7 @@ void myModel::refresh()
     //free all inotify watches
     foreach(int w, watchers.keys()) { inotify_rm_watch(inotifyFD,w); }
     watchers.clear();
+    m_pendingFsNotifies.clear();
 
     beginResetModel();
     if (item) { item->clearAll(); }
@@ -592,6 +786,7 @@ void myModel::refreshItems()
 
 void myModel::refreshForegroundRoles()
 {
+    reloadAppearanceCaches();
     const QModelIndex dir = index(currentRootPath);
     if (!dir.isValid()) {
         return;
@@ -602,6 +797,13 @@ void myModel::refreshForegroundRoles()
     }
     const int cols = columnCount(dir) - 1;
     emit dataChanged(index(0, 0, dir), index(rows - 1, qMax(0, cols), dir), {Qt::ForegroundRole});
+}
+
+void myModel::reloadAppearanceCaches()
+{
+    m_fileColorEnabled = Common::readSetting(QStringLiteral("fileColor")).toBool();
+    Common::invalidateThumbnailSettingsCache();
+    m_thumbGenMode = Common::thumbnailGenerationMode();
 }
 
 void myModel::refreshDecorationRoles()
@@ -802,7 +1004,8 @@ void myModel::loadThumbs(QModelIndexList indexes) {
     if (filename.isEmpty()) {
       continue;
     }
-    if (fileWantsThumbnail(filename, mimeUtilsPtr)) {
+    // Extension-only probe on the GUI thread; MIME detection runs in workers.
+    if (fileWantsThumbnail(filename, nullptr, false)) {
       files.append(filename);
     }
   }
@@ -815,7 +1018,8 @@ void myModel::loadThumbs(QModelIndexList indexes) {
                       .arg(files.count())
                       .arg(currentRootPath));
 
-  const Common::ThumbnailGenMode genMode = Common::thumbnailGenerationMode();
+  m_thumbGenMode = Common::thumbnailGenerationMode();
+  const Common::ThumbnailGenMode genMode = m_thumbGenMode;
   if (genMode == Common::ThumbGenOff) {
     ThumbDiag::info(QStringLiteral("thumbnail generation disabled (Settings → Advanced)"));
   } else if (genMode == Common::ThumbGenNewestOnly) {
@@ -845,32 +1049,23 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
 
   bool scheduled = false;
   QStringList decorationUpdates;
-  int cacheHits = 0;
   int queued = 0;
   int queueLen = 0;
-  const bool allowNewJobs = Common::thumbnailGenerationMode() != Common::ThumbGenOff;
+  const bool allowNewJobs = m_thumbGenMode != Common::ThumbGenOff;
   {
     QMutexLocker lock(&thumbMutex);
     // Prepend newest-first so they run before any leftover older entries.
     QStringList pendingNewestFirst;
     for (const QString &path : files) {
-      const QString cache = Common::thumbnailCacheFile(path);
-      if (Common::isThumbnailCacheValid(path, cache)) {
-        if (!thumbPaths->contains(path)) {
-          thumbPaths->insert(path, cache);
-          decorationUpdates.append(path);
-        }
-        ++cacheHits;
+      if (thumbPaths->contains(path)) {
+        decorationUpdates.append(path);
+        m_thumbMissCache.remove(path);
         continue;
-      }
-      // Revisit / resume: drop soft failure markers so incomplete folders continue.
-      if (Common::isThumbnailFailureMarkerValid(path)) {
-        Common::clearThumbnailFailure(path);
       }
       if (!allowNewJobs) {
         continue;
       }
-      if (!thumbQueue.contains(path) && !thumbInFlight.contains(path)) {
+      if (!thumbQueued.contains(path) && !thumbInFlight.contains(path)) {
         if (thumbQueue.size() + pendingNewestFirst.size() >= 2048) {
           continue;
         }
@@ -880,7 +1075,9 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
     }
     // files are already newest-first; put them at the front of the queue.
     for (int i = pendingNewestFirst.size() - 1; i >= 0; --i) {
-      thumbQueue.prepend(pendingNewestFirst.at(i));
+      const QString &path = pendingNewestFirst.at(i);
+      thumbQueue.prepend(path);
+      thumbQueued.insert(path);
       scheduled = true;
     }
     queueLen = thumbQueue.size();
@@ -889,7 +1086,7 @@ void myModel::enqueueThumbnailPaths(const QStringList &files)
   ThumbDiag::info(QStringLiteral("enqueue: queued=%1 cache_hit=%2 "
                                  "active_jobs=%3 queue_len=%4")
                       .arg(queued)
-                      .arg(cacheHits)
+                      .arg(decorationUpdates.size())
                       .arg(thumbActiveJobs.loadRelaxed())
                       .arg(queueLen));
 
@@ -923,17 +1120,52 @@ void myModel::flushPendingThumbDecorations()
                         m_pendingThumbDecorationPaths.cend());
     m_pendingThumbDecorationPaths.clear();
   }
+  if (paths.isEmpty()) {
+    return;
+  }
+
+  struct Range {
+    QModelIndex parent;
+    int first = -1;
+    int last = -1;
+  };
+  QHash<quintptr, Range> ranges;
+
   for (const QString &path : paths) {
     icons->remove(path);
+    {
+      QMutexLocker lock(&thumbMutex);
+      m_thumbMissCache.remove(path);
+    }
     const QModelIndex idx = index(path);
-    if (idx.isValid()) {
-      emit dataChanged(idx, idx, {Qt::DecorationRole});
+    if (!idx.isValid()) {
+      continue;
+    }
+    const QModelIndex parent = idx.parent();
+    const quintptr key = parent.isValid()
+                             ? reinterpret_cast<quintptr>(parent.internalPointer())
+                             : 0;
+    Range &range = ranges[key];
+    if (range.first < 0) {
+      range.parent = parent;
+      range.first = idx.row();
+      range.last = idx.row();
+    } else {
+      range.first = qMin(range.first, idx.row());
+      range.last = qMax(range.last, idx.row());
     }
   }
-  if (!paths.isEmpty()) {
-    const QString dir = QFileInfo(paths.constFirst()).absolutePath();
-    emit thumbUpdate(dir);
+
+  for (auto it = ranges.cbegin(); it != ranges.cend(); ++it) {
+    const Range &range = it.value();
+    const QModelIndex topLeft = this->index(range.first, 0, range.parent);
+    const QModelIndex bottomRight =
+        this->index(range.last, qMax(0, columnCount(range.parent) - 1), range.parent);
+    if (topLeft.isValid() && bottomRight.isValid()) {
+      emit dataChanged(topLeft, bottomRight, {Qt::DecorationRole});
+    }
   }
+  // Precise dataChanged above; skip full-viewport thumbUpdate to reduce scroll jank.
 }
 
 namespace {
@@ -966,26 +1198,48 @@ void myModel::pumpThumbnailQueue()
   const int kMaxConcurrent = thumbnailMaxConcurrentJobs();
   while (thumbActiveJobs.loadRelaxed() < kMaxConcurrent) {
     QString path;
-    QString itemMime;
     int epoch = 0;
     {
       QMutexLocker lock(&thumbMutex);
       if (thumbQueue.isEmpty()) {
         return;
       }
-      path = thumbQueue.takeFirst();
+      path = thumbQueue.dequeue();
+      thumbQueued.remove(path);
       thumbInFlight.insert(path);
       epoch = thumbEpoch.loadRelaxed();
     }
-    itemMime = mimeUtilsPtr ? mimeUtilsPtr->getMimeType(path) : QString();
+
+    // Validate disk cache on the GUI thread before paying for a worker.
+    const QString existingCache = Common::thumbnailCacheFile(path);
+    if (Common::isThumbnailCacheValid(path, existingCache)) {
+      {
+        QMutexLocker lock(&thumbMutex);
+        thumbPaths->insert(path, existingCache);
+        thumbInFlight.remove(path);
+        m_thumbMissCache.remove(path);
+      }
+      queueThumbnailDecorationUpdate(path);
+      continue;
+    }
+    if (Common::isThumbnailFailureMarkerValid(path)) {
+      Common::clearThumbnailFailure(path);
+    }
 
     thumbActiveJobs.ref();
     ThumbDiag::info(QStringLiteral("worker start: %1").arg(path));
-    QtConcurrent::run([this, path, itemMime, epoch]() {
+    MimeUtils *mimeUtils = mimeUtilsPtr;
+    QtConcurrent::run([this, path, epoch, mimeUtils]() {
       QString cache;
       const bool abandoned = thumbEpoch.loadRelaxed() != epoch;
       if (!abandoned) {
-        cache = generateThumbnailToCache(path, itemMime);
+        if (!fileWantsThumbnail(path, mimeUtils, true)) {
+          ThumbDiag::info(QStringLiteral("worker skip (not thumbable): %1").arg(path));
+        } else {
+          const QString itemMime =
+              mimeUtils ? mimeUtils->getMimeType(path) : QString();
+          cache = generateThumbnailToCache(path, itemMime);
+        }
       } else {
         ThumbDiag::info(QStringLiteral("worker abandon (dir changed): %1").arg(path));
       }
@@ -994,8 +1248,11 @@ void myModel::pumpThumbnailQueue()
       if (!cache.isEmpty()) {
         QMutexLocker lock(&thumbMutex);
         thumbPaths->insert(path, cache);
+        m_thumbMissCache.remove(path);
       } else if (!abandoned && !stale) {
         Common::recordThumbnailFailure(path);
+        QMutexLocker lock(&thumbMutex);
+        m_thumbMissCache.insert(path);
       }
       thumbActiveJobs.deref();
       QMetaObject::invokeMethod(this, "finishThumbnailJob", Qt::QueuedConnection,
@@ -1031,7 +1288,8 @@ void myModel::finishThumbnailJob(QString path, QString cachePath)
 
 //---------------------------------------------------------------------------
 
-bool myModel::fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils)
+bool myModel::fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils,
+                                 bool allowMimeProbe)
 {
   if (path.isEmpty() || !QFileInfo::exists(path)) {
     return false;
@@ -1056,7 +1314,7 @@ bool myModel::fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils)
   if (kExt.contains(FileUtils::getRealSuffix(path).toLower())) {
     return true;
   }
-  if (!mimeUtils) {
+  if (!allowMimeProbe || !mimeUtils) {
     return false;
   }
   const QString mime = mimeUtils->getMimeType(path);
@@ -1173,7 +1431,7 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
   // Color of filename (depends on file type)
   if (role == Qt::ForegroundRole) {
     const QPalette pal = QApplication::palette();
-    if (!Common::readSetting("fileColor").toBool()) {
+    if (!m_fileColorEnabled) {
       return pal.brush(QPalette::WindowText);
     }
     QFileInfo type(item->fileInfo());
@@ -1307,8 +1565,7 @@ QVariant myModel::findIcon(myModelItem *item) const {
 
     // If thumbnails are allowed and current file has it, show it
     if (showThumbs) {
-        const bool newestOnly =
-            Common::thumbnailGenerationMode() == Common::ThumbGenNewestOnly;
+        const bool newestOnly = m_thumbGenMode == Common::ThumbGenNewestOnly;
         if (newestOnly && !thumbEligiblePaths.isEmpty()
             && !thumbEligiblePaths.contains(absPath)) {
             // fall through to mime icon
@@ -1323,12 +1580,26 @@ QVariant myModel::findIcon(myModelItem *item) const {
             icons->insert(item->absoluteFilePath(), new QIcon(pic), 1);
             return *icons->object(item->absoluteFilePath());
             }
-        } else if (!Common::hasThumbnail(item->absoluteFilePath()).isEmpty()) {
-            qDebug() << "USING XDG CACHE FOR" << item->absoluteFilePath();
-            QPixmap pic;
-            pic.load(Common::hasThumbnail(item->absoluteFilePath()));
-            icons->insert(item->absoluteFilePath(), new QIcon(pic), 1);
-            return *icons->object(item->absoluteFilePath());
+        } else {
+            bool knownMiss = false;
+            {
+                QMutexLocker lock(&thumbMutex);
+                knownMiss = m_thumbMissCache.contains(absPath);
+            }
+            if (!knownMiss) {
+                const QString thumbFile = Common::hasThumbnail(item->absoluteFilePath());
+                if (!thumbFile.isEmpty()) {
+                    qDebug() << "USING XDG CACHE FOR" << item->absoluteFilePath();
+                    QPixmap pic;
+                    pic.load(thumbFile);
+                    if (!pic.isNull()) {
+                        icons->insert(item->absoluteFilePath(), new QIcon(pic), 1);
+                        return *icons->object(item->absoluteFilePath());
+                    }
+                }
+                QMutexLocker lock(&thumbMutex);
+                m_thumbMissCache.insert(absPath);
+            }
         }
     }
 

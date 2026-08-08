@@ -39,7 +39,7 @@ void IconListDelegate::paint(QPainter *painter,
 
     if (option.state & QStyle::State_Selected) {
         painter->setPen(option.palette.highlightedText().color());
-    } else if (index.data(Qt::ForegroundRole).isValid()) {
+    } else if (txtBrush.style() != Qt::NoBrush) {
         painter->setPen(txtBrush.color());
     } else {
         painter->setPen(option.palette.text().color());

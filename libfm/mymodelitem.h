@@ -25,6 +25,7 @@
 #include <QDir>
 #include <QFileIconProvider>
 #include <QDateTime>
+#include <QHash>
 
 #define SEPARATOR QString("/")
 
@@ -41,6 +42,7 @@ public:
     myModelItem* childAt(int position);
     myModelItem* parent();
     myModelItem* matchPath(const QStringList& path, int startIndex = 0);
+    myModelItem* childByName(const QString &fileName) const;
 
     QList<myModelItem*> children();
 
@@ -68,6 +70,7 @@ public:
 private:
 
     QList<myModelItem*> mChildren;
+    QHash<QString, myModelItem*> mChildByName;
     myModelItem* mParent;
     QFileInfo mFileInfo;
     QString mAbsFilePath;

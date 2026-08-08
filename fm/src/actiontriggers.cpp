@@ -1206,6 +1206,7 @@ void MainWindow::showEditDialog() {
 
     // Only rebuild file icons when coloring / thumbnail policy actually changes.
     if (fileColorChanged || thumbModeChanged) {
+        Common::invalidateThumbnailSettingsCache();
         modelList->clearIconCache();
         modelList->refreshItems();
         if (thumbsAct->isChecked()) {

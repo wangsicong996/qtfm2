@@ -111,6 +111,8 @@ public:
     static ThumbnailGenMode thumbnailGenerationMode();
     static int thumbnailNewestLimit();
     static ThumbnailVideoSample thumbnailVideoSample();
+    /** Drop cached thumbnail/settings values (call after settings dialog apply). */
+    static void invalidateThumbnailSettingsCache();
     /** Newest-only: keep at most `limit` paths by modification time (newest first). */
     static QStringList filterThumbnailGenerationPaths(const QStringList &absolutePaths);
     /** Sort paths by last-modified time, newest first (for thumbnail queue priority). */
