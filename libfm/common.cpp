@@ -523,70 +523,36 @@ void Common::populateFileListMimeData(QMimeData *data, const QList<QUrl> &urls, 
     if (!data || urls.isEmpty()) {
         return;
     }
-    data->setUrls(urls);
 
+    // Explicit text/uri-list (CRLF) — what GTK/Qt/Electron/PyQt drop handlers expect.
+    QByteArray uriList;
     QByteArray gnome;
     gnome += cut ? "cut\n" : "copy\n";
     QStringList paths;
     paths.reserve(urls.size());
     for (const QUrl &url : urls) {
-        gnome += url.toEncoded();
+        // Prefer a real local file URL; keep non-local as-is.
+        const QUrl fileUrl = url.isLocalFile()
+                                 ? QUrl::fromLocalFile(url.toLocalFile())
+                                 : url;
+        uriList += fileUrl.toEncoded(QUrl::FullyEncoded);
+        uriList += "\r\n";
+        gnome += fileUrl.toEncoded(QUrl::FullyEncoded);
         gnome += '\n';
-        if (url.isLocalFile()) {
-            paths.append(url.toLocalFile());
+        if (fileUrl.isLocalFile()) {
+            paths.append(fileUrl.toLocalFile());
         }
     }
+
+    data->setUrls(urls);
+    // Re-assert CRLF uri-list after setUrls (some targets are picky).
+    data->setData(QStringLiteral("text/uri-list"), uriList);
     data->setData(QStringLiteral("x-special/gnome-copied-files"), gnome);
     if (!paths.isEmpty()) {
         data->setText(paths.join(QLatin1Char('\n')));
     }
-
-    // Single-file media: help Chromium/Electron treat the drop like a paste.
-    if (!cut && urls.size() == 1 && urls.constFirst().isLocalFile()) {
-        const QString path = urls.constFirst().toLocalFile();
-        const QFileInfo fi(path);
-        const QString ext = fi.suffix().toLower();
-        static const QSet<QString> kImageExt = {
-            QStringLiteral("png"), QStringLiteral("jpg"), QStringLiteral("jpeg"),
-            QStringLiteral("gif"), QStringLiteral("bmp"), QStringLiteral("webp"),
-            QStringLiteral("tif"), QStringLiteral("tiff"), QStringLiteral("svg"),
-        };
-        static const QSet<QString> kVideoExt = {
-            QStringLiteral("mp4"), QStringLiteral("mkv"), QStringLiteral("mov"),
-            QStringLiteral("avi"), QStringLiteral("webm"), QStringLiteral("m4v"),
-            QStringLiteral("mpeg"), QStringLiteral("mpg"), QStringLiteral("wmv"),
-        };
-
-        // Chromium DownloadURL: "mime:filename:url"
-        if (kImageExt.contains(ext) || kVideoExt.contains(ext)
-            || ext == QLatin1String("pdf")) {
-            const QByteArray encodedUrl = urls.constFirst().toEncoded();
-            const QString download = QStringLiteral("application/octet-stream:%1:%2")
-                                         .arg(fi.fileName(),
-                                              QString::fromUtf8(encodedUrl));
-            data->setData(QStringLiteral("DownloadURL"), download.toUtf8());
-        }
-
-        if (kImageExt.contains(ext) && fi.size() > 0 && fi.size() <= 40 * 1024 * 1024) {
-            QImage img(path);
-            if (!img.isNull()) {
-                data->setImageData(img);
-                QByteArray png;
-                QBuffer buf(&png);
-                if (buf.open(QIODevice::WriteOnly) && img.save(&buf, "PNG")) {
-                    data->setData(QStringLiteral("image/png"), png);
-                }
-                if (ext == QLatin1String("jpg") || ext == QLatin1String("jpeg")) {
-                    QByteArray jpg;
-                    QBuffer jbuf(&jpg);
-                    if (jbuf.open(QIODevice::WriteOnly)
-                        && img.save(&jbuf, "JPEG", 90)) {
-                        data->setData(QStringLiteral("image/jpeg"), jpg);
-                    }
-                }
-            }
-        }
-    }
+    // Do NOT embed image/png or QImage here: large payloads freeze XDND/Wayland
+    // and make Electron/PyQt drops hang with a stuck drag pixmap.
 }
 
 namespace {

@@ -942,21 +942,24 @@ QMimeData * myModel::mimeData(const QModelIndexList & indexes) const
         // One URL per row (details view may pass every column).
         const QModelIndex rowIndex = index.sibling(index.row(), 0);
         const QModelIndex use = rowIndex.isValid() ? rowIndex : index;
-        myModelItem *item = static_cast<myModelItem*>(use.internalPointer());
-        if (!item) {
-            continue;
+        QString path;
+        if (use.model() == this) {
+            path = filePath(use);
+        } else if (myModelItem *item = static_cast<myModelItem*>(use.internalPointer())) {
+            path = item->absoluteFilePath();
         }
-        const QString path = item->absoluteFilePath();
         if (path.isEmpty()) {
             continue;
         }
-        const QUrl url = QUrl::fromLocalFile(path);
-        if (!files.contains(url)) {
+        const QUrl url = QUrl::fromLocalFile(QFileInfo(path).absoluteFilePath());
+        if (url.isValid() && !files.contains(url)) {
             files.append(url);
         }
     }
 
-    Common::populateFileListMimeData(data, files, false /*copy for outbound DnD*/);
+    if (!files.isEmpty()) {
+        Common::populateFileListMimeData(data, files, false /*copy for outbound DnD*/);
+    }
     return data;
 }
 

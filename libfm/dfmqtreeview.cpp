@@ -9,6 +9,8 @@
 #include <QPainter>
 #include <QScrollBar>
 #include <QWheelEvent>
+#include <QPixmap>
+#include <QColor>
 
 #include "common.h"
 
@@ -151,40 +153,35 @@ void DfmQTreeView::mouseReleaseEvent(QMouseEvent* event)
 
 void DfmQTreeView::startDrag(Qt::DropActions supportedActions)
 {
-    if (!model()) {
+    if (!model() || !selectionModel()) {
         return;
     }
     QModelIndexList indexes;
-    if (selectionModel()) {
-        if (selectionModel()->selectedRows(0).count()) {
-            indexes = selectionModel()->selectedRows(0);
-        } else {
-            indexes = selectionModel()->selectedIndexes();
-        }
+    if (selectionModel()->selectedRows(0).count()) {
+        indexes = selectionModel()->selectedRows(0);
+    } else {
+        indexes = selectionModel()->selectedIndexes();
     }
     if (indexes.isEmpty()) {
         return;
     }
 
     QMimeData *data = model()->mimeData(indexes);
-    if (!data || !data->hasUrls()) {
+    if (!data || data->urls().isEmpty()) {
         delete data;
         return;
     }
 
     QDrag *drag = new QDrag(this);
     drag->setMimeData(data);
-    const QModelIndex first = indexes.constFirst();
-    const QIcon icon = qvariant_cast<QIcon>(first.data(Qt::DecorationRole));
-    if (!icon.isNull()) {
-        const QPixmap pm = icon.pixmap(32, 32);
-        drag->setPixmap(pm);
-        drag->setHotSpot(QPoint(pm.width() / 2, pm.height() / 2));
-    }
+    QPixmap pm(32, 32);
+    pm.fill(QColor(0, 122, 255, 160));
+    drag->setPixmap(pm);
+    drag->setHotSpot(QPoint(16, 16));
 
-    const Qt::DropActions actions =
-        supportedActions & (Qt::CopyAction | Qt::MoveAction | Qt::LinkAction);
-    drag->exec(actions == 0 ? supportedActions : actions, Qt::CopyAction);
+    Q_UNUSED(supportedActions);
+    drag->exec(Qt::CopyAction | Qt::MoveAction, Qt::CopyAction);
+    setState(NoState);
 }
 
 void DfmQTreeView::wheelEvent(QWheelEvent *event)

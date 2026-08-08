@@ -109,7 +109,7 @@ public:
                                     Qt::KeyboardModifiers mods = Qt::NoModifier,
                                     Qt::DropAction proposed = Qt::IgnoreAction);
     /** Fill urls + text/uri-list + x-special/gnome-copied-files (+ plain paths).
-     *  Single local images also get image/png + imageData for Electron-style paste drops. */
+     *  Keep payloads small — do not embed image bytes (breaks Electron/Wayland DnD). */
     static void populateFileListMimeData(QMimeData *data,
                                          const QList<QUrl> &urls,
                                          bool cut = false);
