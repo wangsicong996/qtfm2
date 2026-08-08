@@ -57,6 +57,8 @@ EXACT = {
     "Drag and Drop ALT action: ": "按住 Alt 拖放：",
     "Enable Single Click": "启用单击打开",
     "Enable path history": "启用路径历史",
+    "Prefer X11 backend for drag-and-drop": "优先使用 X11 后端（改善拖放）",
+    "Thunar and many Electron apps use X11/XWayland. Running QtFM on the X11 backend improves cross-app drag and drop. Restart QtFM after changing this. Override with QT_QPA_PLATFORM or QTFM_NATIVE_WAYLAND.": "Thunar 与多数 Electron 应用仍使用 X11/XWayland。QtFM 走 X11 后端可改善跨应用拖放。修改后需重启 QtFM。可用 QT_QPA_PLATFORM 或 QTFM_NATIVE_WAYLAND 覆盖。",
     "Wheel scroll speed:": "滚轮滚动速度：",
     "Wheel scroll distance relative to half the visible view height.": "相对可视区域半页高度的滚轮步进（0.3–1.5 倍）。",
     "Ask before file is deleted: ": "删除文件前询问：",

@@ -5,15 +5,21 @@
 #include <QFontMetrics>
 #include <QMouseEvent>
 #include <QApplication>
-#include <QDrag>
-#include <QMimeData>
 #include <QWheelEvent>
-#include <QPixmap>
-#include <QColor>
+#include <QMimeData>
+#include <QUrl>
 
 IconFileListView::IconFileListView(QWidget *parent)
     : QListView(parent)
 {
+    // Static: Free/Snap rearranges icons in-view and never exports file URLs
+    // to Thunar / Electron / other apps (QListView::startDrag special-case).
+    setMovement(QListView::Static);
+    setDragEnabled(true);
+    setAcceptDrops(true);
+    setDropIndicatorShown(true);
+    setDefaultDropAction(Qt::CopyAction);
+    setDragDropMode(QAbstractItemView::DragDrop);
 }
 
 void IconFileListView::suppressRubberBandUntilMouseRelease()
@@ -136,37 +142,37 @@ void IconFileListView::mouseDoubleClickEvent(QMouseEvent *event)
     QListView::mouseDoubleClickEvent(event);
 }
 
+void IconFileListView::wheelEvent(QWheelEvent *event)
+{
+    Common::applyFileViewWheelScroll(this, event);
+}
+
 void IconFileListView::startDrag(Qt::DropActions supportedActions)
 {
     if (!model() || !selectionModel()) {
         return;
     }
-    QModelIndexList indexes = selectionModel()->selectedIndexes();
+
+    // Column-0 only so details-style multi-column selections do not duplicate.
+    QModelIndexList indexes;
+    for (const QModelIndex &index : selectionModel()->selectedIndexes()) {
+        if (index.isValid() && index.column() == 0) {
+            indexes.append(index);
+        }
+    }
     if (indexes.isEmpty()) {
         return;
     }
 
-    QMimeData *data = model()->mimeData(indexes);
-    if (!data || data->urls().isEmpty()) {
-        delete data;
+    QMimeData *probe = model()->mimeData(indexes);
+    if (!probe) {
+        return;
+    }
+    const QList<QUrl> urls = probe->urls();
+    delete probe;
+    if (urls.isEmpty()) {
         return;
     }
 
-    QDrag *drag = new QDrag(this);
-    drag->setMimeData(data);
-    QPixmap pm(32, 32);
-    pm.fill(QColor(0, 122, 255, 160));
-    drag->setPixmap(pm);
-    drag->setHotSpot(QPoint(16, 16));
-
-    Q_UNUSED(supportedActions);
-    // Always advertise Copy|Move. Default Copy for Electron/PyQt receivers that
-    // only accept copy-style file drops (they read urls, not filesystem ops).
-    drag->exec(Qt::CopyAction | Qt::MoveAction, Qt::CopyAction);
-    setState(NoState);
-}
-
-void IconFileListView::wheelEvent(QWheelEvent *event)
-{
-    Common::applyFileViewWheelScroll(this, event);
+    Common::startFileUrlDrag(this, urls, supportedActions);
 }

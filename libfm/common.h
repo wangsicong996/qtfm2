@@ -108,11 +108,19 @@ public:
                                     const QString &destDir,
                                     Qt::KeyboardModifiers mods = Qt::NoModifier,
                                     Qt::DropAction proposed = Qt::IgnoreAction);
-    /** Fill urls + text/uri-list + x-special/gnome-copied-files (+ plain paths).
-     *  Keep payloads small — do not embed image bytes (breaks Electron/Wayland DnD). */
+    /** Fill urls + text/uri-list (+ gnome / moz-url). text/plain uses file:// lines
+     *  (not bare paths) so Chromium/Electron fills dataTransfer.files. */
     static void populateFileListMimeData(QMimeData *data,
                                          const QList<QUrl> &urls,
                                          bool cut = false);
+    /**
+     * Start an outbound file drag (Copy|Move|Link, default Copy).
+     * Prefer this over QListView's default startDrag — IconMode + Free movement
+     * only rearranges icons and never talks to Thunar/Electron.
+     */
+    static void startFileUrlDrag(class QAbstractItemView *view,
+                                 const QList<QUrl> &urls,
+                                 Qt::DropActions supportedActions);
     /** Wheel steps as a fraction of half the viewport (0.3–1.5, default 1.0). */
     static qreal fileViewScrollSpeed();
     static void invalidateFileViewScrollSpeedCache();

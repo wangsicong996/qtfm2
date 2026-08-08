@@ -45,6 +45,7 @@ FM::FM(MimeUtils *mimeUtils,
     list->setGridSize(QSize(zoom, zoom));
     list->setIconSize(QSize(zoom, zoom));
     list->setFlow(QListView::LeftToRight);
+    list->setMovement(QListView::Static);
     list->setMouseTracking(true);
     list->setDragDropMode(QAbstractItemView::DragDrop);
     list->setDefaultDropAction(Qt::CopyAction);

@@ -917,14 +917,17 @@ Qt::DropActions myModel::supportedDropActions() const
 //---------------------------------------------------------------------------------
 Qt::DropActions myModel::supportedDragActions() const
 {
+    // Copy|Move|Link — Thunar negotiates Move on same volume; Electron wants Copy.
     return Qt::CopyAction | Qt::MoveAction | Qt::LinkAction;
 }
 
 //---------------------------------------------------------------------------------
 QStringList myModel::mimeTypes() const
 {
+    // Order matters for some receivers (Chromium/Electron): uri-list first.
     return QStringList()
         << QStringLiteral("text/uri-list")
+        << QStringLiteral("text/x-moz-url")
         << QStringLiteral("x-special/gnome-copied-files")
         << QStringLiteral("text/plain");
 }

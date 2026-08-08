@@ -242,6 +242,16 @@ QWidget *SettingsDialog::createGeneralSettings() {
   checkPathHistory = new ToggleSwitch(grpBehav);
   layoutBehav->addRow(tr("Enable path history"), checkPathHistory);
 
+#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+  checkPreferX11Backend = new ToggleSwitch(grpBehav);
+  checkPreferX11Backend->setToolTip(
+      tr("Thunar and many Electron apps use X11/XWayland. Running QtFM on the "
+         "X11 backend improves cross-app drag and drop. Restart QtFM after "
+         "changing this. Override with QT_QPA_PLATFORM or QTFM_NATIVE_WAYLAND."));
+  layoutBehav->addRow(
+      tr("Prefer X11 backend for drag-and-drop"), checkPreferX11Backend);
+#endif
+
   comboUiLanguage = new QComboBox(grpBehav);
   for (const QString &code : AppTranslator::availableLanguageCodes()) {
       comboUiLanguage->addItem(AppTranslator::languageDisplayName(code), code);
@@ -1119,6 +1129,10 @@ void SettingsDialog::readSettings() {
 #endif
   checkFileColor->setChecked(settingsPtr->value("fileColor", false).toBool());
   checkPathHistory->setChecked(settingsPtr->value("pathHistory", true).toBool());
+  if (checkPreferX11Backend) {
+      checkPreferX11Backend->setChecked(
+          settingsPtr->value(QStringLiteral("preferX11Backend"), true).toBool());
+  }
   const QString uiLang = AppTranslator::normalizedLanguageCode(
       settingsPtr->value(QStringLiteral("uiLanguage"), QStringLiteral("system")).toString());
   const int langIdx = comboUiLanguage->findData(uiLang);
@@ -1406,6 +1420,10 @@ bool SettingsDialog::saveSettings() {
 #endif
   settingsPtr->setValue("fileColor", checkFileColor->isChecked());
   settingsPtr->setValue("pathHistory", checkPathHistory->isChecked());
+  if (checkPreferX11Backend) {
+      settingsPtr->setValue(QStringLiteral("preferX11Backend"),
+                            checkPreferX11Backend->isChecked());
+  }
 
 
   // Custom actions

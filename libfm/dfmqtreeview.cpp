@@ -1,16 +1,14 @@
 #include "dfmqtreeview.h"
 
 #include <QApplication>
-#include <QDrag>
 #include <QEvent>
 #include <QHeaderView>
-#include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QScrollBar>
 #include <QWheelEvent>
-#include <QPixmap>
-#include <QColor>
+#include <QMimeData>
+#include <QUrl>
 
 #include "common.h"
 
@@ -29,6 +27,11 @@ DfmQTreeView::DfmQTreeView(QWidget *parent) :
     m_band()
 {
     setUniformRowHeights(true);
+    setDragEnabled(true);
+    setAcceptDrops(true);
+    setDropIndicatorShown(true);
+    setDefaultDropAction(Qt::CopyAction);
+    setDragDropMode(QAbstractItemView::DragDrop);
     m_fileItemDelegate = new DfmQStyledItemDelegate(this);
     m_fileItemDelegate->setMinimizedNameColumnSelection(false); // if true long filenames will overflow the column!
 #if defined(Q_OS_MAC)
@@ -151,42 +154,40 @@ void DfmQTreeView::mouseReleaseEvent(QMouseEvent* event)
     }
 }
 
+void DfmQTreeView::wheelEvent(QWheelEvent *event)
+{
+    Common::applyFileViewWheelScroll(this, event);
+}
+
 void DfmQTreeView::startDrag(Qt::DropActions supportedActions)
 {
     if (!model() || !selectionModel()) {
         return;
     }
-    QModelIndexList indexes;
-    if (selectionModel()->selectedRows(0).count()) {
-        indexes = selectionModel()->selectedRows(0);
-    } else {
-        indexes = selectionModel()->selectedIndexes();
+
+    QModelIndexList indexes = selectionModel()->selectedRows(0);
+    if (indexes.isEmpty()) {
+        for (const QModelIndex &index : selectionModel()->selectedIndexes()) {
+            if (index.isValid() && index.column() == 0) {
+                indexes.append(index);
+            }
+        }
     }
     if (indexes.isEmpty()) {
         return;
     }
 
-    QMimeData *data = model()->mimeData(indexes);
-    if (!data || data->urls().isEmpty()) {
-        delete data;
+    QMimeData *probe = model()->mimeData(indexes);
+    if (!probe) {
+        return;
+    }
+    const QList<QUrl> urls = probe->urls();
+    delete probe;
+    if (urls.isEmpty()) {
         return;
     }
 
-    QDrag *drag = new QDrag(this);
-    drag->setMimeData(data);
-    QPixmap pm(32, 32);
-    pm.fill(QColor(0, 122, 255, 160));
-    drag->setPixmap(pm);
-    drag->setHotSpot(QPoint(16, 16));
-
-    Q_UNUSED(supportedActions);
-    drag->exec(Qt::CopyAction | Qt::MoveAction, Qt::CopyAction);
-    setState(NoState);
-}
-
-void DfmQTreeView::wheelEvent(QWheelEvent *event)
-{
-    Common::applyFileViewWheelScroll(this, event);
+    Common::startFileUrlDrag(this, urls, supportedActions);
 }
 
 void DfmQTreeView::paintEvent(QPaintEvent* event)

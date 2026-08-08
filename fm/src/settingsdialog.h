@@ -116,6 +116,7 @@ protected:
   ToggleSwitch* checkDarkTheme = nullptr;
   ToggleSwitch* checkFileColor;
   ToggleSwitch* checkPathHistory;
+  ToggleSwitch* checkPreferX11Backend = nullptr;
   ToggleSwitch* checkOutput;
     ToggleSwitch* checkEnableDiskSidebar = nullptr;
     ToggleSwitch* checkLogThumbnailDiag = nullptr;

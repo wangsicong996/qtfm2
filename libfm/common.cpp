@@ -28,6 +28,9 @@
 #include <QStandardPaths>
 #include <QBuffer>
 #include <QMimeData>
+#include <QDrag>
+#include <QAbstractItemView>
+#include <QPixmap>
 #include <QAbstractScrollArea>
 #include <QScrollBar>
 #include <QWheelEvent>
@@ -524,35 +527,126 @@ void Common::populateFileListMimeData(QMimeData *data, const QList<QUrl> &urls, 
         return;
     }
 
-    // Explicit text/uri-list (CRLF) — what GTK/Qt/Electron/PyQt drop handlers expect.
+    // Build formats the way GTK/Thunar do. Chromium/Electron is picky:
+    // - Needs text/uri-list with file:// URLs (CRLF)
+    // - Must NOT get text/plain as raw local paths (/home/...), or it treats
+    //   the drop as text paste and never fills dataTransfer.files
+    QList<QUrl> fileUrls;
+    fileUrls.reserve(urls.size());
     QByteArray uriList;
     QByteArray gnome;
+    QByteArray mozUrl;
+    QStringList uriLines;
     gnome += cut ? "cut\n" : "copy\n";
-    QStringList paths;
-    paths.reserve(urls.size());
+
     for (const QUrl &url : urls) {
-        // Prefer a real local file URL; keep non-local as-is.
-        const QUrl fileUrl = url.isLocalFile()
-                                 ? QUrl::fromLocalFile(url.toLocalFile())
-                                 : url;
-        uriList += fileUrl.toEncoded(QUrl::FullyEncoded);
+        QUrl fileUrl = url;
+        if (url.isLocalFile()) {
+            fileUrl = QUrl::fromLocalFile(QFileInfo(url.toLocalFile()).absoluteFilePath());
+        }
+        if (!fileUrl.isValid()) {
+            continue;
+        }
+        fileUrls.append(fileUrl);
+
+        const QByteArray encoded = fileUrl.toEncoded(QUrl::FullyEncoded);
+        uriList += encoded;
         uriList += "\r\n";
-        gnome += fileUrl.toEncoded(QUrl::FullyEncoded);
+
+        gnome += encoded;
         gnome += '\n';
-        if (fileUrl.isLocalFile()) {
-            paths.append(fileUrl.toLocalFile());
+
+        uriLines.append(QString::fromUtf8(encoded));
+
+        // text/x-moz-url: "url\ntitle" per entry (Chromium also understands this).
+        if (!mozUrl.isEmpty()) {
+            mozUrl += '\n';
+        }
+        mozUrl += encoded;
+        mozUrl += '\n';
+        const QString title = fileUrl.isLocalFile()
+                                  ? QFileInfo(fileUrl.toLocalFile()).fileName()
+                                  : fileUrl.fileName();
+        mozUrl += title.toUtf8();
+    }
+
+    if (fileUrls.isEmpty()) {
+        return;
+    }
+
+    data->setUrls(fileUrls);
+    data->setData(QStringLiteral("text/uri-list"), uriList);
+    data->setData(QStringLiteral("x-special/gnome-copied-files"), gnome);
+    data->setData(QStringLiteral("text/x-moz-url"), mozUrl);
+    // Prefer file:// lines (GTK-style), never bare filesystem paths.
+    data->setText(uriLines.join(QLatin1Char('\n')));
+}
+
+void Common::startFileUrlDrag(QAbstractItemView *view,
+                              const QList<QUrl> &urls,
+                              Qt::DropActions supportedActions)
+{
+    if (!view || urls.isEmpty()) {
+        return;
+    }
+
+    QMimeData *mime = new QMimeData();
+    populateFileListMimeData(mime, urls, false);
+    if (!mime->hasUrls()) {
+        delete mime;
+        return;
+    }
+
+    Qt::DropActions actions = supportedActions;
+    if (actions == Qt::IgnoreAction) {
+        actions = Qt::CopyAction | Qt::MoveAction | Qt::LinkAction;
+    } else {
+        // External targets (Thunar / Electron) need Copy; keep Move/Link if offered.
+        actions |= Qt::CopyAction;
+    }
+
+    QDrag *drag = new QDrag(view);
+    drag->setMimeData(mime);
+
+    // Lightweight drag pixmap from the first selected cell (no image decode).
+    const QModelIndexList selected = view->selectionModel()
+                                         ? view->selectionModel()->selectedIndexes()
+                                         : QModelIndexList();
+    QModelIndex pixIndex;
+    for (const QModelIndex &idx : selected) {
+        if (idx.isValid() && idx.column() == 0) {
+            pixIndex = idx;
+            break;
+        }
+    }
+    if (!pixIndex.isValid() && !selected.isEmpty()) {
+        pixIndex = selected.first();
+    }
+    if (pixIndex.isValid()) {
+        const QRect rect = view->visualRect(pixIndex);
+        if (rect.isValid() && view->viewport()) {
+            QPixmap grab = view->viewport()->grab(rect);
+            if (!grab.isNull()) {
+                drag->setPixmap(grab);
+                drag->setHotSpot(QPoint(qMin(16, rect.width() / 2),
+                                        qMin(16, rect.height() / 2)));
+            }
         }
     }
 
-    data->setUrls(urls);
-    // Re-assert CRLF uri-list after setUrls (some targets are picky).
-    data->setData(QStringLiteral("text/uri-list"), uriList);
-    data->setData(QStringLiteral("x-special/gnome-copied-files"), gnome);
-    if (!paths.isEmpty()) {
-        data->setText(paths.join(QLatin1Char('\n')));
+    qInfo("qtfm DnD: start drag with %d url(s), actions=0x%x",
+          urls.size(), int(actions));
+    // Default Copy so GTK/Electron accept; Thunar can still negotiate Move.
+    const Qt::DropAction dropped = drag->exec(actions, Qt::CopyAction);
+    qInfo("qtfm DnD: drag finished action=0x%x", int(dropped));
+
+    // External file managers perform the filesystem move themselves. Do not
+    // QAbstractItemView::clearOrRemove() — that only drops model rows and
+    // leaves a stale view when the target already moved the files.
+    if (dropped == Qt::MoveAction) {
+        // Soft refresh: inotify / next listing will sync; force a viewport update.
+        view->viewport()->update();
     }
-    // Do NOT embed image/png or QImage here: large payloads freeze XDND/Wayland
-    // and make Electron/PyQt drops hang with a stuck drag pixmap.
 }
 
 namespace {

@@ -736,6 +736,7 @@ void MainWindow::applyIconView() {
       lv->setGridSize(QSize(zoom, zoom));
       lv->setIconSize(QSize(zoom, zoom));
       lv->setFlow(QListView::LeftToRight);
+      lv->setMovement(QListView::Static);
       lv->setDragDropMode(QAbstractItemView::DragDrop);
       lv->setDefaultDropAction(Qt::CopyAction);
   }

@@ -1560,6 +1560,14 @@ Switch to “Full log” to see all messages, or reproduce the problem and refre
       <translation>启用路径历史</translation>
     </message>
     <message>
+      <source>Prefer X11 backend for drag-and-drop</source>
+      <translation>优先使用 X11 后端（改善拖放）</translation>
+    </message>
+    <message>
+      <source>Thunar and many Electron apps use X11/XWayland. Running QtFM on the X11 backend improves cross-app drag and drop. Restart QtFM after changing this. Override with QT_QPA_PLATFORM or QTFM_NATIVE_WAYLAND.</source>
+      <translation>Thunar 与多数 Electron 应用仍使用 X11/XWayland。QtFM 走 X11 后端可改善跨应用拖放。修改后需重启 QtFM。可用 QT_QPA_PLATFORM 或 QTFM_NATIVE_WAYLAND 覆盖。</translation>
+    </message>
+    <message>
       <source>Everything</source>
       <translation>全部</translation>
     </message>

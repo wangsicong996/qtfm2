@@ -33,6 +33,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+/**
+ * Thunar and many Electron builds still use X11/XWayland. Native Wayland Qt
+ * apps often cannot complete cross-protocol drag-and-drop with them.
+ * Prefer xcb unless the user already set QT_QPA_PLATFORM, opted into native
+ * Wayland via QTFM_NATIVE_WAYLAND, or disabled preferX11Backend in settings.
+ */
+static void applyPreferredDisplayBackend()
+{
+  if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM"))
+    return;
+  if (qEnvironmentVariableIsSet("QTFM_NATIVE_WAYLAND"))
+    return;
+
+  const bool waylandSession =
+      qEnvironmentVariableIsSet("WAYLAND_DISPLAY")
+      || qgetenv("XDG_SESSION_TYPE") == "wayland";
+  if (!waylandSession)
+    return;
+
+  bool preferX11 = true;
+  {
+    QSettings settings(Common::configFile(), QSettings::IniFormat);
+    preferX11 = settings.value(QStringLiteral("preferX11Backend"), true).toBool();
+  }
+  if (preferX11)
+    qputenv("QT_QPA_PLATFORM", "xcb");
+}
+#endif
+
 void msgHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
     QByteArray localMsg = msg.toLocal8Bit();
@@ -66,6 +96,10 @@ void msgHandler(QtMsgType type, const QMessageLogContext &context, const QString
 int main(int argc, char *argv[]) {
 
   qInstallMessageHandler(msgHandler);
+
+#if defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID)
+  applyPreferredDisplayBackend();
+#endif
 
   QApplication app(argc, argv);
 #ifdef Q_OS_MAC
