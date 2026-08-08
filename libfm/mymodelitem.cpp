@@ -34,8 +34,9 @@ myModelItem::myModelItem(const QFileInfo& fileInfo, myModelItem* parent)
 
     if(parent)
     {
-          parent->addChild(this);
+          // Must set before addChild(): fileName() uses mAbsFilePath for "/".
           mAbsFilePath = fileInfo.filePath();
+          parent->addChild(this);
     }
     else
     {
@@ -107,9 +108,10 @@ QString myModelItem::absoluteFilePath()const
 //---------------------------------------------------------------------------------------
 QString myModelItem::fileName() const
 {
-    if(mAbsFilePath == "/") return "/";
-    else return mFileInfo.fileName();
-
+    if(mAbsFilePath == QLatin1String("/") || mFileInfo.absoluteFilePath() == QLatin1String("/")) {
+        return QStringLiteral("/");
+    }
+    return mFileInfo.fileName();
 }
 
 //---------------------------------------------------------------------------------------
