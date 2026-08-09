@@ -603,6 +603,10 @@ void Common::startFileUrlDrag(QAbstractItemView *view,
     QDrag *drag = new QDrag(view);
     drag->setMimeData(mime);
 
+    // Intentionally no drag pixmap on Linux: a QDrag pixmap that fails to
+    // complete XDND/Wayland looks exactly like "thumbnail stuck where I
+    // released" (internal Free-move symptom). Cursor-only drag is clearer.
+#if !defined(Q_OS_LINUX)
     QModelIndex pixIndex;
     if (view->selectionModel()) {
         for (const QModelIndex &idx : view->selectionModel()->selectedIndexes()) {
@@ -614,7 +618,6 @@ void Common::startFileUrlDrag(QAbstractItemView *view,
             }
         }
     }
-
     if (pixIndex.isValid()) {
         const QVariant dec = pixIndex.data(Qt::DecorationRole);
         QPixmap tip;
@@ -636,6 +639,7 @@ void Common::startFileUrlDrag(QAbstractItemView *view,
             drag->setHotSpot(QPoint(canvas / 2, canvas / 2));
         }
     }
+#endif
 
     qInfo("qtfm DnD: platform=%s urls=%d (Move/cut like PyQt)",
           qPrintable(QGuiApplication::platformName()), urls.size());

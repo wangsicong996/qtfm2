@@ -722,6 +722,7 @@ void MainWindow::applyIconView() {
   list->setGridSize(QSize(zoom, zoom));
   list->setIconSize(QSize(zoom, zoom));
   list->setFlow(QListView::LeftToRight);
+  list->setMovement(QListView::Static);
 
   modelList->setShowListDecorations(true);
   modelList->setMode(thumbsAct->isChecked());
@@ -736,7 +737,7 @@ void MainWindow::applyIconView() {
       lv->setGridSize(QSize(zoom, zoom));
       lv->setIconSize(QSize(zoom, zoom));
       lv->setFlow(QListView::LeftToRight);
-      lv->setMovement(QListView::Static);
+      lv->ensureFileDragMode();
       lv->setDragDropMode(QAbstractItemView::DragDrop);
       lv->setDefaultDropAction(Qt::MoveAction);
   }
