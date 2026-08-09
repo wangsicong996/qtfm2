@@ -145,9 +145,13 @@ QList<QUrl> IconFileListView::urlsFromSelectionOrPress() const
         }
     }
 
-    // Fallback / ensure pressed file is included even if selection lagged.
-    if (!m_dragUrlsSnapshot.isEmpty() && urls.isEmpty()) {
-        return m_dragUrlsSnapshot;
+    // Always include the pressed file even if selection state lagged behind.
+    if (urls.isEmpty()) {
+        for (const QUrl &u : m_dragUrlsSnapshot) {
+            if (u.isValid() && !urls.contains(u)) {
+                urls.append(u);
+            }
+        }
     }
     return urls;
 }
@@ -306,6 +310,7 @@ void IconFileListView::wheelEvent(QWheelEvent *event)
 
 void IconFileListView::startDrag(Qt::DropActions supportedActions)
 {
+    Q_UNUSED(supportedActions);
     ensureFileDragMode();
     QList<QUrl> urls = m_dragUrlsSnapshot;
     if (urls.isEmpty()) {
@@ -317,7 +322,8 @@ void IconFileListView::startDrag(Qt::DropActions supportedActions)
         return;
     }
     // Never call QListView::startDrag (Free mode = slide thumbnails only).
-    Common::startFileUrlDrag(this, urls, supportedActions);
+    // Move/cut only — matches the PyQt file manager that works with Thunar/Electron.
+    Common::startFileUrlDrag(this, urls, Qt::MoveAction);
     m_dragUrlsSnapshot.clear();
     m_fileDragArmed = false;
     setState(NoState);

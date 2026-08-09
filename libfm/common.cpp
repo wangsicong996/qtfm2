@@ -587,24 +587,18 @@ void Common::startFileUrlDrag(QAbstractItemView *view,
                               const QList<QUrl> &urls,
                               Qt::DropActions supportedActions)
 {
+    Q_UNUSED(supportedActions);
     if (!view || urls.isEmpty()) {
         return;
     }
 
-    // Match working PyQt FileGridWidget MIME (cut + uri toString), but offer
-    // Copy|Move so more targets can accept the drag negotiation.
+    // Match the working PyQt FileGridWidget exactly: cut + MoveAction only.
+    // Adding CopyAction makes some GTK/Electron targets reject the drag.
     QMimeData *mime = new QMimeData();
     populateFileListMimeData(mime, urls, true /*cut/move*/);
     if (!mime->hasUrls()) {
         delete mime;
         return;
-    }
-
-    Qt::DropActions actions = supportedActions;
-    if (actions == Qt::IgnoreAction) {
-        actions = Qt::CopyAction | Qt::MoveAction;
-    } else {
-        actions |= Qt::CopyAction | Qt::MoveAction;
     }
 
     QDrag *drag = new QDrag(view);
@@ -637,11 +631,9 @@ void Common::startFileUrlDrag(QAbstractItemView *view,
         }
     }
 
-    qInfo("qtfm DnD: platform=%s urls=%d actions=0x%x",
-          qPrintable(QGuiApplication::platformName()),
-          urls.size(), int(actions));
-    // Default Move (file-manager style); Copy still offered for Electron/etc.
-    const Qt::DropAction dropped = drag->exec(actions, Qt::MoveAction);
+    qInfo("qtfm DnD: platform=%s urls=%d (Move/cut like PyQt)",
+          qPrintable(QGuiApplication::platformName()), urls.size());
+    const Qt::DropAction dropped = drag->exec(Qt::MoveAction, Qt::MoveAction);
     qInfo("qtfm DnD: finished action=0x%x", int(dropped));
 
     if (view->viewport()) {
