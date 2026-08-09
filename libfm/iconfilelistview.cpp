@@ -9,12 +9,9 @@
 #include <QShowEvent>
 #include <QApplication>
 #include <QWheelEvent>
-#include <QDragMoveEvent>
-#include <QDropEvent>
 #include <QFileInfo>
 #include <QAbstractProxyModel>
 #include <QSet>
-#include <QMimeData>
 
 IconFileListView::IconFileListView(QWidget *parent)
     : QListView(parent)
@@ -24,20 +21,12 @@ IconFileListView::IconFileListView(QWidget *parent)
 
 void IconFileListView::ensureFileDragMode()
 {
-    // Qt resets movement to Free when setViewMode(IconMode) is called — that
-    // mode only rearranges thumbnails in-view (ghost stays where you release).
-    // Bounce Free→Static once so any leftover Free positions are cleared.
-    if (movement() != QListView::Static) {
-        setMovement(QListView::Free);
-        setMovement(QListView::Static);
-    } else {
-        setMovement(QListView::Static);
-    }
+    // setViewMode(IconMode) resets movement to Free (in-view thumbnail slide).
+    setMovement(QListView::Static);
     setDragEnabled(true);
     setAcceptDrops(true);
     setDropIndicatorShown(true);
     setDefaultDropAction(Qt::MoveAction);
-    // DragDrop so Thunar→qtfm still works; outbound uses our startDrag only.
     setDragDropMode(QAbstractItemView::DragDrop);
 }
 
@@ -57,8 +46,7 @@ void IconFileListView::suppressRubberBandUntilMouseRelease()
         return;
     }
     m_suppressRubberBandUntilRelease = true;
-    m_pressPlainLeftOnItem = false;
-    m_pressOnItem = false;
+    m_fileDragArmed = false;
     if (selectionModel()) {
         selectionModel()->clearSelection();
         selectionModel()->clearCurrentIndex();
@@ -84,8 +72,6 @@ QRect IconFileListView::contentRectForVisualRect(const QRect &cellRect) const
 
 QModelIndex IconFileListView::cellIndexAt(const QPoint &point) const
 {
-    // Full cell — used for drag arming so padding around the thumbnail still
-    // counts as "on file", not empty space that falls into Free rearrange.
     return QListView::indexAt(point);
 }
 
@@ -105,58 +91,100 @@ QModelIndex IconFileListView::indexAt(const QPoint &point) const
     return idx;
 }
 
-QList<QUrl> IconFileListView::selectedLocalFileUrls() const
+QString IconFileListView::filePathFromProxyIndex(const QModelIndex &proxyIndex) const
 {
-    QList<QUrl> urls;
-    if (!model() || !selectionModel()) {
-        return urls;
+    if (!proxyIndex.isValid() || !model()) {
+        return QString();
+    }
+    QModelIndex use = (proxyIndex.column() == 0)
+                          ? proxyIndex
+                          : proxyIndex.sibling(proxyIndex.row(), 0);
+    if (!use.isValid()) {
+        use = proxyIndex;
     }
 
+    QModelIndex src = use;
+    const QAbstractItemModel *m = model();
+    while (const auto *proxy = qobject_cast<const QAbstractProxyModel *>(m)) {
+        src = proxy->mapToSource(src);
+        m = proxy->sourceModel();
+        if (!src.isValid() || !m) {
+            return QString();
+        }
+    }
+
+    if (auto *fm = const_cast<myModel *>(qobject_cast<const myModel *>(m))) {
+        return fm->filePath(src);
+    }
+    if (src.internalPointer()) {
+        return static_cast<myModelItem *>(src.internalPointer())->absoluteFilePath();
+    }
+    return QString();
+}
+
+QList<QUrl> IconFileListView::urlsFromSelectionOrPress() const
+{
+    QList<QUrl> urls;
     QSet<QString> seen;
-    const QModelIndexList indexes = selectionModel()->selectedIndexes();
-    for (const QModelIndex &index : indexes) {
-        if (!index.isValid()) {
-            continue;
-        }
-        QModelIndex use = (index.column() == 0) ? index : index.sibling(index.row(), 0);
-        if (!use.isValid()) {
-            use = index;
-        }
 
-        QModelIndex src = use;
-        const QAbstractItemModel *m = model();
-        while (const auto *proxy = qobject_cast<const QAbstractProxyModel *>(m)) {
-            src = proxy->mapToSource(src);
-            m = proxy->sourceModel();
-            if (!src.isValid() || !m) {
-                break;
-            }
-        }
-        if (!src.isValid()) {
-            continue;
-        }
-
-        QString path;
-        if (auto *fm = const_cast<myModel *>(qobject_cast<const myModel *>(m))) {
-            path = fm->filePath(src);
-        } else if (src.internalPointer()) {
-            path = static_cast<myModelItem *>(src.internalPointer())->absoluteFilePath();
-        }
+    const auto appendPath = [&](const QString &path) {
         if (path.isEmpty() || seen.contains(path)) {
-            continue;
+            return;
         }
         seen.insert(path);
         const QUrl url = QUrl::fromLocalFile(QFileInfo(path).absoluteFilePath());
         if (url.isValid()) {
             urls.append(url);
         }
+    };
+
+    if (selectionModel()) {
+        const QModelIndexList indexes = selectionModel()->selectedIndexes();
+        for (const QModelIndex &index : indexes) {
+            appendPath(filePathFromProxyIndex(index));
+        }
+    }
+
+    // Fallback / ensure pressed file is included even if selection lagged.
+    if (!m_dragUrlsSnapshot.isEmpty() && urls.isEmpty()) {
+        return m_dragUrlsSnapshot;
     }
     return urls;
 }
 
-void IconFileListView::snapshotDragFromSelection()
+void IconFileListView::armFileDrag(const QModelIndex &cellIndex)
 {
-    m_dragUrlsSnapshot = selectedLocalFileUrls();
+    m_fileDragArmed = true;
+    m_dragUrlsSnapshot.clear();
+
+    if (selectionModel() && cellIndex.isValid()) {
+        if (!selectionModel()->isSelected(cellIndex)) {
+            selectionModel()->select(cellIndex, QItemSelectionModel::ClearAndSelect);
+            selectionModel()->setCurrentIndex(cellIndex, QItemSelectionModel::Current);
+        }
+    }
+
+    // Snapshot immediately from selection + pressed cell path.
+    QSet<QString> seen;
+    const auto appendPath = [&](const QString &path) {
+        if (path.isEmpty() || seen.contains(path)) {
+            return;
+        }
+        seen.insert(path);
+        const QUrl url = QUrl::fromLocalFile(QFileInfo(path).absoluteFilePath());
+        if (url.isValid()) {
+            m_dragUrlsSnapshot.append(url);
+        }
+    };
+
+    appendPath(filePathFromProxyIndex(cellIndex));
+    if (selectionModel()) {
+        for (const QModelIndex &index : selectionModel()->selectedIndexes()) {
+            appendPath(filePathFromProxyIndex(index));
+        }
+    }
+
+    qInfo("qtfm DnD: armed %d url(s)", m_dragUrlsSnapshot.size());
 }
 
 void IconFileListView::mousePressEvent(QMouseEvent *event)
@@ -169,9 +197,7 @@ void IconFileListView::mousePressEvent(QMouseEvent *event)
     }
 
     m_pressPos = QPoint();
-    m_pressOnItem = false;
-    m_pressOnSelectedItem = false;
-    m_pressPlainLeftOnItem = false;
+    m_fileDragArmed = false;
     m_dragUrlsSnapshot.clear();
 
     if (event->button() != Qt::LeftButton) {
@@ -180,28 +206,22 @@ void IconFileListView::mousePressEvent(QMouseEvent *event)
     }
 
     m_pressPos = event->pos();
-    // Use FULL cell for drag — tight indexAt() misses padding and lets Free-mode
-    // rearrange kick in via QListView::mousePressEvent.
-    const QModelIndex idx = cellIndexAt(event->pos());
-    m_pressOnItem = idx.isValid();
-    m_pressOnSelectedItem = idx.isValid() && selectionModel() && selectionModel()->isSelected(idx);
+    const QModelIndex cell = cellIndexAt(event->pos());
 
-    // Plain left on a file cell: select + snapshot, never call QListView press
-    // (that would enter DraggingState and slide icons when movement was Free).
+    // Plain left on a file cell → arm real file drag (do not call QListView press,
+    // which enters DraggingState and can slide icons if movement were Free).
     if ((event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier)) == 0
-        && idx.isValid()) {
-        m_pressPlainLeftOnItem = true;
-        if (selectionModel() && !selectionModel()->isSelected(idx)) {
-            selectionModel()->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect);
-        }
-        m_pressOnSelectedItem = selectionModel() && selectionModel()->isSelected(idx);
-        snapshotDragFromSelection();
+        && cell.isValid()) {
+        armFileDrag(cell);
         setState(NoState);
+        // Mouse events are delivered via the viewport — grab it, not the view.
+        if (viewport()) {
+            viewport()->grabMouse();
+        }
         event->accept();
         return;
     }
 
-    // Empty area or modified click: rubber band / multi-select (Static → safe).
     QListView::mousePressEvent(event);
 }
 
@@ -215,31 +235,21 @@ void IconFileListView::mouseMoveEvent(QMouseEvent *event)
         return;
     }
 
-    // Plain left on file → real QDrag only (never QListView icon sliding).
-    if ((event->buttons() & Qt::LeftButton)
-        && m_pressPlainLeftOnItem
-        && !m_pressPos.isNull()) {
+    if ((event->buttons() & Qt::LeftButton) && m_fileDragArmed && !m_pressPos.isNull()) {
         const int dist = (event->pos() - m_pressPos).manhattanLength();
-        if (dist >= QApplication::startDragDistance() && m_pressOnSelectedItem) {
+        if (dist >= QApplication::startDragDistance()) {
             if (m_dragUrlsSnapshot.isEmpty()) {
-                snapshotDragFromSelection();
+                m_dragUrlsSnapshot = urlsFromSelectionOrPress();
             }
-            ensureFileDragMode();
-            startDrag(Qt::MoveAction);
-        }
-        event->accept();
-        return;
-    }
-
-    // Never let QListView Free-slide icons when the press began on an item.
-    if ((event->buttons() & Qt::LeftButton) && m_pressOnItem) {
-        const int dist = (event->pos() - m_pressPos).manhattanLength();
-        if (dist >= QApplication::startDragDistance() && m_pressOnSelectedItem) {
-            if (m_dragUrlsSnapshot.isEmpty()) {
-                snapshotDragFromSelection();
+            if (!m_dragUrlsSnapshot.isEmpty()) {
+                if (viewport() && mouseGrabber() == viewport()) {
+                    viewport()->releaseMouse();
+                }
+                startDrag(Qt::CopyAction | Qt::MoveAction);
+            } else {
+                qWarning("qtfm DnD: armed but no URLs — cannot start drag");
             }
-            ensureFileDragMode();
-            startDrag(Qt::MoveAction);
+            m_fileDragArmed = false;
         }
         event->accept();
         return;
@@ -251,10 +261,11 @@ void IconFileListView::mouseMoveEvent(QMouseEvent *event)
 void IconFileListView::mouseReleaseEvent(QMouseEvent *event)
 {
     const bool wasSuppressing = m_suppressRubberBandUntilRelease;
-    m_pressPlainLeftOnItem = false;
+    m_fileDragArmed = false;
     m_pressPos = QPoint();
-    m_pressOnItem = false;
-    m_pressOnSelectedItem = false;
+    if (viewport() && mouseGrabber() == viewport()) {
+        viewport()->releaseMouse();
+    }
 
     if (wasSuppressing) {
         m_suppressRubberBandUntilRelease = false;
@@ -275,7 +286,8 @@ void IconFileListView::mouseDoubleClickEvent(QMouseEvent *event)
 {
     const QModelIndex idx = cellIndexAt(event->pos());
     if (idx.isValid() && selectionModel()) {
-        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect);
+        selectionModel()->select(idx, QItemSelectionModel::ClearAndSelect);
+        selectionModel()->setCurrentIndex(idx, QItemSelectionModel::Current);
     }
     if (idx.isValid()) {
         suppressRubberBandUntilMouseRelease();
@@ -294,41 +306,22 @@ void IconFileListView::wheelEvent(QWheelEvent *event)
 
 void IconFileListView::startDrag(Qt::DropActions supportedActions)
 {
-    Q_UNUSED(supportedActions);
     ensureFileDragMode();
-    // Never call QListView::startDrag — with Free movement it only slides icons.
     QList<QUrl> urls = m_dragUrlsSnapshot;
     if (urls.isEmpty()) {
-        urls = selectedLocalFileUrls();
+        urls = urlsFromSelectionOrPress();
     }
     if (urls.isEmpty()) {
-        qWarning("qtfm DnD: icon view startDrag with no local URLs");
+        qWarning("qtfm DnD: startDrag with no local URLs");
         setState(NoState);
         return;
     }
-    Common::startFileUrlDrag(this, urls, Qt::MoveAction);
+    // Never call QListView::startDrag (Free mode = slide thumbnails only).
+    Common::startFileUrlDrag(this, urls, supportedActions);
     m_dragUrlsSnapshot.clear();
-    m_pressPlainLeftOnItem = false;
-    m_pressOnItem = false;
+    m_fileDragArmed = false;
     setState(NoState);
-    viewport()->update();
-}
-
-void IconFileListView::dragMoveEvent(QDragMoveEvent *event)
-{
-    // Ignore drags that originated from this view (internal rearrange attempts).
-    if (event->source() == this || event->source() == viewport()) {
-        event->ignore();
-        return;
+    if (viewport()) {
+        viewport()->update();
     }
-    QListView::dragMoveEvent(event);
-}
-
-void IconFileListView::dropEvent(QDropEvent *event)
-{
-    if (event->source() == this || event->source() == viewport()) {
-        event->ignore();
-        return;
-    }
-    QListView::dropEvent(event);
 }

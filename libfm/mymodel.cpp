@@ -917,8 +917,7 @@ Qt::DropActions myModel::supportedDropActions() const
 //---------------------------------------------------------------------------------
 Qt::DropActions myModel::supportedDragActions() const
 {
-    // Match working PyQt FileGridWidget: Move/cut for Thunar & Electron.
-    return Qt::MoveAction;
+    return Qt::CopyAction | Qt::MoveAction;
 }
 
 //---------------------------------------------------------------------------------

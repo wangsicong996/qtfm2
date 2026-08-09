@@ -8,8 +8,8 @@
 class IconViewDelegate;
 
 /**
- * Icon-mode file list: hit-testing matches icon+label chrome, not full grid cell.
- * Outbound DnD is real QDrag (file URLs), never QListView Free-mode icon rearrange.
+ * Icon-mode file list. Outbound DnD uses real QDrag (file URLs).
+ * Movement is always Static — Free mode only slides thumbnails in-view.
  */
 class IconFileListView : public QListView
 {
@@ -17,10 +17,7 @@ class IconFileListView : public QListView
 public:
     explicit IconFileListView(QWidget *parent = nullptr);
 
-    /** After changing folder, ignore drag/rubber-band until the mouse is released. */
     void suppressRubberBandUntilMouseRelease();
-
-    /** Force Static movement + drag settings (setViewMode resets movement to Free!). */
     void ensureFileDragMode();
 
     QModelIndex indexAt(const QPoint &point) const override;
@@ -33,21 +30,17 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void startDrag(Qt::DropActions supportedActions) override;
     void wheelEvent(QWheelEvent *event) override;
-    void dragMoveEvent(QDragMoveEvent *event) override;
-    void dropEvent(QDropEvent *event) override;
 
 private:
     QRect contentRectForVisualRect(const QRect &cellRect) const;
-    QList<QUrl> selectedLocalFileUrls() const;
-    void snapshotDragFromSelection();
-    /** Full grid cell under point (not the tight icon+label hit box). */
     QModelIndex cellIndexAt(const QPoint &point) const;
+    QString filePathFromProxyIndex(const QModelIndex &proxyIndex) const;
+    QList<QUrl> urlsFromSelectionOrPress() const;
+    void armFileDrag(const QModelIndex &cellIndex);
 
     bool m_suppressRubberBandUntilRelease = false;
     QPoint m_pressPos;
-    bool m_pressOnItem = false;
-    bool m_pressOnSelectedItem = false;
-    bool m_pressPlainLeftOnItem = false;
+    bool m_fileDragArmed = false;
     QList<QUrl> m_dragUrlsSnapshot;
 };
 

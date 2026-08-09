@@ -587,12 +587,12 @@ void Common::startFileUrlDrag(QAbstractItemView *view,
                               const QList<QUrl> &urls,
                               Qt::DropActions supportedActions)
 {
-    Q_UNUSED(supportedActions);
     if (!view || urls.isEmpty()) {
         return;
     }
 
-    // PyQt FileGridWidget: cut + MoveAction only (Thunar/Electron both accept this).
+    // Match working PyQt FileGridWidget MIME (cut + uri toString), but offer
+    // Copy|Move so more targets can accept the drag negotiation.
     QMimeData *mime = new QMimeData();
     populateFileListMimeData(mime, urls, true /*cut/move*/);
     if (!mime->hasUrls()) {
@@ -600,13 +600,17 @@ void Common::startFileUrlDrag(QAbstractItemView *view,
         return;
     }
 
+    Qt::DropActions actions = supportedActions;
+    if (actions == Qt::IgnoreAction) {
+        actions = Qt::CopyAction | Qt::MoveAction;
+    } else {
+        actions |= Qt::CopyAction | Qt::MoveAction;
+    }
+
     QDrag *drag = new QDrag(view);
     drag->setMimeData(mime);
 
-    // Intentionally no drag pixmap on Linux: a QDrag pixmap that fails to
-    // complete XDND/Wayland looks exactly like "thumbnail stuck where I
-    // released" (internal Free-move symptom). Cursor-only drag is clearer.
-#if !defined(Q_OS_LINUX)
+    // Small icon feedback (not a full viewport grab — that breaks Linux DnD).
     QModelIndex pixIndex;
     if (view->selectionModel()) {
         for (const QModelIndex &idx : view->selectionModel()->selectedIndexes()) {
@@ -622,28 +626,22 @@ void Common::startFileUrlDrag(QAbstractItemView *view,
         const QVariant dec = pixIndex.data(Qt::DecorationRole);
         QPixmap tip;
         if (dec.canConvert<QIcon>()) {
-            tip = dec.value<QIcon>().pixmap(QSize(56, 56));
+            tip = dec.value<QIcon>().pixmap(QSize(48, 48));
         } else if (dec.canConvert<QPixmap>()) {
-            tip = dec.value<QPixmap>().scaled(56, 56, Qt::KeepAspectRatio,
+            tip = dec.value<QPixmap>().scaled(48, 48, Qt::KeepAspectRatio,
                                               Qt::SmoothTransformation);
         }
         if (!tip.isNull()) {
-            const int canvas = 64;
-            QPixmap base(canvas, canvas);
-            base.fill(Qt::transparent);
-            QPainter p(&base);
-            p.setRenderHint(QPainter::Antialiasing, true);
-            p.drawPixmap((canvas - tip.width()) / 2, (canvas - tip.height()) / 2, tip);
-            p.end();
-            drag->setPixmap(base);
-            drag->setHotSpot(QPoint(canvas / 2, canvas / 2));
+            drag->setPixmap(tip);
+            drag->setHotSpot(QPoint(tip.width() / 2, tip.height() / 2));
         }
     }
-#endif
 
-    qInfo("qtfm DnD: platform=%s urls=%d (Move/cut like PyQt)",
-          qPrintable(QGuiApplication::platformName()), urls.size());
-    const Qt::DropAction dropped = drag->exec(Qt::MoveAction, Qt::MoveAction);
+    qInfo("qtfm DnD: platform=%s urls=%d actions=0x%x",
+          qPrintable(QGuiApplication::platformName()),
+          urls.size(), int(actions));
+    // Default Move (file-manager style); Copy still offered for Electron/etc.
+    const Qt::DropAction dropped = drag->exec(actions, Qt::MoveAction);
     qInfo("qtfm DnD: finished action=0x%x", int(dropped));
 
     if (view->viewport()) {
